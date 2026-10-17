@@ -1,5 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
 import { CONTACT, SITE } from "../data/site";
 
 const values = [
@@ -18,9 +20,18 @@ const values = [
 ];
 
 const steps = [
-  { title: "Hubungi kami", body: "Mesej kami dan perkenalkan diri - tak perlu pengalaman." },
-  { title: "Datang larian", body: "Sertai sesi larian kumpulan. Datang dengan kasut yang selesa." },
-  { title: "Ikut kemampuan", body: "Lari ikut rentak sendiri. Kami bantu anda naik setapak demi setapak." },
+  {
+    title: "Hubungi kami",
+    body: "Mesej kami dan perkenalkan diri - tak perlu pengalaman.",
+  },
+  {
+    title: "Datang larian",
+    body: "Sertai sesi larian kumpulan. Datang dengan kasut yang selesa.",
+  },
+  {
+    title: "Ikut kemampuan",
+    body: "Lari ikut rentak sendiri. Kami bantu anda naik setapak demi setapak.",
+  },
 ];
 
 const faqs = [
@@ -46,37 +57,34 @@ const contacts = [
 ---
 
 <Layout>
-  <header class="site-header">
-    <div class="container bar">
-      <a href="/" aria-label={`${SITE.name} - laman utama`}>
-        <img src="/brand/logo-on-dark.svg" alt="" width="142" height="40" class="logo" />
-      </a>
-      <nav aria-label="Utama">
-        <a href="#tentang">Tentang</a>
-        <a href="#cara">Cara sertai</a>
-        <a href="#soalan">Soalan</a>
-      </nav>
-    </div>
-  </header>
+  <Header />
 
   <main>
     <section class="hero">
       <div class="container hero-grid">
         <div>
-          <p class="eyebrow on-dark">{SITE.tagline} · Est. {SITE.established}</p>
+          <p class="eyebrow on-dark">
+            {SITE.tagline} · Est. {SITE.established}
+          </p>
           <h1 class="display hero-title">
             Lari pertama anda <span>bermula di sini.</span>
           </h1>
           <p class="hero-lead">
-            Nubi Sport ialah komuniti larian untuk pemula. Tiada pace minimum, tiada
-            siapa ditinggalkan - hanya langkah demi langkah, bersama.
+            Nubi Sport ialah komuniti larian untuk pemula. Tiada pace minimum,
+            tiada siapa ditinggalkan - hanya langkah demi langkah, bersama.
           </p>
           <div class="hero-cta">
             <a class="btn btn-primary" href="#sertai">Sertai komuniti</a>
-            <a class="btn btn-ghost" href="#tentang">Kenali kami</a>
+            <a class="btn btn-ghost" href="/pelan-5k">Pelan 5K bawah 30 min</a>
           </div>
         </div>
-        <img src="/brand/nubi-crest-roundel-reversed.svg" alt="Jata Nubi Sport - Running Community" width="320" height="320" class="hero-crest" />
+        <img
+          src="/brand/nubi-crest-roundel-reversed.svg"
+          alt="Jata Nubi Sport - Running Community"
+          width="320"
+          height="320"
+          class="hero-crest"
+        />
       </div>
     </section>
 
@@ -85,8 +93,8 @@ const contacts = [
         <p class="eyebrow">Tentang kami</p>
         <h2 class="display section-title">Nubi = newbie. Dan itu okey.</h2>
         <p class="lead">
-          Kami kumpulan pelari baru yang mahu mula dengan cara yang betul - tanpa
-          tekanan, tanpa ego. Setiap orang bermula di tempat yang berbeza.
+          Kami kumpulan pelari baru yang mahu mula dengan cara yang betul -
+          tanpa tekanan, tanpa ego. Setiap orang bermula di tempat yang berbeza.
         </p>
         <ul class="cards">
           {
@@ -136,76 +144,44 @@ const contacts = [
 
     <section id="sertai" class="join">
       <div class="container join-inner">
-        <h2 class="display join-title">Langkah pertama paling susah. <span>Kami teman.</span></h2>
+        <h2 class="display join-title">
+          Langkah pertama paling susah. <span>Kami teman.</span>
+        </h2>
         {
           contacts.length ? (
             <div class="hero-cta">
               {contacts.map((c) => (
-                <a class="btn btn-primary" href={c.href} rel="noopener" target={c.href.startsWith("mailto:") ? undefined : "_blank"}>
+                <a
+                  class="btn btn-primary"
+                  href={c.href}
+                  rel="noopener"
+                  target={c.href.startsWith("mailto:") ? undefined : "_blank"}
+                >
                   {c.label}
                 </a>
               ))}
             </div>
           ) : (
-            <p class="hero-lead">Maklumat untuk menyertai akan dikemas kini tidak lama lagi.</p>
+            <p class="hero-lead">
+              Maklumat untuk menyertai akan dikemas kini tidak lama lagi.
+            </p>
           )
         }
       </div>
     </section>
   </main>
 
-  <footer class="site-footer">
-    <div class="container foot">
-      <img src="/brand/symbol-on-dark.svg" alt="" width="40" height="32" />
-      <p>© {SITE.established} {SITE.name}. {SITE.tagline}.</p>
-    </div>
-  </footer>
+  <Footer />
 </Layout>
 
 <style>
-  .site-header {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    background: rgb(10 26 51 / 0.92);
-    backdrop-filter: blur(8px);
-  }
-  .bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    height: 4.25rem;
-  }
-  .logo {
-    height: 2.25rem;
-    width: auto;
-  }
-  nav {
-    display: flex;
-    gap: 1.5rem;
-  }
-  nav a {
-    color: #cbd5e1;
-    text-decoration: none;
-    font-family: var(--display);
-    font-weight: 700;
-    font-size: 1.05rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-  }
-  nav a:hover {
-    color: var(--orange);
-  }
-  @media (max-width: 40rem) {
-    nav {
-      display: none;
-    }
-  }
-
   .hero {
     background:
-      radial-gradient(60rem 30rem at 85% 10%, rgb(255 90 31 / 0.16), transparent 60%),
+      radial-gradient(
+        60rem 30rem at 85% 10%,
+        rgb(255 90 31 / 0.16),
+        transparent 60%
+      ),
       var(--navy);
     color: #fff;
     padding-block: clamp(3.5rem, 9vw, 7rem);
@@ -243,7 +219,6 @@ const contacts = [
     width: min(100%, 20rem);
     height: auto;
     justify-self: center;
-
   }
   @media (max-width: 52rem) {
     .hero-grid {
@@ -355,20 +330,5 @@ const contacts = [
   .join .btn-primary {
     background: var(--navy);
     color: #fff;
-  }
-
-  .site-footer {
-    background: var(--navy);
-    color: #94a3b8;
-    padding-block: 2rem;
-  }
-  .foot {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
-  .foot p {
-    margin: 0;
-    font-size: 0.95rem;
   }
 </style>

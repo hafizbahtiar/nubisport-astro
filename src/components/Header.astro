@@ -1,0 +1,64 @@
+---
+import { SITE } from "../data/site";
+---
+
+<header class="site-header">
+  <div class="container bar">
+    <a href="/" aria-label={`${SITE.name} - laman utama`}>
+      <img
+        src="/brand/logo-on-dark.svg"
+        alt=""
+        width="142"
+        height="40"
+        class="logo"
+      />
+    </a>
+    <nav aria-label="Utama">
+      <a href="/#tentang">Tentang</a>
+      <a href="/#cara">Cara sertai</a>
+      <a href="/pelan-5k">Pelan 5K</a>
+    </nav>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: rgb(10 26 51 / 0.92);
+    backdrop-filter: blur(8px);
+  }
+  .bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    height: 4.25rem;
+  }
+  .logo {
+    height: 2.25rem;
+    width: auto;
+  }
+  nav {
+    display: flex;
+    gap: 1.5rem;
+  }
+  nav a {
+    color: #cbd5e1;
+    text-decoration: none;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  nav a:hover {
+    color: var(--orange);
+  }
+  @media (max-width: 40rem) {
+    nav {
+      display: none;
+    }
+  }
+</style>

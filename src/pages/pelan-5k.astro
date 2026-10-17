@@ -1,0 +1,549 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import {
+  BULAN,
+  HARI,
+  MASA_MAX,
+  MASA_MIN,
+  MINGGU_MIN,
+  MINGGU_SETIAP_MINIT,
+  TAHAP,
+} from "../lib/pelan-5k";
+---
+
+<Layout
+  title="Pelan 5K bawah 30 minit - Nubi Sport"
+  description="Pilih berapa bulan dan tahap anda sekarang - dapat pelan latihan mingguan untuk lari 5K bawah 30 minit. Percuma, tanpa daftar."
+>
+  <Header />
+
+  <main>
+    <section class="intro">
+      <div class="container">
+        <p class="eyebrow on-dark">Pelan latihan</p>
+        <h1 class="display title">5K bawah <span>30 minit.</span></h1>
+        <p class="lead on-dark">
+          Pilih tempoh dan tahap anda sekarang. Pelan dikira dalam pelayar anda
+          - tiada daftar, tiada data dihantar ke mana-mana.
+        </p>
+
+        <form class="form" method="get" id="borang">
+          <fieldset>
+            <legend>Tempoh</legend>
+            <div class="chips">
+              {
+                BULAN.map((b) => (
+                  <label class="chip">
+                    <input
+                      type="radio"
+                      name="bulan"
+                      value={b}
+                      required
+                      checked={b === 3}
+                    />
+                    <span>{b} bulan</span>
+                  </label>
+                ))
+              }
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Tahap sekarang</legend>
+            <div class="chips">
+              {
+                Object.entries(TAHAP).map(([v, label]) => (
+                  <label class="chip">
+                    <input
+                      type="radio"
+                      name="tahap"
+                      value={v}
+                      required
+                      checked={v === "jalan"}
+                    />
+                    <span>{label}</span>
+                  </label>
+                ))
+              }
+            </div>
+          </fieldset>
+
+          <label class="field" id="masa-medan" hidden>
+            <span>Masa 5K sekarang (minit)</span>
+            <input
+              type="number"
+              name="masa"
+              min={MASA_MIN}
+              max={MASA_MAX}
+              step="1"
+              inputmode="numeric"
+              placeholder="cth. 36"
+            />
+          </label>
+
+          <fieldset>
+            <legend>Hari seminggu</legend>
+            <div class="chips">
+              {
+                HARI.map((h) => (
+                  <label class="chip">
+                    <input
+                      type="radio"
+                      name="hari"
+                      value={h}
+                      required
+                      checked={h === 3}
+                    />
+                    <span>{h} hari</span>
+                  </label>
+                ))
+              }
+            </div>
+          </fieldset>
+
+          <label class="field">
+            <span>Tarikh mula (pilihan)</span>
+            <input type="date" name="mula" />
+          </label>
+
+          <button class="btn btn-primary" type="submit">Buat pelan</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="hasil" id="hasil" hidden aria-live="polite">
+      <div class="container" id="pelan"></div>
+    </section>
+
+    <section class="nota">
+      <div class="container narrow">
+        <h2 class="display section-title">Sebelum mula</h2>
+        <ul>
+          <li>
+            Pelan ini panduan umum, <strong>bukan nasihat perubatan</strong>.
+            Jika ada masalah jantung, tekanan darah, sendi atau baru sembuh dari
+            kecederaan, rujuk doktor dulu. Berhenti jika sakit (bukan sekadar
+            penat).
+          </li>
+          <li>
+            Ambang "munasabah" adalah <strong>anggaran kasar</strong>: dari
+            sifar ~{MINGGU_MIN.sifar} minggu, dari jalan-lari ~{
+              MINGGU_MIN.jalan
+            } minggu, dan dari 5K sekarang ~{MINGGU_SETIAP_MINIT} minggu bagi setiap
+            minit yang hendak dipotong. Setiap orang berbeza.
+          </li>
+          <li>
+            Beban naik paling banyak 10% seminggu dan setiap minggu ke-4 lebih
+            ringan - badan menjadi kuat ketika berehat. Terlepas sesi? Teruskan
+            dengan minggu itu, jangan ganti dua kali ganda.
+          </li>
+          <li>
+            Cuaca Malaysia panas dan lembap: lari awal pagi atau lewat petang,
+            bawa air, perlahankan pace bila panas - ikut rasa usaha, bukan jam.
+          </li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Layout>
+
+<script>
+  import { TAHAP, buatPelan, type Minggu, type Tahap } from "../lib/pelan-5k";
+
+  const borang = document.getElementById("borang") as HTMLFormElement;
+  const masaMedan = document.getElementById("masa-medan")!;
+  const masaInput = borang.elements.namedItem("masa") as HTMLInputElement;
+  const hasil = document.getElementById("hasil")!;
+  const pelanEl = document.getElementById("pelan")!;
+
+  const q = new URLSearchParams(location.search);
+  for (const [k, v] of q) {
+    const el = borang.elements.namedItem(k);
+    if (el instanceof RadioNodeList) el.value = v;
+    else if (el instanceof HTMLInputElement) el.value = v;
+  }
+
+  const ikutTahap = () => {
+    const is5k =
+      (borang.elements.namedItem("tahap") as RadioNodeList).value === "5k";
+    masaMedan.hidden = !is5k;
+    masaInput.required = is5k;
+    masaInput.disabled = !is5k; // tak dihantar dalam URL bila bukan 5k
+  };
+  borang.addEventListener("change", ikutTahap);
+  ikutTahap();
+
+  if (q.has("bulan")) papar();
+
+  function papar() {
+    const tahap = q.get("tahap") as Tahap;
+    const bulan = Number(q.get("bulan"));
+    const hari = Number(q.get("hari"));
+    const masa5k = q.get("masa") ? Number(q.get("masa")) : undefined;
+    const h = buatPelan({ bulan, tahap, hari, masa5k });
+    hasil.hidden = false;
+
+    if (!h.ok) {
+      pelanEl.innerHTML = `<div class="kotak amaran"><p>${h.sebab}</p>${
+        h.cadanganBulan
+          ? `<a class="btn btn-primary" href="?${new URLSearchParams({ ...Object.fromEntries(q), bulan: String(h.cadanganBulan) })}">Cuba ${h.cadanganBulan} bulan</a>`
+          : ""
+      }</div>`;
+      hasil.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+
+    const kunci = `pelan-5k:${bulan}-${tahap}-${masa5k ?? ""}-${hari}`;
+    const siap = new Set<string>(baca(kunci));
+    const mula = /^\d{4}-\d{2}-\d{2}$/.test(q.get("mula") ?? "")
+      ? new Date(`${q.get("mula")}T00:00:00`)
+      : null;
+    const tarikh = (w: number) =>
+      mula &&
+      new Date(mula.getTime() + w * 7 * 864e5).toLocaleDateString("ms-MY", {
+        day: "numeric",
+        month: "short",
+      });
+    const jumlah = h.minggu.reduce((a, w) => a + w.sesi.length, 0);
+
+    pelanEl.innerHTML = `
+      <div class="ringkas">
+        <div>
+          <p class="eyebrow">Pelan anda</p>
+          <h2 class="display section-title">${bulan} bulan · ${hari} hari seminggu</h2>
+          <p class="lead">${TAHAP[tahap]}${masa5k ? ` (${masa5k} minit)` : ""} → 5K bawah 30 minit.
+            <span id="kemajuan"></span></p>
+        </div>
+        <div class="aksi">
+          <button class="btn btn-outline" type="button" data-kongsi>Kongsi</button>
+          <button class="btn btn-outline" type="button" onclick="print()">Cetak</button>
+        </div>
+      </div>
+      ${h.amaran.map((a) => `<div class="kotak amaran"><p>${a}</p></div>`).join("")}
+      <ol class="minggu">${h.minggu.map((w) => minggu(w, tarikh(w.no - 1))).join("")}</ol>`;
+
+    const kemajuan = document.getElementById("kemajuan")!;
+    const kira = () =>
+      (kemajuan.textContent = `${siap.size} / ${jumlah} sesi siap.`);
+    kira();
+    pelanEl
+      .querySelectorAll<HTMLInputElement>("input[data-sesi]")
+      .forEach((c) => {
+        c.checked = siap.has(c.dataset.sesi!);
+        c.addEventListener("change", () => {
+          c.checked ? siap.add(c.dataset.sesi!) : siap.delete(c.dataset.sesi!);
+          simpan(kunci, [...siap]);
+          kira();
+        });
+      });
+    pelanEl
+      .querySelector<HTMLButtonElement>("[data-kongsi]")!
+      .addEventListener("click", async (e) => {
+        const btn = e.currentTarget as HTMLButtonElement;
+        try {
+          if (navigator.share)
+            return await navigator.share({
+              title: document.title,
+              url: location.href,
+            });
+          await navigator.clipboard.writeText(location.href);
+          btn.textContent = "Pautan disalin";
+        } catch {
+          /* dibatalkan */
+        }
+      });
+    hasil.scrollIntoView({ behavior: "smooth" });
+  }
+
+  function minggu(w: Minggu, tarikh: string | null) {
+    return `<li class="kad${w.ringan ? " ringan" : ""}">
+      <header>
+        <h3 class="display">Minggu ${w.no}</h3>
+        <span class="tag">${w.fasa}${w.ringan && w.fasa !== "Ujian" ? " · ringan" : ""}</span>
+        <span class="minit">${tarikh ? `${tarikh} · ` : ""}${w.minit} min</span>
+      </header>
+      <ol>${w.sesi
+        .map(
+          (s, i) => `<li class="sesi ${s.jenis}">
+            <label>
+              <input type="checkbox" data-sesi="${w.no}.${i}" aria-label="Minggu ${w.no} sesi ${i + 1} siap" />
+              <span>
+                <strong>Sesi ${i + 1}: ${s.tajuk}</strong> <em>${s.minit} min</em>
+                <span class="arahan">${s.arahan}</span>
+                <span class="usaha">${s.usaha}</span>
+              </span>
+            </label>
+          </li>`,
+        )
+        .join("")}</ol>
+    </li>`;
+  }
+
+  function baca(k: string): string[] {
+    try {
+      return JSON.parse(localStorage.getItem(k) ?? "[]");
+    } catch {
+      return [];
+    }
+  }
+  function simpan(k: string, v: string[]) {
+    try {
+      localStorage.setItem(k, JSON.stringify(v));
+    } catch {
+      /* mod peribadi: tanda siap tak disimpan */
+    }
+  }
+</script>
+
+<!-- Global: pelan dirender melalui innerHTML, jadi gaya scoped Astro tak sampai. CSS ini hanya dimuat di page ini. -->
+<style is:global>
+  .intro {
+    background:
+      radial-gradient(
+        50rem 26rem at 90% 0%,
+        rgb(255 90 31 / 0.16),
+        transparent 60%
+      ),
+      var(--navy);
+    color: #fff;
+  }
+  .eyebrow.on-dark {
+    color: var(--orange);
+  }
+  .title {
+    font-size: clamp(3rem, 9vw, 5.5rem);
+    margin: 0 0 1rem;
+  }
+  .title span {
+    color: var(--orange);
+  }
+  .lead.on-dark {
+    color: #cbd5e1;
+  }
+
+  .form {
+    margin-top: 2.5rem;
+    display: grid;
+    gap: 1.5rem;
+    max-width: 44rem;
+  }
+  fieldset {
+    border: 0;
+    padding: 0;
+    margin: 0;
+  }
+  legend,
+  .field > span {
+    font-family: var(--display);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #cbd5e1;
+    margin-bottom: 0.6rem;
+    display: block;
+  }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .chip input {
+    position: absolute;
+    opacity: 0;
+  }
+  .chip span {
+    display: inline-block;
+    padding: 0.55rem 1rem;
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 2px rgb(255 255 255 / 0.25);
+    cursor: pointer;
+  }
+  .chip input:checked + span {
+    background: var(--orange);
+    color: var(--navy);
+    box-shadow: none;
+    font-weight: 600;
+  }
+  .chip input:focus-visible + span {
+    outline: 3px solid var(--orange);
+    outline-offset: 3px;
+  }
+  .field input {
+    font: inherit;
+    padding: 0.65rem 0.9rem;
+    border-radius: 0.6rem;
+    border: 2px solid rgb(255 255 255 / 0.25);
+    background: var(--navy-2);
+    color: #fff;
+    color-scheme: dark;
+    width: min(100%, 16rem);
+  }
+  .form .btn {
+    justify-self: start;
+    border: 0;
+    cursor: pointer;
+  }
+
+  .hasil {
+    padding-block: clamp(3rem, 7vw, 5rem);
+  }
+  .ringkas {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .aksi {
+    display: flex;
+    gap: 0.5rem;
+  }
+  .btn-outline {
+    color: var(--navy);
+    background: none;
+    border: 0;
+    cursor: pointer;
+    box-shadow: inset 0 0 0 2px var(--line);
+  }
+  .btn-outline:hover {
+    box-shadow: inset 0 0 0 2px var(--navy);
+  }
+  .kotak {
+    margin-top: 1.5rem;
+    padding: 1.25rem 1.5rem;
+    border-radius: 1rem;
+    display: grid;
+    gap: 1rem;
+    justify-items: start;
+  }
+  .kotak p {
+    margin: 0;
+  }
+  .amaran {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    color: #7c2d12;
+  }
+
+  .minggu {
+    list-style: none;
+    padding: 0;
+    margin: 2rem 0 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 21rem), 1fr));
+    gap: 1rem;
+  }
+  .kad {
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    padding: 1.25rem;
+    background: var(--paper);
+    break-inside: avoid;
+  }
+  .kad.ringan {
+    background: var(--paper-2);
+  }
+  .kad header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+  .kad h3 {
+    font-size: 1.6rem;
+    margin: 0;
+    color: var(--navy);
+  }
+  .tag {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--orange-ink);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .minit {
+    margin-left: auto;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .kad ol {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.75rem;
+  }
+  .sesi label {
+    display: flex;
+    gap: 0.75rem;
+    align-items: start;
+    cursor: pointer;
+  }
+  .sesi input {
+    margin-top: 0.3rem;
+    width: 1.1rem;
+    height: 1.1rem;
+    accent-color: var(--orange);
+    flex: none;
+  }
+  .sesi strong {
+    color: var(--navy);
+  }
+  .sesi em {
+    font-style: normal;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .arahan,
+  .usaha {
+    display: block;
+    font-size: 0.95rem;
+  }
+  .usaha {
+    color: var(--muted);
+    font-size: 0.88rem;
+  }
+  .sesi.interval strong,
+  .sesi.tempo strong,
+  .sesi.ujian strong {
+    color: var(--orange-ink);
+  }
+  .sesi:has(input:checked) .arahan {
+    text-decoration: line-through;
+    color: var(--muted);
+  }
+
+  .nota {
+    background: var(--paper-2);
+    border-top: 1px solid var(--line);
+  }
+  .narrow {
+    max-width: 48rem;
+  }
+  .nota ul {
+    padding-left: 1.2rem;
+    color: var(--muted);
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  @media print {
+    .site-header,
+    .site-footer,
+    .intro,
+    .aksi {
+      display: none !important;
+    }
+    .hasil {
+      padding: 0;
+    }
+    .minggu {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+</style>

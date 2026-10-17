@@ -1,0 +1,27 @@
+---
+import { SITE } from "../data/site";
+---
+
+<footer class="site-footer">
+  <div class="container foot">
+    <img src="/brand/symbol-on-dark.svg" alt="" width="40" height="32" />
+    <p>© {SITE.established} {SITE.name}. {SITE.tagline}.</p>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    background: var(--navy);
+    color: #94a3b8;
+    padding-block: 2rem;
+  }
+  .foot {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .foot p {
+    margin: 0;
+    font-size: 0.95rem;
+  }
+</style>
