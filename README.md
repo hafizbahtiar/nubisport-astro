@@ -1,46 +1,35 @@
-# Astro Starter Kit: Basics
+# Nubi Sport
+
+Laman komuniti larian Nubi Sport (pemula / newbie, est. 2026). Astro, satu page statik, CSS biasa - tiada dependency lain.
 
 ```sh
-bun create astro@latest -- --template basics
+bun install
+bun dev        # localhost:4321
+bun run build  # dist/
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## Kandungan
 
-## 🚀 Project Structure
+- `src/pages/index.astro` - page utama (hero, tentang, cara sertai, soalan lazim, sertai).
+- `astro.config.mjs` `site` - domain sebenar. **Selagi kosong, `canonical`, `og:url`, `og:image` tak dikeluarkan** (perlu URL penuh; domain rekaan merosakkan pratonton pautan WhatsApp/Facebook).
+- `src/data/site.ts` - nama, tagline dan pautan hubungan. **Pautan WhatsApp/Instagram/e-mel muncul hanya bila diisi** - jangan letak URL contoh.
+- `src/styles/global.css` - token warna dan atom (`.btn`, `.display`, `.eyebrow`).
 
-Inside of your Astro project, you'll see the following folders and files:
+## Jenama
 
-```text
-/
-├── public/
-│   └── favicon.svg
-├── src
-│   ├── assets
-│   │   └── astro.svg
-│   ├── components
-│   │   └── Welcome.astro
-│   ├── layouts
-│   │   └── Layout.astro
-│   └── pages
-│       └── index.astro
-└── package.json
-```
+Sumber: set SVG pereka dalam `scripts/brand/source/` (jangan edit). `python3 scripts/brand/gen.py` salin ke `public/brand/` tanpa ubah dan terbitkan:
 
-To learn more about the folder structure of an Astro project, refer to [our guide on project structure](https://docs.astro.build/en/basics/project-structure/).
+- `logo-on-dark.svg` - `nubi-logo-reversed` tanpa latar navy tertanam, dipotong ke karya (header/hero).
+- `symbol-on-dark.svg` - simbol dengan lorong navy jadi putih (footer).
+- Jata: `nubi-crest-roundel{,-reversed,-black}.svg` disalin terus; hero guna `-reversed` (bulatan putih atas navy).
+- `public/favicon.svg` (= `nubi-favicon.svg`), `apple-touch-icon.png` (dari avatar), `og.png` (logo reversed atas navy).
 
-## 🧞 Commands
+Tukar jenama = ganti fail dalam `source/`, jalankan skrip. PNG perlukan Chrome/Brave.
 
-All commands are run from the root of the project, from a terminal:
+| Token | Hex | Guna |
+|---|---|---|
+| Navy | `#0A1A33` | latar, header, hero, footer, simbol |
+| Oren | `#FF5A1F` | aksen, butang, jalur dalam simbol |
+| Oren (teks atas putih) | `#C2410C` | label kecil atas latar putih (kontras AA) |
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `bun install`             | Installs dependencies                            |
-| `bun dev`             | Starts local dev server at `localhost:4321`      |
-| `bun build`           | Build your production site to `./dist/`          |
-| `bun preview`         | Preview your build locally, before deploying     |
-| `bun astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `bun astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+Karya asal (perisai neon + kasut) disimpan sebagai rujukan di `scripts/brand/original-*.png`.

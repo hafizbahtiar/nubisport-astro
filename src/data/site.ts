@@ -4,7 +4,6 @@ export const SITE = {
   name: "Nubi Sport",
   tagline: "Running Community",
   established: 2026,
-  url: "https://nubisport.com", // TODO: real domain
   description:
     "Nubi Sport ialah komuniti larian untuk pemula. Mula dari sifar, gerak bersama, tiada siapa ditinggalkan.",
 };
