@@ -13,3 +13,13 @@ export const CONTACT = {
   instagram: "", // e.g. https://instagram.com/nubisport
   email: "", // e.g. hello@nubisport.com
 };
+
+// Akaun dikongsi dengan portfolio (satu backend, satu jadual users). Urus profil di sana.
+export const ACCOUNT = {
+  manage: "https://hafizbahtiar.com/account",
+};
+
+// Kunci TAPAK Turnstile (awam - memang dipapar dalam HTML), widget yang sama dengan portfolio.
+// Hostname nubisport.hafizbahtiar.com mesti ditambah pada widget ini di dashboard Cloudflare,
+// dan pada TURNSTILE_HOSTNAMES backend - jika tidak, login production gagal "captcha".
+export const TURNSTILE_SITE_KEY = "0x4AAAAAAFD-PSk_u7NHAF-5";

@@ -1,0 +1,22 @@
+---
+// Seksyen kandungan: eyebrow + h2 + lead pilihan, kemudian slot.
+interface Props {
+  id?: string;
+  eyebrow?: string;
+  title?: string;
+  lead?: string;
+  band?: boolean; // latar kelabu dengan garis atas/bawah
+  narrow?: boolean;
+  class?: string;
+}
+const { id, eyebrow, title, lead, band, narrow, class: cls } = Astro.props;
+---
+
+<section id={id} class:list={[band && "band", cls]}>
+  <div class:list={["container", narrow && "narrow"]}>
+    {eyebrow && <p class="eyebrow">{eyebrow}</p>}
+    {title && <h2 class="display section-title">{title}</h2>}
+    {lead && <p class="lead">{lead}</p>}
+    <slot />
+  </div>
+</section>

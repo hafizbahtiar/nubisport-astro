@@ -1,7 +1,9 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import Header from "../components/Header.astro";
-import Footer from "../components/Footer.astro";
+import PageHero from "../components/ui/PageHero.astro";
+import Section from "../components/ui/Section.astro";
+import ChipGroup from "../components/ui/ChipGroup.astro";
+import Field from "../components/ui/Field.astro";
 import {
   BULAN,
   HARI,
@@ -17,142 +19,105 @@ import {
   title="Pelan 5K bawah 30 minit - Nubi Sport"
   description="Pilih berapa bulan dan tahap anda sekarang - dapat pelan latihan mingguan untuk lari 5K bawah 30 minit. Percuma, tanpa daftar."
 >
-  <Header />
+  <PageHero
+    eyebrow="Pelan latihan"
+    title="5K bawah"
+    accent="30 minit."
+    lead="Pilih tempoh dan tahap anda sekarang. Pelan dikira dalam pelayar anda - tiada daftar, tiada data dihantar ke mana-mana."
+  >
+    <form class="form" method="get" id="borang">
+      <ChipGroup
+        legend="Tempoh"
+        name="bulan"
+        checked={3}
+        options={BULAN.map((b) => ({ value: b, label: `${b} bulan` }))}
+      />
+      <ChipGroup
+        legend="Tahap sekarang"
+        name="tahap"
+        checked="jalan"
+        options={Object.entries(TAHAP).map(([value, label]) => ({
+          value,
+          label,
+        }))}
+      />
+      <Field label="Masa 5K sekarang (minit)" id="masa-medan" hidden>
+        <input
+          class="input"
+          type="number"
+          name="masa"
+          min={MASA_MIN}
+          max={MASA_MAX}
+          step="1"
+          inputmode="numeric"
+          placeholder="cth. 36"
+        />
+      </Field>
+      <ChipGroup
+        legend="Hari seminggu"
+        name="hari"
+        checked={3}
+        options={HARI.map((h) => ({ value: h, label: `${h} hari` }))}
+      />
+      <Field
+        label="Tarikh mula (pilihan)"
+        hint="Pelan bermula pada hari Isnin pada atau selepas tarikh ini."
+      >
+        <input class="input" type="date" name="mula" />
+      </Field>
+      <button class="btn btn-primary" type="submit">Buat pelan</button>
+    </form>
+  </PageHero>
 
-  <main>
-    <section class="intro">
-      <div class="container">
-        <p class="eyebrow on-dark">Pelan latihan</p>
-        <h1 class="display title">5K bawah <span>30 minit.</span></h1>
-        <p class="lead on-dark">
-          Pilih tempoh dan tahap anda sekarang. Pelan dikira dalam pelayar anda
-          - tiada daftar, tiada data dihantar ke mana-mana.
-        </p>
+  <section class="hasil" id="hasil" hidden aria-live="polite">
+    <div class="container" id="pelan"></div>
+  </section>
 
-        <form class="form" method="get" id="borang">
-          <fieldset>
-            <legend>Tempoh</legend>
-            <div class="chips">
-              {
-                BULAN.map((b) => (
-                  <label class="chip">
-                    <input
-                      type="radio"
-                      name="bulan"
-                      value={b}
-                      required
-                      checked={b === 3}
-                    />
-                    <span>{b} bulan</span>
-                  </label>
-                ))
-              }
-            </div>
-          </fieldset>
-
-          <fieldset>
-            <legend>Tahap sekarang</legend>
-            <div class="chips">
-              {
-                Object.entries(TAHAP).map(([v, label]) => (
-                  <label class="chip">
-                    <input
-                      type="radio"
-                      name="tahap"
-                      value={v}
-                      required
-                      checked={v === "jalan"}
-                    />
-                    <span>{label}</span>
-                  </label>
-                ))
-              }
-            </div>
-          </fieldset>
-
-          <label class="field" id="masa-medan" hidden>
-            <span>Masa 5K sekarang (minit)</span>
-            <input
-              type="number"
-              name="masa"
-              min={MASA_MIN}
-              max={MASA_MAX}
-              step="1"
-              inputmode="numeric"
-              placeholder="cth. 36"
-            />
-          </label>
-
-          <fieldset>
-            <legend>Hari seminggu</legend>
-            <div class="chips">
-              {
-                HARI.map((h) => (
-                  <label class="chip">
-                    <input
-                      type="radio"
-                      name="hari"
-                      value={h}
-                      required
-                      checked={h === 3}
-                    />
-                    <span>{h} hari</span>
-                  </label>
-                ))
-              }
-            </div>
-          </fieldset>
-
-          <label class="field">
-            <span>Tarikh mula (pilihan)</span>
-            <input type="date" name="mula" />
-          </label>
-
-          <button class="btn btn-primary" type="submit">Buat pelan</button>
-        </form>
-      </div>
-    </section>
-
-    <section class="hasil" id="hasil" hidden aria-live="polite">
-      <div class="container" id="pelan"></div>
-    </section>
-
-    <section class="nota">
-      <div class="container narrow">
-        <h2 class="display section-title">Sebelum mula</h2>
-        <ul>
-          <li>
-            Pelan ini panduan umum, <strong>bukan nasihat perubatan</strong>.
-            Jika ada masalah jantung, tekanan darah, sendi atau baru sembuh dari
-            kecederaan, rujuk doktor dulu. Berhenti jika sakit (bukan sekadar
-            penat).
-          </li>
-          <li>
-            Ambang "munasabah" adalah <strong>anggaran kasar</strong>: dari
-            sifar ~{MINGGU_MIN.sifar} minggu, dari jalan-lari ~{
-              MINGGU_MIN.jalan
-            } minggu, dan dari 5K sekarang ~{MINGGU_SETIAP_MINIT} minggu bagi setiap
-            minit yang hendak dipotong. Setiap orang berbeza.
-          </li>
-          <li>
-            Beban naik paling banyak 10% seminggu dan setiap minggu ke-4 lebih
-            ringan - badan menjadi kuat ketika berehat. Terlepas sesi? Teruskan
-            dengan minggu itu, jangan ganti dua kali ganda.
-          </li>
-          <li>
-            Cuaca Malaysia panas dan lembap: lari awal pagi atau lewat petang,
-            bawa air, perlahankan pace bila panas - ikut rasa usaha, bukan jam.
-          </li>
-        </ul>
-      </div>
-    </section>
-  </main>
-
-  <Footer />
+  <Section band narrow title="Sebelum mula" class="nota">
+    <ul>
+      <li>
+        Pelan ini panduan umum, <strong>bukan nasihat perubatan</strong>. Jika
+        ada masalah jantung, tekanan darah, sendi atau baru sembuh dari
+        kecederaan, rujuk doktor dulu. Berhenti jika sakit (bukan sekadar
+        penat).
+      </li>
+      <li>
+        Ambang "munasabah" adalah <strong>anggaran kasar</strong>: dari sifar ~{
+          MINGGU_MIN.sifar
+        } minggu, dari jalan-lari ~{MINGGU_MIN.jalan} minggu, dan dari 5K sekarang
+        ~{MINGGU_SETIAP_MINIT} minggu bagi setiap minit yang hendak dipotong. Setiap
+        orang berbeza.
+      </li>
+      <li>
+        Beban naik paling banyak 10% seminggu dan setiap minggu ke-4 lebih
+        ringan - badan menjadi kuat ketika berehat. Terlepas sesi? Teruskan
+        dengan minggu itu, jangan ganti dua kali ganda.
+      </li>
+      <li>
+        Cuaca Malaysia panas dan lembap: lari awal pagi atau lewat petang, bawa
+        air, perlahankan pace bila panas - ikut rasa usaha, bukan jam. Mahu
+        ukuran yang lebih tepat? Cuba <a class="link" href="/maf"
+          >lari ikut nadi (MAF)</a
+        > untuk sesi mudah.
+      </li>
+    </ul>
+  </Section>
 </Layout>
 
 <script>
-  import { TAHAP, buatPelan, type Minggu, type Tahap } from "../lib/pelan-5k";
+  import { buatIcs, waktuMalaysia } from "../lib/ics";
+  import {
+    HAD_TANPA_AKAUN,
+    HARI_SESI,
+    NAMA_HARI,
+    TAHAP,
+    bolehBuatPelan,
+    buatPelan,
+    isninMula,
+    tarikhSesi,
+    type Minggu,
+    type Tahap,
+  } from "../lib/pelan-5k";
 
   const borang = document.getElementById("borang") as HTMLFormElement;
   const masaMedan = document.getElementById("masa-medan")!;
@@ -188,7 +153,7 @@ import {
     hasil.hidden = false;
 
     if (!h.ok) {
-      pelanEl.innerHTML = `<div class="kotak amaran"><p>${h.sebab}</p>${
+      pelanEl.innerHTML = `<div class="alert alert-warning"><p>${h.sebab}</p>${
         h.cadanganBulan
           ? `<a class="btn btn-primary" href="?${new URLSearchParams({ ...Object.fromEntries(q), bulan: String(h.cadanganBulan) })}">Cuba ${h.cadanganBulan} bulan</a>`
           : ""
@@ -198,16 +163,27 @@ import {
     }
 
     const kunci = `pelan-5k:${bulan}-${tahap}-${masa5k ?? ""}-${hari}`;
+    const dibuat = baca("pelan-5k:dibuat");
+    const logMasuk = /(?:^|; )session_active=1/.test(document.cookie);
+    if (!bolehBuatPelan(kunci, dibuat, logMasuk)) {
+      pelanEl.innerHTML = `<div class="alert alert-info">
+        <p class="alert-title">${HAD_TANPA_AKAUN} pelan percuma tanpa akaun</p>
+        <p>Anda sudah buat ${HAD_TANPA_AKAUN} pelan berbeza di pelayar ini. Daftar akaun percuma untuk buat lebih banyak pelan.
+          Pelan yang sudah dibuat masih boleh dibuka seperti biasa.</p>
+        <div class="actions">
+          <a class="btn btn-primary" href="/register">Daftar percuma</a>
+          <a class="btn btn-outline" href="/login">Log masuk</a>
+        </div>
+      </div>`;
+      hasil.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+    if (!dibuat.includes(kunci)) simpan("pelan-5k:dibuat", [...dibuat, kunci]);
     const siap = new Set<string>(baca(kunci));
-    const mula = /^\d{4}-\d{2}-\d{2}$/.test(q.get("mula") ?? "")
-      ? new Date(`${q.get("mula")}T00:00:00`)
+    const isnin = /^\d{4}-\d{2}-\d{2}$/.test(q.get("mula") ?? "")
+      ? isninMula(new Date(`${q.get("mula")}T00:00:00`))
       : null;
-    const tarikh = (w: number) =>
-      mula &&
-      new Date(mula.getTime() + w * 7 * 864e5).toLocaleDateString("ms-MY", {
-        day: "numeric",
-        month: "short",
-      });
+    const hariIni = new Date().toDateString();
     const jumlah = h.minggu.reduce((a, w) => a + w.sesi.length, 0);
 
     pelanEl.innerHTML = `
@@ -216,15 +192,34 @@ import {
           <p class="eyebrow">Pelan anda</p>
           <h2 class="display section-title">${bulan} bulan · ${hari} hari seminggu</h2>
           <p class="lead">${TAHAP[tahap]}${masa5k ? ` (${masa5k} minit)` : ""} → 5K bawah 30 minit.
+            ${isnin ? `Bermula Isnin, ${isnin.toLocaleDateString("ms-MY", { day: "numeric", month: "long", year: "numeric" })}.` : ""}
             <span id="kemajuan"></span></p>
         </div>
-        <div class="aksi">
+        <div class="actions no-print">
           <button class="btn btn-outline" type="button" data-kongsi>Kongsi</button>
           <button class="btn btn-outline" type="button" onclick="print()">Cetak</button>
         </div>
       </div>
-      ${h.amaran.map((a) => `<div class="kotak amaran"><p>${a}</p></div>`).join("")}
-      <ol class="minggu">${h.minggu.map((w) => minggu(w, tarikh(w.no - 1))).join("")}</ol>`;
+      ${h.amaran.map((a) => `<div class="alert alert-warning amaran"><p>${a}</p></div>`).join("")}
+      <div class="kalendar no-print">
+        <h3 class="display">Simpan ke kalendar</h3>
+        ${
+          isnin
+            ? `<div class="actions">
+                <label class="field"><span class="field-label">Masa lari</span>
+                  <input class="input" type="time" id="masa-lari" value="06:30" /></label>
+                <button class="btn btn-primary" type="button" data-ics>Muat turun fail kalendar (.ics)</button>
+              </div>`
+            : `<p class="muted">Isi "Tarikh mula" di atas dan tekan "Buat pelan" - kalendar perlukan tarikh sebenar.</p>`
+        }
+        <ul class="muted">
+          <li><strong>iPhone / iPad:</strong> buka page ini dalam Safari, tekan butang dan pilih "Tambah Semua".</li>
+          <li><strong>Android (Samsung Calendar):</strong> buka fail yang dimuat turun dan pilih Kalendar.</li>
+          <li><strong>Google Calendar:</strong> app Android tidak boleh import fail. Guna calendar.google.com dalam pelayar komputer → Tetapan → Import &amp; eksport.</li>
+          <li><strong>Outlook / Mac:</strong> buka fail yang dimuat turun.</li>
+        </ul>
+      </div>
+      <ol class="minggu">${h.minggu.map((w) => minggu(w, isnin, hariIni)).join("")}</ol>`;
 
     const kemajuan = document.getElementById("kemajuan")!;
     const kira = () =>
@@ -256,29 +251,72 @@ import {
           /* dibatalkan */
         }
       });
-    hasil.scrollIntoView({ behavior: "smooth" });
+    pelanEl
+      .querySelector<HTMLButtonElement>("[data-ics]")
+      ?.addEventListener("click", () => {
+        const jam =
+          (document.getElementById("masa-lari") as HTMLInputElement).value ||
+          "06:30";
+        const ics = buatIcs(
+          h.minggu.flatMap((w) =>
+            w.sesi.map((s, i) => ({
+              uid: `${kunci.replace(":", "-")}-m${w.no}s${i}`,
+              mula: waktuMalaysia(tarikhSesi(isnin!, w.no, hari, i), jam),
+              minit: s.minit,
+              tajuk: `Nubi 5K · Minggu ${w.no}: ${s.tajuk} (${s.minit} min)`,
+              keterangan: `${s.arahan}\n${s.usaha}`,
+            })),
+          ),
+          { nama: `Nubi 5K · ${bulan} bulan` },
+        );
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(
+          new Blob([ics], { type: "text/calendar" }),
+        );
+        a.download = `pelan-5k-${bulan}bln-${tahap}-${hari}hari.ics`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 60e3);
+      });
+    // Minggu semasa (bila tarikh mula diisi) lebih berguna dari atas pelan.
+    (pelanEl.querySelector(".kad.kini") ?? hasil).scrollIntoView({
+      behavior: "smooth",
+    });
   }
 
-  function minggu(w: Minggu, tarikh: string | null) {
-    return `<li class="kad${w.ringan ? " ringan" : ""}">
+  function minggu(w: Minggu, isnin: Date | null, hariIni: string) {
+    const hari = w.sesi.length;
+    const tarikh = (i: number) => isnin && tarikhSesi(isnin, w.no, hari, i);
+    const isninIni = tarikh(0)?.getTime(); // sesi pertama = Isnin minggu itu
+    const kini =
+      isninIni !== undefined &&
+      Date.now() >= isninIni &&
+      Date.now() < isninIni + 7 * 864e5;
+    return `<li class="kad${w.ringan ? " ringan" : ""}${kini ? " kini" : ""}">
       <header>
         <h3 class="display">Minggu ${w.no}</h3>
-        <span class="tag">${w.fasa}${w.ringan && w.fasa !== "Ujian" ? " · ringan" : ""}</span>
-        <span class="minit">${tarikh ? `${tarikh} · ` : ""}${w.minit} min</span>
+        <span class="tag">${kini ? "Minggu ini · " : ""}${w.fasa}${w.ringan && w.fasa !== "Ujian" ? " · ringan" : ""}</span>
+        <span class="minit">${w.minit} min</span>
       </header>
       <ol>${w.sesi
-        .map(
-          (s, i) => `<li class="sesi ${s.jenis}">
+        .map((s, i) => {
+          const d = tarikh(i);
+          const label =
+            NAMA_HARI[HARI_SESI[hari][i]] +
+            (d
+              ? ` ${d.toLocaleDateString("ms-MY", { day: "numeric", month: "short" })}`
+              : "");
+          const today = d?.toDateString() === hariIni;
+          return `<li class="sesi ${s.jenis}${today ? " hari-ini" : ""}">
             <label>
-              <input type="checkbox" data-sesi="${w.no}.${i}" aria-label="Minggu ${w.no} sesi ${i + 1} siap" />
+              <input type="checkbox" data-sesi="${w.no}.${i}" aria-label="Minggu ${w.no}, ${label}, siap" />
               <span>
-                <strong>Sesi ${i + 1}: ${s.tajuk}</strong> <em>${s.minit} min</em>
+                <strong>${today ? "Hari ini · " : ""}${label}: ${s.tajuk}</strong> <em>${s.minit} min</em>
                 <span class="arahan">${s.arahan}</span>
                 <span class="usaha">${s.usaha}</span>
               </span>
             </label>
-          </li>`,
-        )
+          </li>`;
+        })
         .join("")}</ol>
     </li>`;
   }
@@ -301,93 +339,6 @@ import {
 
 <!-- Global: pelan dirender melalui innerHTML, jadi gaya scoped Astro tak sampai. CSS ini hanya dimuat di page ini. -->
 <style is:global>
-  .intro {
-    background:
-      radial-gradient(
-        50rem 26rem at 90% 0%,
-        rgb(255 90 31 / 0.16),
-        transparent 60%
-      ),
-      var(--navy);
-    color: #fff;
-  }
-  .eyebrow.on-dark {
-    color: var(--orange);
-  }
-  .title {
-    font-size: clamp(3rem, 9vw, 5.5rem);
-    margin: 0 0 1rem;
-  }
-  .title span {
-    color: var(--orange);
-  }
-  .lead.on-dark {
-    color: #cbd5e1;
-  }
-
-  .form {
-    margin-top: 2.5rem;
-    display: grid;
-    gap: 1.5rem;
-    max-width: 44rem;
-  }
-  fieldset {
-    border: 0;
-    padding: 0;
-    margin: 0;
-  }
-  legend,
-  .field > span {
-    font-family: var(--display);
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #cbd5e1;
-    margin-bottom: 0.6rem;
-    display: block;
-  }
-  .chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-  .chip input {
-    position: absolute;
-    opacity: 0;
-  }
-  .chip span {
-    display: inline-block;
-    padding: 0.55rem 1rem;
-    border-radius: 999px;
-    box-shadow: inset 0 0 0 2px rgb(255 255 255 / 0.25);
-    cursor: pointer;
-  }
-  .chip input:checked + span {
-    background: var(--orange);
-    color: var(--navy);
-    box-shadow: none;
-    font-weight: 600;
-  }
-  .chip input:focus-visible + span {
-    outline: 3px solid var(--orange);
-    outline-offset: 3px;
-  }
-  .field input {
-    font: inherit;
-    padding: 0.65rem 0.9rem;
-    border-radius: 0.6rem;
-    border: 2px solid rgb(255 255 255 / 0.25);
-    background: var(--navy-2);
-    color: #fff;
-    color-scheme: dark;
-    width: min(100%, 16rem);
-  }
-  .form .btn {
-    justify-self: start;
-    border: 0;
-    cursor: pointer;
-  }
-
   .hasil {
     padding-block: clamp(3rem, 7vw, 5rem);
   }
@@ -398,35 +349,8 @@ import {
     justify-content: space-between;
     gap: 1rem;
   }
-  .aksi {
-    display: flex;
-    gap: 0.5rem;
-  }
-  .btn-outline {
-    color: var(--navy);
-    background: none;
-    border: 0;
-    cursor: pointer;
-    box-shadow: inset 0 0 0 2px var(--line);
-  }
-  .btn-outline:hover {
-    box-shadow: inset 0 0 0 2px var(--navy);
-  }
-  .kotak {
-    margin-top: 1.5rem;
-    padding: 1.25rem 1.5rem;
-    border-radius: 1rem;
-    display: grid;
-    gap: 1rem;
-    justify-items: start;
-  }
-  .kotak p {
-    margin: 0;
-  }
   .amaran {
-    background: #fff7ed;
-    border: 1px solid #fed7aa;
-    color: #7c2d12;
+    margin-top: 1.5rem;
   }
 
   .minggu {
@@ -446,6 +370,16 @@ import {
   }
   .kad.ringan {
     background: var(--paper-2);
+  }
+  .kad.kini {
+    border: 2px solid var(--orange);
+    scroll-margin-top: 5.5rem; /* bawah header sticky */
+  }
+  .sesi.hari-ini {
+    background: rgb(255 90 31 / 0.08);
+    border-radius: 0.5rem;
+    margin: -0.4rem;
+    padding: 0.4rem;
   }
   .kad header {
     display: flex;
@@ -518,13 +452,27 @@ import {
     color: var(--muted);
   }
 
-  .nota {
-    background: var(--paper-2);
-    border-top: 1px solid var(--line);
+  .kalendar {
+    margin-top: 1.5rem;
+    display: grid;
+    gap: 0.75rem;
   }
-  .narrow {
-    max-width: 48rem;
+  .kalendar h3 {
+    font-size: 1.6rem;
+    margin: 0;
+    color: var(--navy);
   }
+  .kalendar .actions {
+    align-items: end;
+  }
+  .kalendar ul {
+    margin: 0;
+    padding-left: 1.2rem;
+    font-size: 0.9rem;
+    display: grid;
+    gap: 0.25rem;
+  }
+
   .nota ul {
     padding-left: 1.2rem;
     color: var(--muted);
@@ -533,15 +481,6 @@ import {
   }
 
   @media print {
-    .site-header,
-    .site-footer,
-    .intro,
-    .aksi {
-      display: none !important;
-    }
-    .hasil {
-      padding: 0;
-    }
     .minggu {
       grid-template-columns: 1fr 1fr;
     }

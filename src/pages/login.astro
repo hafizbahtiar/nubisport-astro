@@ -1,0 +1,209 @@
+---
+import Layout from "../layouts/Layout.astro";
+import PageHero from "../components/ui/PageHero.astro";
+import Field from "../components/ui/Field.astro";
+import Alert from "../components/ui/Alert.astro";
+import { ACCOUNT, TURNSTILE_SITE_KEY } from "../data/site";
+---
+
+<Layout
+  title="Log masuk - Nubi Sport"
+  description="Log masuk ke akaun Nubi Sport."
+>
+  <PageHero
+    eyebrow="Akaun"
+    title="Log"
+    accent="masuk."
+    lead="Satu akaun untuk Nubi Sport dan hafizbahtiar.com - guna e-mel dan kata laluan yang sama."
+  >
+    <form class="form login" id="borang" novalidate hidden>
+      <Field label="E-mel">
+        <input
+          class="input"
+          type="email"
+          name="email"
+          autocomplete="email"
+          required
+        />
+      </Field>
+      <Field label="Kata laluan">
+        <input
+          class="input"
+          type="password"
+          name="password"
+          autocomplete="current-password"
+          required
+        />
+      </Field>
+      <!-- Turnstile: tersembunyi kecuali Cloudflare minta interaksi. Token masuk input "cf-turnstile-response". -->
+      <div
+        class="cf-turnstile"
+        data-sitekey={TURNSTILE_SITE_KEY}
+        data-action="login"
+        data-appearance="interaction-only"
+      >
+      </div>
+      <p class="mesej" id="mesej" aria-live="polite" hidden></p>
+      <p class="lead" id="belum-sah" hidden>
+        Tiada e-mel pengesahan?{" "}
+        <a class="link" href="/verify">Hantar semula pautan</a>.
+      </p>
+      <button class="btn btn-primary" type="submit">Log masuk</button>
+      <p class="lead">
+        Belum ada akaun? <a class="link" href="/register">Daftar</a>.
+      </p>
+    </form>
+
+    <div class="form" id="akaun" hidden>
+      <p class="lead">
+        Anda log masuk sebagai <strong id="nama"></strong> (<span id="emel"
+        ></span>).
+      </p>
+      <p class="lead" id="peranan"></p>
+      <div class="actions">
+        <a class="btn btn-primary" href="/pelan-5k">Pelan 5K</a>
+        <button class="btn btn-ghost" type="button" id="keluar"
+          >Log keluar</button
+        >
+      </div>
+    </div>
+
+    <p class="lead" id="memuat">Menyemak sesi...</p>
+  </PageHero>
+
+  <section>
+    <div class="container narrow">
+      <Alert variant="info" title="Data anda">
+        <p>
+          Nubi Sport hanya menyimpan sesi log masuk (cookie). Akaun, kata laluan
+          dan profil diurus di{" "}
+          <a class="link" href={ACCOUNT.manage} rel="noopener"
+            >hafizbahtiar.com/account</a
+          >.
+        </p>
+      </Alert>
+    </div>
+  </section>
+</Layout>
+
+<script
+  is:inline
+  src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+  async
+  defer></script>
+
+<script>
+  import { api, json, saya, type Saya } from "../lib/api";
+
+  const borang = document.getElementById("borang") as HTMLFormElement;
+  const akaun = document.getElementById("akaun")!;
+  const memuat = document.getElementById("memuat")!;
+  const mesej = document.getElementById("mesej")!;
+  const belumSah = document.getElementById("belum-sah")!;
+  const butang = borang.querySelector<HTMLButtonElement>(
+    "button[type=submit]",
+  )!;
+  const turnstile = () =>
+    (window as any).turnstile as { reset(): void } | undefined;
+
+  const papar = (s: Saya | null) => {
+    memuat.hidden = true;
+    borang.hidden = !!s;
+    akaun.hidden = !s;
+    if (!s) return;
+    document.getElementById("nama")!.textContent = s.name;
+    document.getElementById("emel")!.textContent = s.email;
+    const nubi = s.apps?.nubi;
+    document.getElementById("peranan")!.textContent =
+      s.role === "owner"
+        ? "Peranan: owner (akses penuh)."
+        : nubi === "admin"
+          ? "Peranan: Admin Nubi Sport."
+          : nubi === "ahli"
+            ? "Peranan: Ahli Nubi Sport."
+            : "Pengguna berdaftar - belum ahli Nubi Sport. Keahlian diluluskan oleh admin.";
+    const a = document.querySelector("[data-akaun]");
+    if (a) a.textContent = "Akaun";
+  };
+
+  const ralat = (teks: string) => {
+    mesej.textContent = teks;
+    mesej.hidden = false;
+  };
+
+  // Mesej mesra - jangan papar teks teknikal dari backend.
+  const terangkan = (status: number, body: Record<string, any>) => {
+    if (status === 403 && body.code === "email_unverified")
+      return "Sahkan e-mel anda dulu - semak peti masuk untuk pautan pengesahan.";
+    if (status === 403 && body.code === "account_banned")
+      return "Akaun ini disekat. Hubungi pentadbir.";
+    if (
+      String(body.error ?? "")
+        .toLowerCase()
+        .includes("captcha")
+    )
+      return "Semakan spam gagal. Muat semula page dan cuba lagi.";
+    if (status === 400 || status === 401)
+      return "E-mel atau kata laluan salah.";
+    if (status === 429) return "Terlalu banyak cubaan. Tunggu seminit.";
+    return "Tak dapat log masuk sekarang. Cuba sebentar lagi.";
+  };
+
+  borang.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    mesej.hidden = true;
+    belumSah.hidden = true;
+    const f = new FormData(borang);
+    const email = String(f.get("email") ?? "").trim();
+    const password = String(f.get("password") ?? "");
+    if (!email || !password) return ralat("Masukkan e-mel dan kata laluan.");
+
+    butang.disabled = true;
+    try {
+      const res = await api("/auth/login", {
+        method: "POST",
+        body: JSON.stringify({
+          email,
+          password,
+          captchaToken:
+            String(f.get("cf-turnstile-response") ?? "") || undefined,
+        }),
+      });
+      if (!res.ok) {
+        const body = await json(res);
+        belumSah.hidden = body.code !== "email_unverified";
+        return ralat(terangkan(res.status, body));
+      }
+      papar(await saya());
+    } catch {
+      ralat("Tiada sambungan. Semak internet anda dan cuba lagi.");
+    } finally {
+      butang.disabled = false;
+      turnstile()?.reset(); // token sekali guna
+    }
+  });
+
+  document.getElementById("keluar")!.addEventListener("click", async () => {
+    await api("/auth/logout", { method: "POST" }).catch(() => {});
+    // Cookie httpOnly dipadam oleh backend; session_active juga, tapi pastikan UI ikut.
+    document.cookie = "session_active=; Max-Age=0; path=/";
+    location.reload();
+  });
+
+  saya()
+    .then(papar)
+    .catch(() => papar(null));
+</script>
+
+<style>
+  .login {
+    max-width: 26rem;
+  }
+  .mesej {
+    margin: 0;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius);
+    background: var(--danger-bg);
+    color: var(--danger-ink);
+  }
+</style>

@@ -1,0 +1,192 @@
+---
+import Layout from "../layouts/Layout.astro";
+import PageHero from "../components/ui/PageHero.astro";
+import Field from "../components/ui/Field.astro";
+import Alert from "../components/ui/Alert.astro";
+import { TURNSTILE_SITE_KEY } from "../data/site";
+---
+
+<Layout title="Daftar - Nubi Sport" description="Daftar akaun Nubi Sport.">
+  <PageHero
+    eyebrow="Akaun"
+    title="Daftar"
+    accent="akaun."
+    lead="Satu akaun untuk Nubi Sport dan hafizbahtiar.com - selepas daftar, anda boleh log masuk di kedua-dua laman."
+  >
+    <form class="form daftar" id="borang" novalidate>
+      <Field label="Nama">
+        <input
+          class="input"
+          type="text"
+          name="name"
+          autocomplete="name"
+          maxlength="100"
+          required
+        />
+      </Field>
+      <Field label="E-mel">
+        <input
+          class="input"
+          type="email"
+          name="email"
+          autocomplete="email"
+          maxlength="255"
+          required
+        />
+      </Field>
+      <Field label="Kata laluan" hint="12 hingga 200 aksara.">
+        <input
+          class="input"
+          type="password"
+          name="password"
+          autocomplete="new-password"
+          minlength="12"
+          maxlength="200"
+          required
+        />
+      </Field>
+      <Field label="Sahkan kata laluan">
+        <input
+          class="input"
+          type="password"
+          name="password2"
+          autocomplete="new-password"
+          required
+        />
+      </Field>
+      <Alert variant="danger" id="mesej" hidden />
+      <button class="btn btn-primary" type="submit">Daftar</button>
+      <p class="lead">
+        Sudah ada akaun? <a class="link" href="/login">Log masuk</a>.
+      </p>
+    </form>
+
+    <div class="form daftar" id="siap" hidden>
+      <Alert variant="success" title="Semak e-mel anda">
+        <p>
+          Jika e-mel ini boleh didaftarkan, pautan pengesahan sedang dihantar.
+          Klik pautan itu dalam masa 24 jam, kemudian log masuk.
+        </p>
+      </Alert>
+      <p class="lead">Tiada e-mel? Semak folder spam, atau hantar semula.</p>
+      <Alert variant="danger" id="mesej-semula" hidden />
+      <div class="actions">
+        <button class="btn btn-primary" type="button" id="semula"
+          >Hantar semula</button
+        >
+        <a class="btn btn-ghost" href="/login">Log masuk</a>
+      </div>
+    </div>
+
+    <!-- Turnstile: tersembunyi kecuali Cloudflare minta interaksi. Dikongsi borang daftar + hantar semula. -->
+    <div
+      class="cf-turnstile"
+      data-sitekey={TURNSTILE_SITE_KEY}
+      data-action="register"
+      data-appearance="interaction-only"
+    >
+    </div>
+  </PageHero>
+</Layout>
+
+<script
+  is:inline
+  src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+  async
+  defer></script>
+
+<script>
+  import {
+    api,
+    captcha,
+    hantarSemula,
+    json,
+    ralatAm,
+    resetCaptcha,
+  } from "../lib/api";
+
+  const borang = document.getElementById("borang") as HTMLFormElement;
+  const siap = document.getElementById("siap")!;
+  const mesej = document.getElementById("mesej")!;
+  const mesejSemula = document.getElementById("mesej-semula")!;
+  const butang = borang.querySelector<HTMLButtonElement>(
+    "button[type=submit]",
+  )!;
+  const semula = document.getElementById("semula") as HTMLButtonElement;
+  let email = "";
+
+  const papar = (el: HTMLElement, teks: string | null) => {
+    el.textContent = teks ?? "";
+    el.hidden = !teks;
+  };
+
+  // Sama dengan RegisterSchema backend (validators/auth.ts).
+  const semak = (name: string, mail: string, pw: string, pw2: string) => {
+    if (!name || name.length > 100)
+      return "Masukkan nama (maksimum 100 aksara).";
+    if (!mail || mail.length > 255 || !borang.email.checkValidity())
+      return "Masukkan e-mel yang sah.";
+    if (pw.length < 12 || pw.length > 200)
+      return "Kata laluan mesti 12 hingga 200 aksara.";
+    if (pw !== pw2) return "Kata laluan tidak sama.";
+    return null;
+  };
+
+  const terangkan = (status: number, body: Record<string, any>) =>
+    ralatAm(status, body) ??
+    (status === 400 && body.field === "email"
+      ? "Masukkan e-mel yang sah."
+      : status === 400 && body.field === "password"
+        ? "Kata laluan mesti 12 hingga 200 aksara."
+        : status === 400 && body.field === "name"
+          ? "Masukkan nama (maksimum 100 aksara)."
+          : "Tak dapat daftar sekarang. Cuba sebentar lagi.");
+
+  borang.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = new FormData(borang);
+    const name = String(f.get("name") ?? "").trim();
+    const mail = String(f.get("email") ?? "").trim();
+    const password = String(f.get("password") ?? "");
+    const salah = semak(name, mail, password, String(f.get("password2") ?? ""));
+    papar(mesej, salah);
+    if (salah) return;
+
+    butang.disabled = true;
+    try {
+      const res = await api("/auth/register", {
+        method: "POST",
+        body: JSON.stringify({
+          name,
+          email: mail,
+          password,
+          app: "nubi",
+          captchaToken: captcha(),
+        }),
+      });
+      if (!res.ok) return papar(mesej, terangkan(res.status, await json(res)));
+      email = mail;
+      borang.hidden = true;
+      siap.hidden = false;
+    } catch {
+      papar(mesej, "Tiada sambungan. Semak internet anda dan cuba lagi.");
+    } finally {
+      butang.disabled = false;
+      resetCaptcha(); // token sekali guna
+    }
+  });
+
+  semula.addEventListener("click", async () => {
+    semula.disabled = true;
+    const salah = await hantarSemula(email);
+    papar(mesejSemula, salah);
+    semula.disabled = false;
+    if (!salah) semula.textContent = "Dihantar - semak e-mel";
+  });
+</script>
+
+<style>
+  .daftar {
+    max-width: 26rem;
+  }
+</style>

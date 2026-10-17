@@ -1,0 +1,39 @@
+---
+// Kumpulan radio berbentuk pil. Nilai dihantar dalam GET seperti radio biasa.
+interface Props {
+  legend: string;
+  name: string;
+  options: { value: string | number; label: string }[];
+  checked?: string | number;
+  required?: boolean;
+  stacked?: boolean; // satu pilihan sebaris - untuk label panjang
+}
+const {
+  legend,
+  name,
+  options,
+  checked,
+  required = true,
+  stacked,
+} = Astro.props;
+---
+
+<fieldset>
+  <legend>{legend}</legend>
+  <div class:list={["chips", stacked && "chips-stacked"]}>
+    {
+      options.map((o) => (
+        <label class="chip">
+          <input
+            type="radio"
+            name={name}
+            value={o.value}
+            required={required}
+            checked={o.value === checked}
+          />
+          <span>{o.label}</span>
+        </label>
+      ))
+    }
+  </div>
+</fieldset>

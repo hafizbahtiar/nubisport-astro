@@ -1,19 +1,49 @@
-/* Palette = scripts/brand/gen.py: deep navy + energy orange. */
+/* Nubi Sport - asas UI. Satu fail, dimuat oleh Layout.astro untuk semua page.
+   Komponen (src/components/ui/) hanya menyusun markup; gaya ada di sini supaya
+   HTML yang dirender skrip (innerHTML) dapat gaya yang sama.
+   Susunan: token · asas · susun atur · tipografi · butang · borang · kad · alert · permukaan gelap · cetak */
+
+/* ---------- Token ---------- */
+/* Palet = scripts/brand/gen.py: navy pekat + oren tenaga. */
 :root {
   --navy: #0a1a33;
   --navy-2: #12264a;
   --orange: #ff5a1f;
-  --orange-ink: #c2410c; /* orange text on white (AA contrast) */
+  --orange-hover: #ff7a45;
+  --orange-ink: #c2410c;
+  /* teks oren atas putih (kontras AA) */
   --ink: #0f172a;
   --muted: #475569;
   --line: #e2e8f0;
   --paper: #ffffff;
   --paper-2: #f8fafc;
+  --on-dark: #cbd5e1;
+  /* teks biasa atas navy */
+  --on-dark-line: rgb(255 255 255 / 0.25);
+
+  --info-bg: #eff6ff;
+  --info-line: #bfdbfe;
+  --info-ink: #1e3a8a;
+  --warning-bg: #fff7ed;
+  --warning-line: #fed7aa;
+  --warning-ink: #7c2d12;
+  --danger-bg: #fef2f2;
+  --danger-line: #fecaca;
+  --danger-ink: #991b1b;
+  --success-bg: #f0fdf4;
+  --success-line: #bbf7d0;
+  --success-ink: #14532d;
+
+  --radius: 0.6rem;
+  --radius-lg: 1rem;
+  --header-h: 4.25rem;
+
   --display: "Barlow Condensed", "Avenir Next Condensed", "Arial Narrow", sans-serif;
   --body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color-scheme: light;
 }
 
+/* ---------- Asas ---------- */
 *,
 *::before,
 *::after {
@@ -22,11 +52,18 @@
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 5rem;
+  scroll-padding-top: calc(var(--header-h) + 1rem);
 }
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
   }
 }
 
@@ -38,7 +75,8 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-img {
+img,
+svg {
   display: block;
   max-width: 100%;
 }
@@ -47,16 +85,60 @@ a {
   color: inherit;
 }
 
+.link {
+  color: var(--orange-ink);
+  font-weight: 600;
+  text-underline-offset: 0.2em;
+}
+
 :focus-visible {
   outline: 3px solid var(--orange);
   outline-offset: 3px;
 }
 
+/* `hidden` mesti menang walaupun kelas menetapkan display (.form, .field, .alert ...). */
+[hidden] {
+  display: none !important;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- Susun atur ---------- */
 .container {
   width: min(72rem, 100% - 2.5rem);
   margin-inline: auto;
 }
 
+.narrow {
+  max-width: 48rem;
+}
+
+section {
+  padding-block: clamp(4rem, 9vw, 7rem);
+}
+
+.band {
+  background: var(--paper-2);
+  border-block: 1px solid var(--line);
+}
+
+.grid-cards {
+  list-style: none;
+  padding: 0;
+  margin: 3rem 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 1.25rem;
+}
+
+/* ---------- Tipografi ---------- */
 .display {
   font-family: var(--display);
   font-style: italic;
@@ -76,49 +158,334 @@ a {
   margin: 0 0 0.75rem;
 }
 
+.section-title {
+  font-size: clamp(2.4rem, 6vw, 3.75rem);
+  margin: 0 0 1rem;
+  color: var(--navy);
+}
+
+.lead {
+  max-width: 40rem;
+  color: var(--muted);
+  font-size: 1.15rem;
+  margin: 0;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.prose {
+  max-width: 44rem;
+}
+
+.prose>*+* {
+  margin-top: 1rem;
+}
+
+.prose h3 {
+  font-size: 1.75rem;
+  color: var(--navy);
+  margin: 2.5rem 0 0;
+}
+
+.prose ul,
+.prose ol {
+  padding-left: 1.2rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+/* ---------- Butang ---------- */
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
   padding: 0.85rem 1.5rem;
+  border: 0;
   border-radius: 999px;
+  background: none;
   font-family: var(--display);
   font-weight: 700;
   font-size: 1.1rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   text-decoration: none;
-  transition: transform 0.15s ease, background-color 0.15s ease;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
+
 .btn:hover {
   transform: translateY(-1px);
 }
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+  transform: none;
+}
+
+.btn-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.95rem;
+}
+
 .btn-primary {
   background: var(--orange);
   color: var(--navy);
 }
+
 .btn-primary:hover {
-  background: #ff7a45;
+  background: var(--orange-hover);
 }
+
+.btn-outline {
+  color: var(--navy);
+  box-shadow: inset 0 0 0 2px var(--line);
+}
+
+.btn-outline:hover {
+  box-shadow: inset 0 0 0 2px var(--navy);
+}
+
 .btn-ghost {
   color: #fff;
-  box-shadow: inset 0 0 0 2px rgb(255 255 255 / 0.35);
+  box-shadow: inset 0 0 0 2px var(--on-dark-line);
 }
+
 .btn-ghost:hover {
   box-shadow: inset 0 0 0 2px #fff;
 }
 
-section {
-  padding-block: clamp(4rem, 9vw, 7rem);
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
-.section-title {
-  font-size: clamp(2.4rem, 6vw, 3.75rem);
-  margin: 0 0 1rem;
+
+/* ---------- Borang ---------- */
+.form {
+  display: grid;
+  gap: 1.5rem;
+  max-width: 44rem;
+}
+
+.form>.btn {
+  justify-self: start;
+}
+
+fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+legend,
+.field-label {
+  display: block;
+  margin-bottom: 0.6rem;
+  font-family: var(--display);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: var(--navy);
 }
-.lead {
-  max-width: 40rem;
+
+.field {
+  display: grid;
+  justify-items: start;
+}
+
+.field-hint {
+  margin-top: 0.35rem;
+  font-size: 0.88rem;
   color: var(--muted);
-  font-size: 1.15rem;
+}
+
+.input {
+  font: inherit;
+  width: min(100%, 22rem);
+  padding: 0.65rem 0.9rem;
+  border-radius: var(--radius);
+  border: 2px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.input:focus-visible {
+  outline: none;
+  border-color: var(--orange);
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--danger-ink);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.chip input {
+  position: absolute;
+  opacity: 0;
+}
+
+.chip span {
+  display: inline-block;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 2px var(--line);
+  cursor: pointer;
+}
+
+.chip input:checked+span {
+  background: var(--orange);
+  color: var(--navy);
+  box-shadow: none;
+  font-weight: 600;
+}
+
+.chip input:focus-visible+span {
+  outline: 3px solid var(--orange);
+  outline-offset: 3px;
+}
+
+.chips-stacked {
+  flex-direction: column;
+  max-width: 40rem;
+}
+
+.chips-stacked .chip span {
+  display: block;
+  border-radius: var(--radius);
+}
+
+/* ---------- Kad ---------- */
+.card {
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+}
+
+.card-title {
+  font-size: 1.75rem;
+  color: var(--navy);
+  margin: 0.5rem 0;
+}
+
+.card p {
   margin: 0;
+  color: var(--muted);
+}
+
+/* ---------- Alert ---------- */
+.alert {
+  display: grid;
+  gap: 0.75rem;
+  justify-items: start;
+  padding: 1.1rem 1.4rem;
+  border: 1px solid;
+  border-radius: var(--radius-lg);
+}
+
+.alert p {
+  margin: 0;
+}
+
+.alert-title {
+  font-weight: 700;
+}
+
+.alert-info {
+  background: var(--info-bg);
+  border-color: var(--info-line);
+  color: var(--info-ink);
+}
+
+.alert-warning {
+  background: var(--warning-bg);
+  border-color: var(--warning-line);
+  color: var(--warning-ink);
+}
+
+.alert-danger {
+  background: var(--danger-bg);
+  border-color: var(--danger-line);
+  color: var(--danger-ink);
+}
+
+.alert-success {
+  background: var(--success-bg);
+  border-color: var(--success-line);
+  color: var(--success-ink);
+}
+
+/* ---------- Permukaan gelap (hero / PageHero) ---------- */
+.surface-dark {
+  background:
+    radial-gradient(50rem 26rem at 90% 0%, rgb(255 90 31 / 0.16), transparent 60%),
+    var(--navy);
+  color: #fff;
+}
+
+.surface-dark .eyebrow,
+.surface-dark .link {
+  color: var(--orange);
+}
+
+.surface-dark .lead,
+.surface-dark .field-hint,
+.surface-dark legend,
+.surface-dark .field-label {
+  color: var(--on-dark);
+}
+
+.surface-dark .chip span {
+  box-shadow: inset 0 0 0 2px var(--on-dark-line);
+}
+
+.surface-dark .input {
+  background: var(--navy-2);
+  border-color: var(--on-dark-line);
+  color: #fff;
+  color-scheme: dark;
+}
+
+.surface-dark .input:focus-visible {
+  border-color: var(--orange);
+}
+
+.page-title {
+  font-size: clamp(3rem, 9vw, 5.5rem);
+  margin: 0 0 1rem;
+}
+
+.page-title span {
+  color: var(--orange);
+}
+
+.page-hero .form {
+  margin-top: 2.5rem;
+}
+
+/* ---------- Cetak ---------- */
+@media print {
+
+  .site-header,
+  .site-footer,
+  .no-print {
+    display: none !important;
+  }
+
+  section {
+    padding-block: 0;
+  }
 }

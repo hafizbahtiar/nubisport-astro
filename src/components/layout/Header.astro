@@ -1,5 +1,5 @@
 ---
-import { SITE } from "../data/site";
+import { SITE } from "../../data/site";
 ---
 
 <header class="site-header">
@@ -14,9 +14,11 @@ import { SITE } from "../data/site";
       />
     </a>
     <nav aria-label="Utama">
-      <a href="/#tentang">Tentang</a>
-      <a href="/#cara">Cara sertai</a>
+      <a class="desktop" href="/#tentang">Tentang</a>
+      <a class="desktop" href="/#cara">Cara sertai</a>
       <a href="/pelan-5k">Pelan 5K</a>
+      <a class="desktop" href="/maf">MAF</a>
+      <a class="btn btn-ghost btn-sm" href="/login" data-akaun>Log masuk</a>
     </nav>
   </div>
 </header>
@@ -42,6 +44,7 @@ import { SITE } from "../data/site";
   }
   nav {
     display: flex;
+    align-items: center;
     gap: 1.5rem;
   }
   nav a {
@@ -53,12 +56,27 @@ import { SITE } from "../data/site";
     letter-spacing: 0.06em;
     text-transform: uppercase;
   }
-  nav a:hover {
+  nav a:not(.btn):hover {
     color: var(--orange);
   }
+  nav .btn {
+    color: #fff;
+  }
+  /* Phone: Pelan 5K + log masuk sahaja (yang lain dipaut dari laman utama). */
   @media (max-width: 40rem) {
     nav {
+      gap: 1rem;
+    }
+    .desktop {
       display: none;
     }
   }
 </style>
+
+<script>
+  // session_active = cookie UX (bukan httpOnly) dari backend: tanda sudah log masuk.
+  if (/(?:^|; )session_active=1/.test(document.cookie)) {
+    const a = document.querySelector<HTMLAnchorElement>("[data-akaun]");
+    if (a) a.textContent = "Akaun";
+  }
+</script>

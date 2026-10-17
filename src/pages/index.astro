@@ -1,7 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import Header from "../components/Header.astro";
-import Footer from "../components/Footer.astro";
+import Section from "../components/ui/Section.astro";
 import { CONTACT, SITE } from "../data/site";
 
 const values = [
@@ -57,133 +56,114 @@ const contacts = [
 ---
 
 <Layout>
-  <Header />
-
-  <main>
-    <section class="hero">
-      <div class="container hero-grid">
-        <div>
-          <p class="eyebrow on-dark">
-            {SITE.tagline} · Est. {SITE.established}
-          </p>
-          <h1 class="display hero-title">
-            Lari pertama anda <span>bermula di sini.</span>
-          </h1>
-          <p class="hero-lead">
-            Nubi Sport ialah komuniti larian untuk pemula. Tiada pace minimum,
-            tiada siapa ditinggalkan - hanya langkah demi langkah, bersama.
-          </p>
-          <div class="hero-cta">
-            <a class="btn btn-primary" href="#sertai">Sertai komuniti</a>
-            <a class="btn btn-ghost" href="/pelan-5k">Pelan 5K bawah 30 min</a>
-          </div>
-        </div>
-        <img
-          src="/brand/nubi-crest-roundel-reversed.svg"
-          alt="Jata Nubi Sport - Running Community"
-          width="320"
-          height="320"
-          class="hero-crest"
-        />
-      </div>
-    </section>
-
-    <section id="tentang">
-      <div class="container">
-        <p class="eyebrow">Tentang kami</p>
-        <h2 class="display section-title">Nubi = newbie. Dan itu okey.</h2>
-        <p class="lead">
-          Kami kumpulan pelari baru yang mahu mula dengan cara yang betul -
-          tanpa tekanan, tanpa ego. Setiap orang bermula di tempat yang berbeza.
+  <section class="surface-dark hero">
+    <div class="container hero-grid">
+      <div>
+        <p class="eyebrow">
+          {SITE.tagline} · Est. {SITE.established}
         </p>
-        <ul class="cards">
-          {
-            values.map((v, i) => (
-              <li class="card">
-                <span class="card-num display">0{i + 1}</span>
-                <h3 class="display card-title">{v.title}</h3>
-                <p>{v.body}</p>
-              </li>
-            ))
-          }
-        </ul>
+        <h1 class="display hero-title">
+          Lari pertama anda <span>bermula di sini.</span>
+        </h1>
+        <p class="hero-lead">
+          Nubi Sport ialah komuniti larian untuk pemula. Tiada pace minimum,
+          tiada siapa ditinggalkan - hanya langkah demi langkah, bersama.
+        </p>
+        <div class="actions hero-cta">
+          <a class="btn btn-primary" href="#sertai">Sertai komuniti</a>
+          <a class="btn btn-ghost" href="/pelan-5k">Pelan 5K bawah 30 min</a>
+          <a class="btn btn-ghost" href="/maf">Lari ikut nadi (MAF)</a>
+        </div>
       </div>
-    </section>
+      <img
+        src="/brand/nubi-crest-roundel-reversed.svg"
+        alt="Jata Nubi Sport - Running Community"
+        width="320"
+        height="320"
+        class="hero-crest"
+      />
+    </div>
+  </section>
 
-    <section id="cara" class="band">
-      <div class="container">
-        <p class="eyebrow">Cara sertai</p>
-        <h2 class="display section-title">Tiga langkah, itu sahaja.</h2>
-        <ol class="steps">
-          {
-            steps.map((s) => (
-              <li>
-                <h3 class="display card-title">{s.title}</h3>
-                <p>{s.body}</p>
-              </li>
-            ))
-          }
-        </ol>
-      </div>
-    </section>
+  <Section
+    id="tentang"
+    eyebrow="Tentang kami"
+    title="Nubi = newbie. Dan itu okey."
+    lead="Kami kumpulan pelari baru yang mahu mula dengan cara yang betul - tanpa tekanan, tanpa ego. Setiap orang bermula di tempat yang berbeza."
+  >
+    <ul class="grid-cards">
+      {
+        values.map((v, i) => (
+          <li class="card">
+            <span class="card-num display">0{i + 1}</span>
+            <h3 class="display card-title">{v.title}</h3>
+            <p>{v.body}</p>
+          </li>
+        ))
+      }
+    </ul>
+  </Section>
 
-    <section id="soalan">
-      <div class="container narrow">
-        <p class="eyebrow">Soalan lazim</p>
-        <h2 class="display section-title">Ada soalan?</h2>
-        {
-          faqs.map((f) => (
-            <details class="faq">
-              <summary>{f.q}</summary>
-              <p>{f.a}</p>
-            </details>
-          ))
-        }
-      </div>
-    </section>
+  <Section
+    id="cara"
+    band
+    eyebrow="Cara sertai"
+    title="Tiga langkah, itu sahaja."
+  >
+    <ol class="steps">
+      {
+        steps.map((s) => (
+          <li>
+            <h3 class="display card-title">{s.title}</h3>
+            <p>{s.body}</p>
+          </li>
+        ))
+      }
+    </ol>
+  </Section>
 
-    <section id="sertai" class="join">
-      <div class="container join-inner">
-        <h2 class="display join-title">
-          Langkah pertama paling susah. <span>Kami teman.</span>
-        </h2>
-        {
-          contacts.length ? (
-            <div class="hero-cta">
-              {contacts.map((c) => (
-                <a
-                  class="btn btn-primary"
-                  href={c.href}
-                  rel="noopener"
-                  target={c.href.startsWith("mailto:") ? undefined : "_blank"}
-                >
-                  {c.label}
-                </a>
-              ))}
-            </div>
-          ) : (
-            <p class="hero-lead">
-              Maklumat untuk menyertai akan dikemas kini tidak lama lagi.
-            </p>
-          )
-        }
-      </div>
-    </section>
-  </main>
+  <Section id="soalan" narrow eyebrow="Soalan lazim" title="Ada soalan?">
+    {
+      faqs.map((f) => (
+        <details class="faq">
+          <summary>{f.q}</summary>
+          <p>{f.a}</p>
+        </details>
+      ))
+    }
+  </Section>
 
-  <Footer />
+  <section id="sertai" class="join">
+    <div class="container join-inner">
+      <h2 class="display join-title">
+        Langkah pertama paling susah. <span>Kami teman.</span>
+      </h2>
+      {
+        contacts.length ? (
+          <div class="actions hero-cta">
+            {contacts.map((c) => (
+              <a
+                class="btn btn-primary"
+                href={c.href}
+                rel="noopener"
+                target={c.href.startsWith("mailto:") ? undefined : "_blank"}
+              >
+                {c.label}
+              </a>
+            ))}
+          </div>
+        ) : (
+          <p class="hero-lead">
+            Maklumat untuk menyertai akan dikemas kini tidak lama lagi.
+          </p>
+        )
+      }
+    </div>
+  </section>
 </Layout>
 
 <style>
   .hero {
-    background:
-      radial-gradient(
-        60rem 30rem at 85% 10%,
-        rgb(255 90 31 / 0.16),
-        transparent 60%
-      ),
-      var(--navy);
-    color: #fff;
     padding-block: clamp(3.5rem, 9vw, 7rem);
   }
   .hero-grid {
@@ -191,9 +171,6 @@ const contacts = [
     grid-template-columns: 1.3fr 1fr;
     align-items: center;
     gap: 3rem;
-  }
-  .eyebrow.on-dark {
-    color: var(--orange);
   }
   .hero-title {
     font-size: clamp(3.2rem, 9vw, 6.25rem);
@@ -210,9 +187,6 @@ const contacts = [
     margin: 0;
   }
   .hero-cta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
     margin-top: 2rem;
   }
   .hero-crest {
@@ -231,39 +205,15 @@ const contacts = [
     }
   }
 
-  .cards {
-    list-style: none;
-    padding: 0;
-    margin: 3rem 0 0;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-    gap: 1.25rem;
-  }
-  .card {
-    background: var(--paper-2);
-    border: 1px solid var(--line);
-    border-radius: 1rem;
-    padding: 1.75rem;
-  }
   .card-num {
     color: var(--orange);
     font-size: 1.6rem;
   }
-  .card-title {
-    font-size: 1.75rem;
-    color: var(--navy);
-    margin: 0.5rem 0;
-  }
-  .card p,
   .steps p {
     margin: 0;
     color: var(--muted);
   }
 
-  .band {
-    background: var(--paper-2);
-    border-block: 1px solid var(--line);
-  }
   .steps {
     list-style: none;
     counter-reset: step;
@@ -288,9 +238,6 @@ const contacts = [
     font-size: 0.9rem;
   }
 
-  .narrow {
-    max-width: 48rem;
-  }
   .faq {
     border-bottom: 1px solid var(--line);
     padding-block: 1.1rem;

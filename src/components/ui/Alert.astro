@@ -1,0 +1,21 @@
+---
+// Kotak makluman. Skrip yang render HTML sendiri guna kelas yang sama:
+// `<div class="alert alert-warning">`.
+interface Props {
+  variant?: "info" | "warning" | "danger" | "success";
+  title?: string;
+  id?: string;
+  hidden?: boolean;
+}
+const { variant = "info", title, id, hidden } = Astro.props;
+---
+
+<div
+  class={`alert alert-${variant}`}
+  role={variant === "danger" ? "alert" : "note"}
+  id={id}
+  hidden={hidden}
+>
+  {title && <p class="alert-title">{title}</p>}
+  <slot />
+</div>

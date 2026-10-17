@@ -1,0 +1,137 @@
+---
+import Layout from "../layouts/Layout.astro";
+import PageHero from "../components/ui/PageHero.astro";
+import Field from "../components/ui/Field.astro";
+import Alert from "../components/ui/Alert.astro";
+import { TURNSTILE_SITE_KEY } from "../data/site";
+---
+
+<Layout
+  title="Sahkan e-mel - Nubi Sport"
+  description="Sahkan e-mel akaun Nubi Sport."
+>
+  <PageHero eyebrow="Akaun" title="Sahkan" accent="e-mel.">
+    <p class="lead" id="memuat">Mengesahkan...</p>
+
+    <div class="form sahkan" id="berjaya" hidden>
+      <Alert variant="success" title="E-mel disahkan">
+        <p>Akaun anda sudah aktif. Anda boleh log masuk sekarang.</p>
+      </Alert>
+      <a class="btn btn-primary" href="/login">Log masuk</a>
+    </div>
+
+    <!-- Tanpa token, atau token tamat / tidak sah: borang hantar semula. -->
+    <form class="form sahkan" id="semula" novalidate hidden>
+      <Alert
+        variant="warning"
+        id="gagal"
+        title="Pautan tidak sah atau sudah tamat"
+      >
+        <p>
+          Pautan pengesahan hanya sah 24 jam dan sekali guna. Masukkan e-mel
+          anda untuk pautan baharu.
+        </p>
+      </Alert>
+      <Field label="E-mel">
+        <input
+          class="input"
+          type="email"
+          name="email"
+          autocomplete="email"
+          maxlength="255"
+          required
+        />
+      </Field>
+      <div
+        class="cf-turnstile"
+        data-sitekey={TURNSTILE_SITE_KEY}
+        data-action="register"
+        data-appearance="interaction-only"
+      >
+      </div>
+      <Alert variant="danger" id="mesej" hidden />
+      <Alert variant="success" id="dihantar" hidden>
+        <p>
+          Jika akaun ini belum disahkan, pautan baharu sedang dihantar. Semak
+          e-mel anda.
+        </p>
+      </Alert>
+      <button class="btn btn-primary" type="submit">Hantar pautan baharu</button
+      >
+      <p class="lead">
+        Belum ada akaun? <a class="link" href="/register">Daftar</a>.
+      </p>
+    </form>
+  </PageHero>
+</Layout>
+
+<script
+  is:inline
+  src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+  async
+  defer></script>
+
+<script>
+  import { api, hantarSemula } from "../lib/api";
+
+  const memuat = document.getElementById("memuat")!;
+  const berjaya = document.getElementById("berjaya")!;
+  const borang = document.getElementById("semula") as HTMLFormElement;
+  const mesej = document.getElementById("mesej")!;
+  const dihantar = document.getElementById("dihantar")!;
+  const butang = borang.querySelector<HTMLButtonElement>(
+    "button[type=submit]",
+  )!;
+
+  const tunjuk = (ok: boolean, tokenAda: boolean) => {
+    memuat.hidden = true;
+    berjaya.hidden = !ok;
+    borang.hidden = ok;
+    document.getElementById("gagal")!.hidden = !tokenAda; // tiada token = hanya borang
+  };
+
+  const token = new URLSearchParams(location.search).get("token");
+  if (!token) tunjuk(false, false);
+  else
+    api("/auth/verify-email", {
+      method: "POST",
+      body: JSON.stringify({ token }),
+    })
+      .then((res) => {
+        if (!res.ok && res.status !== 400) {
+          // 429 / 5xx: token mungkin masih sah - kekalkan dalam URL untuk muat semula.
+          memuat.textContent =
+            "Tak dapat mengesahkan sekarang. Muat semula page ini sebentar lagi.";
+          return;
+        }
+        // Token sekali guna - buang dari bar alamat (sejarah / kongsi skrin).
+        history.replaceState(null, "", location.pathname);
+        tunjuk(res.ok, true);
+      })
+      .catch(() => {
+        memuat.textContent =
+          "Tiada sambungan. Semak internet anda dan muat semula page ini.";
+      });
+
+  borang.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    dihantar.hidden = true;
+    if (!borang.email.checkValidity()) {
+      mesej.textContent = "Masukkan e-mel yang sah.";
+      mesej.hidden = false;
+      return;
+    }
+    butang.disabled = true;
+    const salah = await hantarSemula(borang.email.value.trim());
+    butang.disabled = false;
+    mesej.textContent = salah ?? "";
+    mesej.hidden = !salah;
+    dihantar.hidden = !!salah;
+  });
+</script>
+
+<style>
+  .sahkan {
+    max-width: 26rem;
+  }
+</style>

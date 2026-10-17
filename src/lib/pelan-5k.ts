@@ -64,6 +64,25 @@ const LANGKAH: [number, number][] = [
 ];
 const LANGKAH_MULA: Record<Exclude<Tahap, "5k">, number> = { sifar: 0, jalan: 4 };
 
+// Hari sesi, kiraan dari Isnin (0 = Isnin ... 6 = Ahad). Sesi akhir (larian panjang / ujian)
+// jatuh hujung minggu, dan tiada dua sesi berturut-turut.
+export const NAMA_HARI = ["Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu", "Ahad"];
+export const HARI_SESI: Record<number, number[]> = { 3: [0, 2, 5], 4: [0, 2, 4, 6] };
+
+/** Isnin pada atau selepas `d` - pelan bermula Isnin supaya hari sesi kekal sama setiap minggu. */
+export function isninMula(d: Date): Date {
+  const r = new Date(d);
+  r.setDate(r.getDate() + ((8 - r.getDay()) % 7));
+  return r;
+}
+
+/** Tarikh sesi ke-`sesi` (dari 0) dalam minggu ke-`minggu` (dari 1). */
+export function tarikhSesi(isnin: Date, minggu: number, hari: number, sesi: number): Date {
+  const r = new Date(isnin);
+  r.setDate(r.getDate() + (minggu - 1) * 7 + HARI_SESI[hari][sesi]);
+  return r;
+}
+
 const turun5 = (n: number) => Math.floor(n / 5) * 5;
 const bulanUntuk = (minggu: number) => BULAN.find((b) => b * 4 >= minggu);
 
@@ -208,11 +227,13 @@ function jalanLari(minit: number, [lari, jalan]: [number, number], usaha: string
     };
   }
   const ulang = Math.max(1, Math.floor(teras / (lari + jalan)));
+  // Baki kitaran jadi satu lari pendek, supaya sejuk badan kekal ~5 min (bukan sampai 14).
+  const baki = Math.max(0, Math.min(lari, teras - ulang * (lari + jalan)));
   return {
     jenis: "jalan-lari",
     minit,
     tajuk: "Jalan-lari",
-    arahan: `Jalan 5 min. (Lari ${lari} min + jalan ${jalan} min) × ${ulang}. Jalan ${minit - 5 - ulang * (lari + jalan)} min.`,
+    arahan: `Jalan 5 min. (Lari ${lari} min + jalan ${jalan} min) × ${ulang}${baki ? `, kemudian lari ${baki} min` : ""}. Jalan ${minit - 5 - ulang * (lari + jalan) - baki} min.`,
     usaha,
   };
 }
@@ -236,4 +257,14 @@ function tempo(minitTempo: number): Sesi {
     arahan: `Panas badan 10 min. ${minitTempo} min pada pace sasaran. Sejuk badan 10 min.`,
     usaha: `Sukar bercakap, tetap terkawal · ~${pace(360)}/km`,
   };
+}
+
+// Had pelan tanpa akaun. ponytail: had lembut sahaja - pelan dikira dalam pelayar (laman statik), jadi
+// padam storan / mod inkognito memintasnya. Ini dorongan untuk daftar, bukan kawalan. Had sebenar =
+// jana pelan di server (kemudian).
+export const HAD_TANPA_AKAUN = 3;
+
+/** `kunci` = kunci pelan tanpa tarikh mula; `dahDibuat` = kunci berbeza yang pernah dibuka. */
+export function bolehBuatPelan(kunci: string, dahDibuat: string[], logMasuk: boolean): boolean {
+  return logMasuk || dahDibuat.includes(kunci) || new Set(dahDibuat).size < HAD_TANPA_AKAUN;
 }

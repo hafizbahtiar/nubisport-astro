@@ -1,0 +1,22 @@
+---
+// Kepala page gelap: eyebrow + h1 (dengan bahagian oren pilihan) + lead. Slot = borang / butang.
+interface Props {
+  eyebrow: string;
+  title: string;
+  accent?: string; // dipapar oren selepas `title`
+  lead?: string;
+}
+const { eyebrow, title, accent, lead } = Astro.props;
+---
+
+<section class="surface-dark page-hero no-print">
+  <div class="container">
+    <p class="eyebrow">{eyebrow}</p>
+    <h1 class="display page-title">
+      {title}
+      {accent && <span>{` ${accent}`}</span>}
+    </h1>
+    {lead && <p class="lead">{lead}</p>}
+    <slot />
+  </div>
+</section>

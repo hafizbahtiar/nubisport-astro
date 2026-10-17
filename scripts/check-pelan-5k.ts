@@ -1,5 +1,5 @@
 // bun scripts/check-pelan-5k.ts - semak src/lib/pelan-5k.ts untuk setiap gabungan input.
-import { BULAN, HARI, MASA_MAX, MASA_MIN, MINGGU_MIN, buatPelan, pace, type Tahap } from "../src/lib/pelan-5k";
+import { BULAN, HAD_TANPA_AKAUN, HARI, HARI_SESI, bolehBuatPelan, MASA_MAX, MASA_MIN, MINGGU_MIN, buatPelan, isninMula, pace, tarikhSesi, type Tahap } from "../src/lib/pelan-5k";
 
 let gagal = 0;
 const ok = (c: unknown, msg: string) => {
@@ -44,6 +44,7 @@ for (const bulan of BULAN)
         ok(w.sesi.reduce((a, s) => a + s.minit, 0) === w.minit, `${nama} M${w.no}: jumlah sesi = beban`);
         ok(w.sesi.every((s) => s.minit >= 15 && s.minit <= 75), `${nama} M${w.no}: sesi 15-75 min`);
         ok(w.sesi.filter((s) => s.jenis === "interval" || s.jenis === "tempo").length <= 1, `${nama} M${w.no}: paling banyak 1 sesi kualiti`);
+        ok(w.sesi.every((s) => s.tajuk !== "Jalan-lari" || Number(/Jalan (\d+) min\.$/.exec(s.arahan)?.[1]) <= 6), `${nama} M${w.no}: sejuk badan jalan-lari > 6 min`);
         ok(w.sesi.every((s) => !/NaN|undefined|-\d+ min/.test(s.arahan + s.usaha)), `${nama} M${w.no}: teks rosak`);
         if (w.no % 4 === 0 && w.fasa !== "Ujian") ok(w.ringan, `${nama} M${w.no}: minggu ringan`);
         if (w.ringan) {
@@ -70,6 +71,27 @@ const sukar = buatPelan({ bulan: 2, hari: 3, tahap: "5k", masa5k: 45 });
 ok(sukar.ok && sukar.amaran.length === 1, "45 min dalam 2 bulan = amaran");
 const mudah = buatPelan({ bulan: 3, hari: 3, tahap: "5k", masa5k: 33 });
 ok(mudah.ok && mudah.amaran.length === 0, "33 min dalam 3 bulan tanpa amaran");
+
+// Hari sesi: mula Isnin, sesi akhir hujung minggu, tiada sesi berturut-turut.
+ok([0, 1, 2, 3, 4, 5, 6].every((i) => {
+  const d = isninMula(new Date(2026, 9, 11 + i)); // Ahad 11 Okt ... Sabtu 17 Okt
+  return d.getDay() === 1 && d >= new Date(2026, 9, 11 + i) && d.getTime() - new Date(2026, 9, 11 + i).getTime() < 7 * 864e5;
+}), "isninMula");
+for (const hari of HARI) {
+  const h = HARI_SESI[hari];
+  ok(h.length === hari && h.at(-1)! >= 5 && h.every((x, i) => i === 0 || x - h[i - 1] >= 2), `HARI_SESI[${hari}]`);
+}
+const t = tarikhSesi(new Date(2026, 9, 19), 2, 4, 3); // Isnin 19 Okt, minggu 2, sesi akhir
+ok(t.getFullYear() === 2026 && t.getMonth() === 10 && t.getDate() === 1 && t.getDay() === 0, "tarikhSesi = Ahad 1 Nov");
+
+// Had tanpa akaun: kunci berbeza dikira, buka semula pelan lama sentiasa boleh, log masuk = tiada had.
+const tiga = ["a", "b", "c"];
+ok(HAD_TANPA_AKAUN === 3, "HAD_TANPA_AKAUN = 3");
+ok(bolehBuatPelan("a", [], false) && bolehBuatPelan("c", ["a", "b"], false), "bawah had = boleh");
+ok(!bolehBuatPelan("d", tiga, false), "pelan ke-4 tanpa akaun = tidak");
+ok(bolehBuatPelan("b", tiga, false), "buka semula pelan lama = boleh");
+ok(bolehBuatPelan("d", tiga, true), "log masuk = tiada had");
+ok(bolehBuatPelan("c", ["a", "a", "b"], false), "kunci berulang dikira sekali");
 
 if (gagal) throw new Error(`${gagal} semakan gagal`);
 console.log(`ok - ${pelan} pelan disemak`);

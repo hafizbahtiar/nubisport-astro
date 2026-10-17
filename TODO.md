@@ -24,22 +24,59 @@ Item yang dah siap dibuang (lihat git history).
   `hono-workers`, `worker.ts` hanya forward). Panggil `fetch("/api/v1/...")` - same-origin, tiada CORS,
   cookie login melekat pada `nubisport.hafizbahtiar.com`. Akaun dikongsi dengan portfolio (satu jadual
   `users`), tapi sesi login berasingan (cookie ikut domain). Semua laluan lain = aset statik `dist/`.
-- **Uji lokal**: `npx wrangler dev` dalam `hono-workers` (port 8787) dan `npx wrangler dev --port 8790`
-  di sini - binding bersambung sendiri; `localhost:8790/api/v1/health` mesti jawab dari backend.
+- **Uji lokal**: `npx wrangler dev --port 8787` dalam `hono-workers`, kemudian di sini `bun run build &&
+  npx wrangler dev --port 8790 --local-upstream localhost:8790` - binding bersambung sendiri. Tanpa
+  `--local-upstream`, wrangler tulis semula `Origin` ke `http://nubisport.hafizbahtiar.com` dan CSRF backend
+  tolak semua POST (403). `.dev.vars` backend mesti ada `ALLOWED_ORIGINS=http://localhost:8790`.
+- **Asas UI**: semua gaya kongsi dalam `src/styles/global.css` (token warna/radius, butang `.btn-*`, borang
+  `.form/.field/.input/.chips`, `.card`, `.alert-*`, `.surface-dark`, `.prose`, `[hidden]` menang). Komponen
+  `src/components/ui/`: `PageHero` (kepala page gelap + slot borang), `Section`, `ChipGroup` (radio pil,
+  `stacked` untuk label panjang), `Field` (label + input + petunjuk), `Alert`. `Layout.astro` sudah ada
+  `Header` + `<main>` + `Footer` (`src/components/layout/`) - page hanya tulis kandungan. HTML dari skrip
+  (`innerHTML`) guna kelas global yang sama. Jangan buat warna/butang baru dalam page - tambah ke global.
+  Formatter memecah baris sebelum `<strong>`/`<a>` dan Astro buang ruang itu - tulis `{" "}` di hujung baris.
+- **Login** (`/login`): `src/lib/api.ts` (`api()` = `/api/v1` + satu refresh dikongsi bila 401, `saya()` =
+  `/me` jika cookie `session_active`). Turnstile widget yang sama dengan portfolio (kunci tapak dalam
+  `src/data/site.ts`, action `login`). Daftar / urus akaun di hafizbahtiar.com (`ACCOUNT`). Header tukar
+  "Log masuk" -> "Akaun" bila `session_active`. Kebenaran sebenar sentiasa di backend.
+- **Daftar / sahkan** (`/register`, `/verify`): daftar hantar `app: "nubi"`, jadi pautan e-mel ke
+  `nubisport.hafizbahtiar.com/verify`. Alamat pautan datang dari senarai `APP_SITES` di backend
+  (`services/registration.ts`) - laman baru = entri baru di situ; URL tidak pernah diterima dari klien
+  (kod app tak dikenali = 400). Hantar semula pautan hanya dari `/verify` (Turnstile action `register`).
+- **Ahli ≠ berdaftar**: ahli = peranan app `nubi/ahli` (migration 026), diluluskan owner/admin di
+  portfolio `/admin/app-access`. Berdaftar + disahkan sahaja = "Pengguna berdaftar - belum ahli".
+- **Kalendar** (`src/lib/ics.ts`, generik - guna semula untuk 10K/21K): `.ics` RFC 5545, masa Malaysia
+  (UTC+8) disimpan UTC, UID tetap `pelan-5k-<kunci>-m<w>s<i>@nubisport.hafizbahtiar.com`, peringatan
+  30 min. Semak `bun scripts/check-ics.ts`.
+- **Had pelan tanpa akaun**: 3 pelan berbeza (`HAD_TANPA_AKAUN`, localStorage `pelan-5k:dibuat`; buka
+  semula tidak dikira; `session_active=1` = tiada had). Had LEMBUT sahaja (incognito memintas) - had
+  keras perlu pelan dijana di server.
+- **MAF** (`/maf`): formula 180 Maffetone dalam `src/lib/maf.ts` (16 ke bawah = 165; +10 untuk >65 hanya
+  nota, bukan automatik), disemak `bun scripts/check-maf.ts` terhadap philmaffetone.com/180-formula.
+  Julat "MAF-10 hingga MAF" dilabel amalan biasa - sumber hanya kata had atas.
 - Palet: navy `#0A1A33`, oren `#FF5A1F`, oren teks atas putih `#C2410C`. Font paparan Barlow Condensed.
 - **Pelan 5K** (`/pelan-5k`): logik tulen dalam `src/lib/pelan-5k.ts` (dikira dalam browser - laman statik,
   jadi `?bulan=&tahap=&masa=&hari=&mula=` dibaca oleh skrip page). Tukar logik = jalankan
   `bun scripts/check-pelan-5k.ts` (setiap gabungan input: bilangan minggu, lonjakan ≤ 10%, minggu ringan
   setiap ke-4, minggu akhir ujian, kes tak munasabah ditolak). Gaya page `is:global` sebab hasil
   dirender dengan `innerHTML`. Tanda siap = localStorage `pelan-5k:<bulan>-<tahap>-<masa>-<hari>`.
-- `Header.astro` / `Footer.astro` dikongsi semua page.
-- Semak: `bun run build` + `bun scripts/check-pelan-5k.ts`. Belum ada lint.
+  Hari sesi tetap (`HARI_SESI`: 3 hari = Isn/Rab/Sab, 4 hari = Isn/Rab/Jum/Ahd - sesi akhir hujung
+  minggu); `mula` dianjak ke Isnin (`isninMula`) dan minggu semasa + sesi hari ini diserlahkan.
+- Semak: `bun run build` + `bun scripts/check-pelan-5k.ts` + `bun scripts/check-maf.ts` +
+  `bun scripts/check-ics.ts`. Belum ada lint.
 
 ## 🚀 Owner - langkah manual
 
 - [ ] Isi `CONTACT` (WhatsApp group / Instagram / e-mel) - seksyen "Sertai" kosong sampai ini diisi.
 - [ ] Lantik admin Nubi di portfolio `/admin/app-access`.
-- [ ] Bila Nubi ada login: tambah domain ke `TURNSTILE_HOSTNAMES` (backend) + hostname widget Turnstile.
+- [ ] **Login / daftar production - ikut urutan**: (1) dashboard Cloudflare -> Turnstile -> widget
+  portfolio -> tambah hostname `nubisport.hafizbahtiar.com`; (2) `bun run db:migrate:remote` dalam
+  `hono-workers` (026, peranan `ahli`); (3) deploy `hono-workers` - mesti SEBELUM push Nubi, backend lama
+  tolak `app` (daftar jadi 400); (4) push repo ini; (5) deploy portfolio (dropdown peranan App Access kini
+  tiada pilihan lalai).
+- [ ] Uji import `.ics` pada iPhone (Safari: terus "Tambah semua" atau simpan ke Files?), Samsung Calendar,
+  Google Calendar (web) dan Outlook - nota platform di page belum diuji pada peranti sebenar.
+- [ ] E-mel pengesahan untuk `app=nubi` masih teks English dari pengirim portfolio - mahu versi Melayu?
 - [ ] Semak pratonton pautan selepas deploy (WhatsApp / Facebook debugger) - `og.png`.
 
 ## 🛠 Frontend - seterusnya
@@ -54,40 +91,58 @@ Item yang dah siap dibuang (lihat git history).
 
 ## 💡 Idea (belum diputuskan - bincang dulu sebelum bina)
 
-Disusun ikut nilai untuk pemula, yang paling murah dulu.
+Disusun ikut nilai untuk pemula, yang paling murah dulu. ✅ = dah dibina.
 
-### Tanpa backend (statik)
-- **Jadual larian mingguan** - hari, masa, lokasi (pautan Google Maps), jarak, pace "santai". Data
-  dalam `src/data/` - admin edit melalui git sehingga ada CMS.
-- **Panduan pemula** - kasut, pemanasan, hidrasi, cuaca panas Malaysia, keselamatan larian malam.
-- **Kalkulator pace** - masa ↔ pace ↔ jarak (5K/10K/21K), dikira dalam browser.
+### Tanpa backend (statik, dikira dalam browser)
+- ✅ Pelan 5K bawah 30 minit (`/pelan-5k`) · ✅ MAF / lari ikut nadi (`/maf`)
+- **Pemasa jalan-lari** - mainkan sesi dari pelan 5K: "Lari 3 min ... jalan 2 min" dengan bunyi/getaran
+  dan Wake Lock supaya skrin tak padam. Paling berguna untuk pemula (tak perlu kira sendiri). Murah.
+- **Kalkulator pace** - masa ↔ pace ↔ jarak (5K/10K/21K/42K) + ramalan masa lumba (formula Riegel,
+  dilabel anggaran).
+- **Zon nadi lengkap** - selain MAF: zon 1-5 dari nadi rehat + nadi maksimum (Karvonen). Dilabel anggaran;
+  nadi maksimum 220-umur sangat kasar.
+- **Panduan pemula** - kasut (dan bila tukar, ~500-800 km), pemanasan, hidrasi + garam dalam panas Malaysia,
+  keselamatan larian malam (lampu, laluan terang, beritahu orang), regangan selepas lari.
+- **Kalkulator peluh / hidrasi** - timbang sebelum & selepas lari 1 jam -> kadar peluh -> berapa minum.
+- **Senarai semak hari lumba** - malam sebelum, pagi lumba, bib, kasut yang dah biasa, jangan cuba benda
+  baru. Boleh dicetak.
 - **Kod etika kumpulan** - tiada siapa ditinggalkan, sweeper di belakang, hormat laluan awam.
+- ✅ Fail `.ics` pelan 5K · ✅ Had 3 pelan tanpa akaun · ✅ Daftar + sahkan e-mel di Nubi
+- **Pelan 10K / 21K** - guna semula `ics.ts` dan struktur `buatPelan`; perlu ambang dan fasa sendiri.
+- **Senarai pelan yang dah dibuat** dalam mesej had (pautan terus) - kecil.
+- **PWA ringan** - pelan + pemasa boleh buka tanpa internet (taman sering tiada liputan).
 
-### Dengan backend (`hono-workers`, guna `requireAppRole`)
+### Dengan backend (`hono-workers`, guna `requireAppRole`, login dah ada)
+- **Simpan pelan ke akaun** - tanda siap ikut pengguna, bukan hanya localStorage (tukar telefon tak hilang).
+- **Langganan kalendar** (`webcal://` dari backend, ikut akaun) - kemas kini sendiri bila pelan berubah;
+  Google (tambah melalui URL), Apple, Outlook. Lebih baik dari muat turun `.ics` sekali.
+- **Mohon jadi ahli** - butang di `/login` untuk pengguna berdaftar; admin lulus di App Access.
+- **Log larian** - jarak, masa, nadi purata, rasa (1-5). Graf kemajuan + hasil ujian MAF bulanan.
+  Data peribadi: lalai hanya diri sendiri nampak.
 - **Acara + RSVP** - admin Nubi cipta sesi larian; ahli tekan "Saya datang". Jadual `nubi_events`,
   `nubi_rsvps`. Kiraan hadir untuk penganjur.
-- **Pendaftaran ahli** - guna akaun sedia ada (login dikongsi) + profil Nubi (nama panggilan, tahap:
-  pemula / 5K / 10K). Perlu Turnstile.
-- **Log larian peribadi** - jarak + masa setiap sesi, graf kemajuan. Data peribadi: privasi dulu
-  (lalai: hanya diri sendiri nampak).
-- **Lencana pencapaian** - 5K pertama, 10 sesi hadir, sebulan konsisten. Motivasi untuk pemula.
-- **Pengumuman** - admin Nubi hantar notis (batal sebab hujan, tukar lokasi). Boleh sambung bot
-  Telegram sedia ada di backend.
-- **Peranan `coach`** - boleh urus acara tapi bukan ahli lain. Migration baru menambah ke `app_roles`.
+- **Jadual larian mingguan** - hari, masa, lokasi (pautan Google Maps), jarak, pace "santai"; boleh jadi
+  sebahagian Acara.
+- **Profil Nubi** - nama panggilan, tahap (pemula / 5K / 10K), sasaran. Atas akaun dikongsi.
+- **Lencana pencapaian** - 5K pertama, 10 sesi hadir, sebulan konsisten, ujian MAF bertambah baik.
+- **Pengumuman** - admin Nubi hantar notis (batal sebab hujan, tukar lokasi). Sambung bot Telegram sedia ada.
+- **Peranan `coach`** - urus acara + pantau pelan ahli yang setuju dikongsi. Migration baru (`app_roles`).
+- **Tanya jurulatih (AI)** - lapisan AI backend dah siap (`getAi`, prompt `APP_CONTEXT`). Konteks = pelan +
+  log pengguna itu. Perlu: kunci Command Code, had kadar setiap pengguna, tiada PII dalam prompt, dan
+  jawapan sentiasa "panduan umum".
 
 ### Integrasi
-- **Strava** - kelab Strava + pautan, atau import aktiviti (OAuth, kerja besar - tangguh).
-- **Cuaca** - ramalan MET untuk lokasi larian (portfolio dah ada `lib/ramalan-cuaca.ts`; boleh jadi
-  endpoint kongsi di backend).
-- **Kualiti udara** - amaran IPU jerebu sebelum sesi (portfolio `lib/ipu.ts`).
-- **Kalendar** - fail `.ics` untuk jadual mingguan.
+- **Cuaca + jerebu sebelum lari** - ramalan MET + IPU untuk lokasi larian (portfolio dah ada
+  `lib/ramalan-cuaca.ts`, `lib/ipu.ts`; jadikan endpoint kongsi di backend). "IPU > 100: lari dalam rumah".
+- **Strava** - kelab Strava + pautan dulu; import aktiviti (OAuth) tangguh - kerja besar.
+- **Kalendar lumba Malaysia** - hanya dari penganjur rasmi, dengan tarikh semakan (seperti nombor
+  kecemasan portfolio) - jangan salin dari blog.
 
 ## Pelan 5K bawah 30 minit (`/pelan-5k`) - susulan
 
 - [ ] **Semakan kandungan latihan** oleh jurulatih bertauliah sebelum dipromosi. Ambang "munasabah"
   (`MINGGU_MIN`, `MINGGU_SETIAP_MINIT`) dan zon pace ialah anggaran kasar.
 - [ ] Unit: kini minit (+ pace /km). Tambah km bagi yang ada jam GPS?
-- [ ] Fail `.ics` (satu acara setiap sesi, dari tarikh mula).
 - [ ] Sasaran lain (bawah 28 / 25 minit, 10K) - `buatPelan` kini tetap 30 minit.
 - [ ] Perlu backend: simpan pelan ke akaun, log larian sebenar vs pelan, coach pantau ahli.
 

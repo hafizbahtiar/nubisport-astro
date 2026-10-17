@@ -1,0 +1,16 @@
+---
+// Label + kawalan (slot: <input class="input" ...>) + petunjuk pilihan.
+interface Props {
+  label: string;
+  hint?: string;
+  id?: string;
+  hidden?: boolean;
+}
+const { label, hint, id, hidden } = Astro.props;
+---
+
+<label class="field" id={id} hidden={hidden}>
+  <span class="field-label">{label}</span>
+  <slot />
+  {hint && <small class="field-hint">{hint}</small>}
+</label>
