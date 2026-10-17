@@ -4,6 +4,9 @@ import PageHero from "../components/ui/PageHero.astro";
 import Section from "../components/ui/Section.astro";
 import ChipGroup from "../components/ui/ChipGroup.astro";
 import Field from "../components/ui/Field.astro";
+import DatePicker from "../components/ui/DatePicker.astro";
+import Checkbox from "../components/ui/Checkbox.astro";
+import { KATEGORI, UMUR_MAX, UMUR_MIN } from "../lib/maf";
 import {
   BULAN,
   HARI,
@@ -13,6 +16,9 @@ import {
   MINGGU_SETIAP_MINIT,
   TAHAP,
 } from "../lib/pelan-5k";
+
+// Julat tarikh mula: dikira semasa build (laman statik - setiap deploy menyegarkannya).
+const tahun = new Date().getFullYear();
 ---
 
 <Layout
@@ -59,11 +65,53 @@ import {
         checked={3}
         options={HARI.map((h) => ({ value: h, label: `${h} hari` }))}
       />
+      <Checkbox
+        name="maf"
+        id="maf"
+        label="Ikut nadi (MAF)"
+        hint="Sesi mudah dan larian panjang dikawal had kadar nadi anda. Perlu jam atau tali dada pengukur nadi."
+      />
+      <fieldset class="form-group" id="maf-medan" hidden disabled>
+        <Field label="Umur (tahun)">
+          <input
+            class="input"
+            type="number"
+            name="umur"
+            min={UMUR_MIN}
+            max={UMUR_MAX}
+            step="1"
+            inputmode="numeric"
+            required
+            placeholder="cth. 32"
+          />
+        </Field>
+        <ChipGroup
+          legend="Keadaan anda sekarang"
+          name="keadaan"
+          checked="terganggu"
+          stacked
+          options={Object.entries(KATEGORI).map(([value, k]) => ({
+            value,
+            label: k.label,
+          }))}
+        />
+        <p class="field-hint">
+          Apa itu MAF? <a class="link" href="/maf"
+            >Baca panduan lari ikut nadi</a
+          >.
+        </p>
+      </fieldset>
       <Field
         label="Tarikh mula (pilihan)"
+        for="mula-text"
         hint="Pelan bermula pada hari Isnin pada atau selepas tarikh ini."
       >
-        <input class="input" type="date" name="mula" />
+        <DatePicker
+          id="mula"
+          name="mula"
+          min={`${tahun - 1}-01-01`}
+          max={`${tahun + 2}-12-31`}
+        />
       </Field>
       <button class="btn btn-primary" type="submit">Buat pelan</button>
     </form>
@@ -106,6 +154,7 @@ import {
 
 <script>
   import { buatIcs, waktuMalaysia } from "../lib/ics";
+  import { kiraMaf, type Kategori } from "../lib/maf";
   import {
     HAD_TANPA_AKAUN,
     HARI_SESI,
@@ -122,6 +171,8 @@ import {
   const borang = document.getElementById("borang") as HTMLFormElement;
   const masaMedan = document.getElementById("masa-medan")!;
   const masaInput = borang.elements.namedItem("masa") as HTMLInputElement;
+  const mafBox = document.getElementById("maf") as HTMLInputElement;
+  const mafMedan = document.getElementById("maf-medan") as HTMLFieldSetElement;
   const hasil = document.getElementById("hasil")!;
   const pelanEl = document.getElementById("pelan")!;
 
@@ -129,7 +180,12 @@ import {
   for (const [k, v] of q) {
     const el = borang.elements.namedItem(k);
     if (el instanceof RadioNodeList) el.value = v;
-    else if (el instanceof HTMLInputElement) el.value = v;
+    else if (el instanceof HTMLInputElement && el.type === "checkbox")
+      el.checked = v === el.value;
+    else if (el instanceof HTMLInputElement) {
+      el.value = v;
+      el.dispatchEvent(new Event("change")); // DatePicker: kotak dd/mm/yyyy ikut
+    }
   }
 
   const ikutTahap = () => {
@@ -138,6 +194,8 @@ import {
     masaMedan.hidden = !is5k;
     masaInput.required = is5k;
     masaInput.disabled = !is5k; // tak dihantar dalam URL bila bukan 5k
+    // fieldset disabled = umur/keadaan tak dihantar dan tak wajib bila MAF tak ditanda
+    mafMedan.hidden = mafMedan.disabled = !mafBox.checked;
   };
   borang.addEventListener("change", ikutTahap);
   ikutTahap();
@@ -149,8 +207,18 @@ import {
     const bulan = Number(q.get("bulan"));
     const hari = Number(q.get("hari"));
     const masa5k = q.get("masa") ? Number(q.get("masa")) : undefined;
-    const h = buatPelan({ bulan, tahap, hari, masa5k });
     hasil.hidden = false;
+    let nadi: { maf: number; bawah: number } | undefined;
+    if (q.get("maf") === "1") {
+      const m = kiraMaf(Number(q.get("umur")), q.get("keadaan") as Kategori);
+      if (!m.ok) {
+        pelanEl.innerHTML = `<div class="alert alert-warning"><p>Ikut nadi: ${m.sebab}</p></div>`;
+        hasil.scrollIntoView({ behavior: "smooth" });
+        return;
+      }
+      nadi = { maf: m.maf, bawah: m.bawah };
+    }
+    const h = buatPelan({ bulan, tahap, hari, masa5k, nadi });
 
     if (!h.ok) {
       pelanEl.innerHTML = `<div class="alert alert-warning"><p>${h.sebab}</p>${
@@ -192,6 +260,7 @@ import {
           <p class="eyebrow">Pelan anda</p>
           <h2 class="display section-title">${bulan} bulan · ${hari} hari seminggu</h2>
           <p class="lead">${TAHAP[tahap]}${masa5k ? ` (${masa5k} minit)` : ""} → 5K bawah 30 minit.
+            ${nadi ? `Ikut nadi: had MAF <strong>${nadi.maf}</strong>, julat ${nadi.bawah}-${nadi.maf} denyut/min.` : ""}
             ${isnin ? `Bermula Isnin, ${isnin.toLocaleDateString("ms-MY", { day: "numeric", month: "long", year: "numeric" })}.` : ""}
             <span id="kemajuan"></span></p>
         </div>

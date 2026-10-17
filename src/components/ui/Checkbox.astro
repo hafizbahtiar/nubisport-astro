@@ -1,0 +1,21 @@
+---
+// Kotak semak dengan label (dan petunjuk pilihan). Dihantar dalam GET sebagai name=value bila
+// ditanda. HTML dari skrip boleh guna kelas yang sama: <label class="check">...</label>.
+interface Props {
+  name: string;
+  label: string;
+  value?: string;
+  checked?: boolean;
+  hint?: string;
+  id?: string;
+}
+const { name, label, value = "1", checked = false, hint, id } = Astro.props;
+---
+
+<label class="check">
+  <input type="checkbox" name={name} value={value} checked={checked} id={id} />
+  <span class="check-teks">
+    <span class="check-label">{label}</span>
+    {hint && <small class="field-hint">{hint}</small>}
+  </span>
+</label>

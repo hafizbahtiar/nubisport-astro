@@ -72,6 +72,19 @@ ok(sukar.ok && sukar.amaran.length === 1, "45 min dalam 2 bulan = amaran");
 const mudah = buatPelan({ bulan: 3, hari: 3, tahap: "5k", masa5k: 33 });
 ok(mudah.ok && mudah.amaran.length === 0, "33 min dalam 3 bulan tanpa amaran");
 
+// Ikut nadi (MAF): sesi mudah/panjang/jalan-lari bawa julat nadi; interval/tempo diberi nota.
+for (const tahap of ["sifar", "jalan"] as const) {
+  const tanpa = buatPelan({ bulan: 4, hari: 3, tahap });
+  const dengan = buatPelan({ bulan: 4, hari: 3, tahap, nadi: { maf: 143, bawah: 133 } });
+  if (!tanpa.ok || !dengan.ok) { ok(false, `nadi ${tahap}: pelan ditolak`); continue; }
+  const sesi = (h: typeof dengan) => h.minggu.flatMap((w) => w.sesi);
+  ok(sesi(tanpa).every((s) => !s.usaha.includes("Nadi")), `nadi ${tahap}: tanpa pilihan, tiada teks nadi`);
+  ok(sesi(dengan).filter((s) => ["mudah", "panjang", "jalan-lari"].includes(s.jenis)).every((s) => s.usaha.includes("133-143")), `nadi ${tahap}: sesi mudah bawa julat`);
+  const laju = sesi(dengan).filter((s) => s.jenis === "interval" || s.jenis === "tempo");
+  ok(laju.length > 0 && laju.every((s) => s.usaha.includes("melebihi 143")), `nadi ${tahap}: interval/tempo bernota`);
+  ok(JSON.stringify(dengan.minggu.map((w) => w.sesi.map((s) => s.minit))) === JSON.stringify(tanpa.minggu.map((w) => w.sesi.map((s) => s.minit))), `nadi ${tahap}: minit sesi sama`);
+}
+
 // Hari sesi: mula Isnin, sesi akhir hujung minggu, tiada sesi berturut-turut.
 ok([0, 1, 2, 3, 4, 5, 6].every((i) => {
   const d = isninMula(new Date(2026, 9, 11 + i)); // Ahad 11 Okt ... Sabtu 17 Okt

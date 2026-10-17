@@ -1,16 +1,28 @@
 ---
 // Label + kawalan (slot: <input class="input" ...>) + petunjuk pilihan.
+// `for` = kawalan berbilang elemen (contoh DatePicker): label biasa menunjuk ke id itu,
+// bukan membungkus butang di dalamnya.
 interface Props {
   label: string;
   hint?: string;
   id?: string;
   hidden?: boolean;
+  for?: string;
 }
-const { label, hint, id, hidden } = Astro.props;
+const { label, hint, id, hidden, for: htmlFor } = Astro.props;
+const Tag = htmlFor ? "div" : "label";
 ---
 
-<label class="field" id={id} hidden={hidden}>
-  <span class="field-label">{label}</span>
+<Tag class="field" id={id} hidden={hidden}>
+  {
+    htmlFor ? (
+      <label class="field-label" for={htmlFor}>
+        {label}
+      </label>
+    ) : (
+      <span class="field-label">{label}</span>
+    )
+  }
   <slot />
   {hint && <small class="field-hint">{hint}</small>}
-</label>
+</Tag>

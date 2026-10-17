@@ -26,6 +26,7 @@ export interface Input {
   tahap: Tahap;
   hari: number;
   masa5k?: number; // minit, tahap "5k" sahaja
+  nadi?: { maf: number; bawah: number }; // pilihan "ikut nadi" - dari kiraMaf (src/lib/maf.ts)
 }
 
 export type Hasil =
@@ -93,7 +94,7 @@ export function pace(saat: number): string {
 }
 
 export function buatPelan(input: Input): Hasil {
-  const { bulan, tahap, hari, masa5k } = input;
+  const { bulan, tahap, hari, masa5k, nadi } = input;
   if (!(BULAN as readonly number[]).includes(bulan)) return { ok: false, sebab: "Pilih tempoh 2, 3, 4 atau 6 bulan." };
   if (!(HARI as readonly number[]).includes(hari)) return { ok: false, sebab: "Pilih 3 atau 4 hari seminggu." };
   if (!(tahap in TAHAP)) return { ok: false, sebab: "Pilih tahap sekarang." };
@@ -127,7 +128,9 @@ export function buatPelan(input: Input): Hasil {
     };
   }
 
-  const USAHA_MUDAH = `Mudah - boleh bercakap ayat penuh${paceMudah}`;
+  const USAHA_MUDAH = nadi
+    ? `Nadi ${nadi.bawah}-${nadi.maf}, jangan lebih ${nadi.maf} - perlahankan atau jalan bila terlebih${paceMudah}`
+    : `Mudah - boleh bercakap ayat penuh${paceMudah}`;
   const bina = jumlahMinggu - 1; // minggu akhir = ujian
   const [rAsas, rDaya] = NISBAH_FASA[tahap];
   const mAsas = Math.round(bina * rAsas);
@@ -210,6 +213,12 @@ export function buatPelan(input: Input): Hasil {
       ujian,
     ],
   });
+
+  // MAF: interval/tempo memang melebihi had - katakan supaya pelari tak risau.
+  if (nadi)
+    for (const w of minggu)
+      for (const s of w.sesi)
+        if (s.jenis === "interval" || s.jenis === "tempo") s.usaha += ` · Nadi melebihi ${nadi.maf} - normal untuk sesi ini sahaja.`;
 
   return { ok: true, minggu, amaran };
 }

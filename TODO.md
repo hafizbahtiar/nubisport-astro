@@ -31,7 +31,11 @@ Item yang dah siap dibuang (lihat git history).
 - **Asas UI**: semua gaya kongsi dalam `src/styles/global.css` (token warna/radius, butang `.btn-*`, borang
   `.form/.field/.input/.chips`, `.card`, `.alert-*`, `.surface-dark`, `.prose`, `[hidden]` menang). Komponen
   `src/components/ui/`: `PageHero` (kepala page gelap + slot borang), `Section`, `ChipGroup` (radio pil,
-  `stacked` untuk label panjang), `Field` (label + input + petunjuk), `Alert`. `Layout.astro` sudah ada
+  `stacked` untuk label panjang), `Checkbox` (kelas `.check`; medan bergantung = `<fieldset class="form-group"
+  hidden disabled>` ditogol skrip), `Field` (label + input + petunjuk; `for` untuk kawalan berbilang
+  elemen), `Alert`, `DatePicker` (dd/mm/yyyy + kalendar, hantar ISO dari input tersembunyi `id`/`name`;
+  isi dari skrip = set nilai + `change`; logik `src/lib/tarikh.ts`, semak `bun scripts/check-tarikh.ts`).
+  Jangan guna `<input type="date">` - format ikut locale pelayar, bukan dd/mm/yyyy. `Layout.astro` sudah ada
   `Header` + `<main>` + `Footer` (`src/components/layout/`) - page hanya tulis kandungan. HTML dari skrip
   (`innerHTML`) guna kelas global yang sama. Jangan buat warna/butang baru dalam page - tambah ke global.
   Formatter memecah baris sebelum `<strong>`/`<a>` dan Astro buang ruang itu - tulis `{" "}` di hujung baris.
@@ -51,6 +55,9 @@ Item yang dah siap dibuang (lihat git history).
 - **Had pelan tanpa akaun**: 3 pelan berbeza (`HAD_TANPA_AKAUN`, localStorage `pelan-5k:dibuat`; buka
   semula tidak dikira; `session_active=1` = tiada had). Had LEMBUT sahaja (incognito memintas) - had
   keras perlu pelan dijana di server.
+- **Pelan 5K + MAF**: kotak semak "Ikut nadi" (`?maf=1&umur=&keadaan=`) -> `buatPelan({ nadi })`: sesi mudah /
+  panjang / jalan-lari bawa julat nadi, interval/tempo diberi nota "melebihi had". Minit sesi tak berubah
+  (kunci tanda siap sama).
 - **MAF** (`/maf`): formula 180 Maffetone dalam `src/lib/maf.ts` (16 ke bawah = 165; +10 untuk >65 hanya
   nota, bukan automatik), disemak `bun scripts/check-maf.ts` terhadap philmaffetone.com/180-formula.
   Julat "MAF-10 hingga MAF" dilabel amalan biasa - sumber hanya kata had atas.
@@ -63,7 +70,7 @@ Item yang dah siap dibuang (lihat git history).
   Hari sesi tetap (`HARI_SESI`: 3 hari = Isn/Rab/Sab, 4 hari = Isn/Rab/Jum/Ahd - sesi akhir hujung
   minggu); `mula` dianjak ke Isnin (`isninMula`) dan minggu semasa + sesi hari ini diserlahkan.
 - Semak: `bun run build` + `bun scripts/check-pelan-5k.ts` + `bun scripts/check-maf.ts` +
-  `bun scripts/check-ics.ts`. Belum ada lint.
+  `bun scripts/check-ics.ts` + `bun scripts/check-tarikh.ts`. Belum ada lint.
 
 ## 🚀 Owner - langkah manual
 
@@ -135,8 +142,15 @@ Disusun ikut nilai untuk pemula, yang paling murah dulu. ✅ = dah dibina.
 - **Cuaca + jerebu sebelum lari** - ramalan MET + IPU untuk lokasi larian (portfolio dah ada
   `lib/ramalan-cuaca.ts`, `lib/ipu.ts`; jadikan endpoint kongsi di backend). "IPU > 100: lari dalam rumah".
 - **Strava** - kelab Strava + pautan dulu; import aktiviti (OAuth) tangguh - kerja besar.
-- **Kalendar lumba Malaysia** - hanya dari penganjur rasmi, dengan tarikh semakan (seperti nombor
-  kecemasan portfolio) - jangan salin dari blog.
+- **Kalendar lumba Malaysia** - TIADA API terbuka (semakan 2026-10-18): data.gov.my tiada dataset;
+  Ahotu (kalendar besar, data ke Garmin/Strava) hanya perkongsian syarikat - hubungi
+  partners@worldssportsgroup.com jika mahu; JomRun / Finishers / Everythingboleh / HAID tiada API, dan
+  scraping = risiko terma + mudah rosak. Rancangan:
+  1. Senarai susun tangan `src/data/lumba.ts` - setiap acara: nama, tarikh, lokasi, jarak, pautan laman
+     RASMI penganjur, `disemak` (tarikh). Skrip semak gagal jika entri > 3 bulan tak disemak; acara lepas
+     disembunyikan sendiri. Muat turun `.ics` per acara (guna `src/lib/ics.ts`). Murah, belasan acara/tahun.
+  2. Kemudian (perlu backend + admin): ahli/penganjur hantar acara melalui borang -> admin Nubi lulus ->
+     jadual D1. Tetap wajib pautan rasmi.
 
 ## Pelan 5K bawah 30 minit (`/pelan-5k`) - susulan
 
