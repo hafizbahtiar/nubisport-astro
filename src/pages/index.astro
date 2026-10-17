@@ -1,0 +1,374 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { CONTACT, SITE } from "../data/site";
+
+const values = [
+  {
+    title: "Mula dari sifar",
+    body: "Tak pernah lari? Tak apa. Jalan-lari, lari perlahan - semua langkah dikira.",
+  },
+  {
+    title: "Gerak bersama",
+    body: "Kita mula bersama dan habis bersama. Tiada siapa ditinggalkan di belakang.",
+  },
+  {
+    title: "Seronok dulu",
+    body: "Laju datang kemudian. Yang penting konsisten, selamat dan seronok.",
+  },
+];
+
+const steps = [
+  { title: "Hubungi kami", body: "Mesej kami dan perkenalkan diri - tak perlu pengalaman." },
+  { title: "Datang larian", body: "Sertai sesi larian kumpulan. Datang dengan kasut yang selesa." },
+  { title: "Ikut kemampuan", body: "Lari ikut rentak sendiri. Kami bantu anda naik setapak demi setapak." },
+];
+
+const faqs = [
+  {
+    q: "Saya tak pernah lari langsung. Boleh sertai?",
+    a: "Boleh - Nubi Sport memang untuk pemula. Ramai bermula dengan jalan-lari.",
+  },
+  {
+    q: "Perlu laju untuk ikut kumpulan?",
+    a: "Tidak. Tiada pace minimum. Anda lari ikut kemampuan sendiri.",
+  },
+  {
+    q: "Apa perlu dibawa?",
+    a: "Kasut larian yang selesa, pakaian yang sesuai dan air minuman.",
+  },
+];
+
+const contacts = [
+  { label: "WhatsApp", href: CONTACT.whatsapp },
+  { label: "Instagram", href: CONTACT.instagram },
+  { label: "E-mel", href: CONTACT.email && `mailto:${CONTACT.email}` },
+].filter((c) => c.href);
+---
+
+<Layout>
+  <header class="site-header">
+    <div class="container bar">
+      <a href="/" aria-label={`${SITE.name} - laman utama`}>
+        <img src="/brand/logo-dark.svg" alt="" width="190" height="42" class="logo" />
+      </a>
+      <nav aria-label="Utama">
+        <a href="#tentang">Tentang</a>
+        <a href="#cara">Cara sertai</a>
+        <a href="#soalan">Soalan</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container hero-grid">
+        <div>
+          <p class="eyebrow on-dark">{SITE.tagline} · Est. {SITE.established}</p>
+          <h1 class="display hero-title">
+            Lari pertama anda <span>bermula di sini.</span>
+          </h1>
+          <p class="hero-lead">
+            Nubi Sport ialah komuniti larian untuk pemula. Tiada pace minimum, tiada
+            siapa ditinggalkan - hanya langkah demi langkah, bersama.
+          </p>
+          <div class="hero-cta">
+            <a class="btn btn-primary" href="#sertai">Sertai komuniti</a>
+            <a class="btn btn-ghost" href="#tentang">Kenali kami</a>
+          </div>
+        </div>
+        <img src="/brand/crest.svg" alt="Jata Nubi Sport" width="320" height="358" class="hero-crest" />
+      </div>
+    </section>
+
+    <section id="tentang">
+      <div class="container">
+        <p class="eyebrow">Tentang kami</p>
+        <h2 class="display section-title">Nubi = newbie. Dan itu okey.</h2>
+        <p class="lead">
+          Kami kumpulan pelari baru yang mahu mula dengan cara yang betul - tanpa
+          tekanan, tanpa ego. Setiap orang bermula di tempat yang berbeza.
+        </p>
+        <ul class="cards">
+          {
+            values.map((v, i) => (
+              <li class="card">
+                <span class="card-num display">0{i + 1}</span>
+                <h3 class="display card-title">{v.title}</h3>
+                <p>{v.body}</p>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </section>
+
+    <section id="cara" class="band">
+      <div class="container">
+        <p class="eyebrow">Cara sertai</p>
+        <h2 class="display section-title">Tiga langkah, itu sahaja.</h2>
+        <ol class="steps">
+          {
+            steps.map((s) => (
+              <li>
+                <h3 class="display card-title">{s.title}</h3>
+                <p>{s.body}</p>
+              </li>
+            ))
+          }
+        </ol>
+      </div>
+    </section>
+
+    <section id="soalan">
+      <div class="container narrow">
+        <p class="eyebrow">Soalan lazim</p>
+        <h2 class="display section-title">Ada soalan?</h2>
+        {
+          faqs.map((f) => (
+            <details class="faq">
+              <summary>{f.q}</summary>
+              <p>{f.a}</p>
+            </details>
+          ))
+        }
+      </div>
+    </section>
+
+    <section id="sertai" class="join">
+      <div class="container join-inner">
+        <h2 class="display join-title">Langkah pertama paling susah. <span>Kami teman.</span></h2>
+        {
+          contacts.length ? (
+            <div class="hero-cta">
+              {contacts.map((c) => (
+                <a class="btn btn-primary" href={c.href} rel="noopener" target={c.href.startsWith("mailto:") ? undefined : "_blank"}>
+                  {c.label}
+                </a>
+              ))}
+            </div>
+          ) : (
+            <p class="hero-lead">Maklumat untuk menyertai akan dikemas kini tidak lama lagi.</p>
+          )
+        }
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container foot">
+      <img src="/brand/crest.svg" alt="" width="40" height="45" />
+      <p>© {SITE.established} {SITE.name}. {SITE.tagline}.</p>
+    </div>
+  </footer>
+</Layout>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: rgb(10 26 51 / 0.92);
+    backdrop-filter: blur(8px);
+  }
+  .bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    height: 4.25rem;
+  }
+  .logo {
+    height: 2.6rem;
+    width: auto;
+  }
+  nav {
+    display: flex;
+    gap: 1.5rem;
+  }
+  nav a {
+    color: #cbd5e1;
+    text-decoration: none;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  nav a:hover {
+    color: var(--orange);
+  }
+  @media (max-width: 40rem) {
+    nav {
+      display: none;
+    }
+  }
+
+  .hero {
+    background:
+      radial-gradient(60rem 30rem at 85% 10%, rgb(255 90 31 / 0.16), transparent 60%),
+      var(--navy);
+    color: #fff;
+    padding-block: clamp(3.5rem, 9vw, 7rem);
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    align-items: center;
+    gap: 3rem;
+  }
+  .eyebrow.on-dark {
+    color: var(--orange);
+  }
+  .hero-title {
+    font-size: clamp(3.2rem, 9vw, 6.25rem);
+    margin: 0 0 1.25rem;
+  }
+  .hero-title span {
+    color: var(--orange);
+    display: block;
+  }
+  .hero-lead {
+    color: #cbd5e1;
+    font-size: 1.2rem;
+    max-width: 34rem;
+    margin: 0;
+  }
+  .hero-cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 2rem;
+  }
+  .hero-crest {
+    width: min(100%, 20rem);
+    height: auto;
+    justify-self: center;
+    filter: drop-shadow(0 1.5rem 3rem rgb(0 0 0 / 0.45));
+  }
+  @media (max-width: 52rem) {
+    .hero-grid {
+      grid-template-columns: 1fr;
+    }
+    .hero-crest {
+      order: -1;
+      width: 9rem;
+      justify-self: start;
+    }
+  }
+
+  .cards {
+    list-style: none;
+    padding: 0;
+    margin: 3rem 0 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: 1.25rem;
+  }
+  .card {
+    background: var(--paper-2);
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    padding: 1.75rem;
+  }
+  .card-num {
+    color: var(--orange);
+    font-size: 1.6rem;
+  }
+  .card-title {
+    font-size: 1.75rem;
+    color: var(--navy);
+    margin: 0.5rem 0;
+  }
+  .card p,
+  .steps p {
+    margin: 0;
+    color: var(--muted);
+  }
+
+  .band {
+    background: var(--paper-2);
+    border-block: 1px solid var(--line);
+  }
+  .steps {
+    list-style: none;
+    counter-reset: step;
+    padding: 0;
+    margin: 3rem 0 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: 2rem;
+  }
+  .steps li {
+    counter-increment: step;
+    border-top: 4px solid var(--orange);
+    padding-top: 1.25rem;
+  }
+  .steps li::before {
+    content: "Langkah " counter(step);
+    font-family: var(--display);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--orange-ink);
+    font-size: 0.9rem;
+  }
+
+  .narrow {
+    max-width: 48rem;
+  }
+  .faq {
+    border-bottom: 1px solid var(--line);
+    padding-block: 1.1rem;
+  }
+  .faq summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--navy);
+    font-size: 1.1rem;
+  }
+  .faq p {
+    margin: 0.6rem 0 0;
+    color: var(--muted);
+  }
+
+  .join {
+    background: var(--orange);
+    color: var(--navy);
+  }
+  .join-inner {
+    text-align: center;
+    display: grid;
+    justify-items: center;
+  }
+  .join-title {
+    font-size: clamp(2.4rem, 6vw, 4rem);
+    margin: 0;
+    max-width: 18ch;
+  }
+  .join-title span {
+    color: #fff;
+  }
+  .join .hero-lead {
+    color: var(--navy);
+    margin-top: 1.25rem;
+  }
+  .join .btn-primary {
+    background: var(--navy);
+    color: #fff;
+  }
+
+  .site-footer {
+    background: var(--navy);
+    color: #94a3b8;
+    padding-block: 2rem;
+  }
+  .foot {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .foot p {
+    margin: 0;
+    font-size: 0.95rem;
+  }
+</style>
