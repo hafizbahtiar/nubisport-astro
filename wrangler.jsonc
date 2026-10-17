@@ -1,0 +1,15 @@
+// Nubi Sport Worker: static site from dist/ + /api/* forwarded to the hono-workers
+// API through a service binding (same origin for the browser - no CORS, no public hop).
+{
+	"name": "nubisport-astro",
+	"main": "worker.ts",
+	"compatibility_date": "2026-01-14",
+	"assets": {
+		"directory": "./dist",
+		"binding": "ASSETS",
+		// Only /api/* runs the Worker; every other path is a plain static asset.
+		"run_worker_first": ["/api/*"]
+	},
+	"services": [{ "binding": "API", "service": "hono-workers" }],
+	"routes": [{ "pattern": "nubisport.hafizbahtiar.com", "custom_domain": true }]
+}

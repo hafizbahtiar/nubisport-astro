@@ -24,3 +24,5 @@ Consult these guides before working on related tasks:
 ## Project notes
 
 Read `TODO.md` first - its "Penting" section holds the rules (brand generator, domain, roles via backend `requireAppRole`, never run anything remote).
+
+@TODO.md

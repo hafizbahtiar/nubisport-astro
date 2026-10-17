@@ -20,8 +20,12 @@ Item yang dah siap dibuang (lihat git history).
 - **Peranan**: akses Nubi diurus owner di portfolio `/admin/app-access` (backend `/owner/apps/*`,
   migration 025). Endpoint Nubi baru wajib guna `requireAppRole("nubi", ...)` di backend - jangan
   semak peranan di frontend sahaja. Peranan baru (contoh `coach`) = migration baru di backend, bukan page.
-- **Akaun dikongsi** dengan portfolio (satu jadual `users`). Cookie API (`api.hafizbahtiar.com`)
-  SameSite=Lax - Nubi subdomain yang sama, jadi `credentials: "include"` berfungsi.
+- **API = `/api/*` di domain sendiri** melalui service binding (`wrangler.jsonc` `services` -> Worker
+  `hono-workers`, `worker.ts` hanya forward). Panggil `fetch("/api/v1/...")` - same-origin, tiada CORS,
+  cookie login melekat pada `nubisport.hafizbahtiar.com`. Akaun dikongsi dengan portfolio (satu jadual
+  `users`), tapi sesi login berasingan (cookie ikut domain). Semua laluan lain = aset statik `dist/`.
+- **Uji lokal**: `npx wrangler dev` dalam `hono-workers` (port 8787) dan `npx wrangler dev --port 8790`
+  di sini - binding bersambung sendiri; `localhost:8790/api/v1/health` mesti jawab dari backend.
 - Palet: navy `#0A1A33`, oren `#FF5A1F`, oren teks atas putih `#C2410C`. Font paparan Barlow Condensed.
 - **Pelan 5K** (`/pelan-5k`): logik tulen dalam `src/lib/pelan-5k.ts` (dikira dalam browser - laman statik,
   jadi `?bulan=&tahap=&masa=&hari=&mula=` dibaca oleh skrip page). Tukar logik = jalankan
@@ -33,8 +37,6 @@ Item yang dah siap dibuang (lihat git history).
 
 ## 🚀 Owner - langkah manual
 
-- [ ] Backend: `wrangler d1 export`, `bun run db:migrate:remote` (025 per-app roles), `wrangler deploy`
-  (CORS untuk domain Nubi ikut deploy ini).
 - [ ] Isi `CONTACT` (WhatsApp group / Instagram / e-mel) - seksyen "Sertai" kosong sampai ini diisi.
 - [ ] Lantik admin Nubi di portfolio `/admin/app-access`.
 - [ ] Bila Nubi ada login: tambah domain ke `TURNSTILE_HOSTNAMES` (backend) + hostname widget Turnstile.
