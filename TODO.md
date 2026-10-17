@@ -55,6 +55,11 @@ Item yang dah siap dibuang (lihat git history).
 - **Had pelan tanpa akaun**: 3 pelan berbeza (`HAD_TANPA_AKAUN`, localStorage `pelan-5k:dibuat`; buka
   semula tidak dikira; `session_active=1` = tiada had). Had LEMBUT sahaja (incognito memintas) - had
   keras perlu pelan dijana di server.
+- **Pelan 5K dinamik**: dengan masa 5K (wajib tahap "5k", pilihan "jalan"), pace interval/tempo
+  turun setiap sesi laju dari pace sekarang ke 6:00/km; sesi mudah seminggu berbeza panjang; Daya
+  tahan ada langkah laju; fasa Asas ulang langkah lama di sesi pertama. "Realistik ke?" = `analisis()`
+  (munasabah >= 100% minggu perlu, mencabar >= 75%, selain itu tak realistik) - anggaran kasar, sama
+  dengan ambang `mingguPerlu`.
 - **Pelan 5K + MAF**: kotak semak "Ikut nadi" (`?maf=1&umur=&keadaan=`) -> `buatPelan({ nadi })`: sesi mudah /
   panjang / jalan-lari bawa julat nadi, interval/tempo diberi nota "melebihi had". Minit sesi tak berubah
   (kunci tanda siap sama).

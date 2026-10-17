@@ -1,5 +1,7 @@
 // bun scripts/check-pelan-5k.ts - semak src/lib/pelan-5k.ts untuk setiap gabungan input.
-import { BULAN, HAD_TANPA_AKAUN, HARI, HARI_SESI, bolehBuatPelan, MASA_MAX, MASA_MIN, MINGGU_MIN, buatPelan, isninMula, pace, tarikhSesi, type Tahap } from "../src/lib/pelan-5k";
+import {
+  analisis, BULAN, HAD_TANPA_AKAUN, HARI, HARI_SESI, bolehBuatPelan, MASA_MAX, MASA_MIN, MINGGU_MIN, buatPelan, isninMula, pace, tarikhSesi, type Tahap
+} from "../src/lib/pelan-5k";
 
 let gagal = 0;
 const ok = (c: unknown, msg: string) => {
@@ -83,6 +85,26 @@ for (const tahap of ["sifar", "jalan"] as const) {
   const laju = sesi(dengan).filter((s) => s.jenis === "interval" || s.jenis === "tempo");
   ok(laju.length > 0 && laju.every((s) => s.usaha.includes("melebihi 143")), `nadi ${tahap}: interval/tempo bernota`);
   ok(JSON.stringify(dengan.minggu.map((w) => w.sesi.map((s) => s.minit))) === JSON.stringify(tanpa.minggu.map((w) => w.sesi.map((s) => s.minit))), `nadi ${tahap}: minit sesi sama`);
+}
+
+// Analisis "realistik ke?"
+{
+  const nilai = (i: Parameters<typeof analisis>[0]) => analisis(i)?.penilaian;
+  ok(nilai({ bulan: 4, hari: 3, tahap: "sifar" }) === "munasabah", "analisis: sifar 4 bulan munasabah");
+  ok(nilai({ bulan: 2, hari: 3, tahap: "sifar" }) === "tak-realistik", "analisis: sifar 2 bulan tak realistik");
+  ok(nilai({ bulan: 3, hari: 3, tahap: "5k", masa5k: 36 }) === "munasabah", "analisis: 36 min 3 bulan munasabah");
+  ok(nilai({ bulan: 2, hari: 3, tahap: "5k", masa5k: 36 }) === "mencabar", "analisis: 36 min 2 bulan mencabar");
+  ok(nilai({ bulan: 2, hari: 4, tahap: "5k", masa5k: 45 }) === "tak-realistik", "analisis: 45 min 2 bulan tak realistik");
+  ok(nilai({ bulan: 6, hari: 3, tahap: "jalan", masa5k: 55 }) === "tak-realistik", "analisis: jalan 50 min ikut masa");
+  ok(analisis({ bulan: 6, hari: 3, tahap: "5k", masa5k: 55 })!.ringkas.includes("bawah 40 minit dulu"), "analisis: sasaran perantaraan");
+  ok(analisis({ bulan: 3, hari: 3, tahap: "5k" }) === null, "analisis: 5k tanpa masa = null");
+  // Pace interval/tempo peribadi turun setiap sesi laju.
+  const h = buatPelan({ bulan: 4, hari: 3, tahap: "5k", masa5k: 40 });
+  const paces = h.ok ? h.minggu.flatMap((w) => w.sesi).filter((s) => s.jenis === "tempo").map((s) => s.usaha.match(/~(\d+):(\d+)/)!).map((m) => +m[1] * 60 + +m[2]) : [];
+  ok(paces.length > 1 && paces.every((p, i) => i === 0 || p < paces[i - 1]), "pace tempo turun setiap sesi");
+  // Sesi mudah dalam seminggu tidak sama panjang.
+  const d = buatPelan({ bulan: 3, hari: 4, tahap: "5k", masa5k: 34 });
+  ok(d.ok && new Set(d.minggu[0].sesi.filter((s) => s.jenis === "mudah").map((s) => s.minit)).size > 1, "sesi mudah berbeza panjang");
 }
 
 // Hari sesi: mula Isnin, sesi akhir hujung minggu, tiada sesi berturut-turut.

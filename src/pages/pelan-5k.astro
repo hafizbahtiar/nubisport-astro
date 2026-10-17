@@ -159,7 +159,9 @@ const tahun = new Date().getFullYear();
     HAD_TANPA_AKAUN,
     HARI_SESI,
     NAMA_HARI,
+    analisis,
     TAHAP,
+    type Analisis,
     bolehBuatPelan,
     buatPelan,
     isninMula,
@@ -188,12 +190,17 @@ const tahun = new Date().getFullYear();
     }
   }
 
+  const masaLabel = masaMedan.querySelector(".field-label")!;
   const ikutTahap = () => {
-    const is5k =
-      (borang.elements.namedItem("tahap") as RadioNodeList).value === "5k";
-    masaMedan.hidden = !is5k;
+    const tahap = (borang.elements.namedItem("tahap") as RadioNodeList).value;
+    const is5k = tahap === "5k";
+    const ada = is5k || tahap === "jalan"; // jalan: pilihan, untuk analisis lebih tepat
+    masaMedan.hidden = !ada;
     masaInput.required = is5k;
-    masaInput.disabled = !is5k; // tak dihantar dalam URL bila bukan 5k
+    masaInput.disabled = !ada; // tak dihantar dalam URL bila "sifar"
+    masaLabel.textContent = is5k
+      ? "Masa 5K sekarang (minit)"
+      : "Masa jalan-lari 5K (minit, pilihan)";
     // fieldset disabled = umur/keadaan tak dihantar dan tak wajib bila MAF tak ditanda
     mafMedan.hidden = mafMedan.disabled = !mafBox.checked;
   };
@@ -201,6 +208,28 @@ const tahun = new Date().getFullYear();
   ikutTahap();
 
   if (q.has("bulan")) papar();
+
+  function htmlAnalisis(a: Analisis) {
+    // Dalam fungsi: papar() dipanggil lebih awal dalam skrip, sebelum const di luar wujud.
+    const LABEL_PENILAIAN = {
+      munasabah: "Munasabah",
+      mencabar: "Mencabar",
+      "tak-realistik": "Tak realistik",
+    };
+    return `<section class="analisis analisis-${a.penilaian}" aria-labelledby="analisis-tajuk">
+      <div class="analisis-kepala">
+        <h3 class="display" id="analisis-tajuk">Realistik ke?</h3>
+        <span class="analisis-lencana">${LABEL_PENILAIAN[a.penilaian]}</span>
+      </div>
+      <p class="analisis-ringkas">${a.ringkas}</p>
+      <dl class="analisis-butiran">${a.butiran
+        .map(
+          (b) =>
+            `<div><dt>${b.label}</dt><dd><strong>${b.nilai}</strong><span>${b.nota}</span></dd></div>`,
+        )
+        .join("")}</dl>
+    </section>`;
+  }
 
   function papar() {
     const tahap = q.get("tahap") as Tahap;
@@ -219,9 +248,10 @@ const tahun = new Date().getFullYear();
       nadi = { maf: m.maf, bawah: m.bawah };
     }
     const h = buatPelan({ bulan, tahap, hari, masa5k, nadi });
+    const a = analisis({ bulan, tahap, hari, masa5k, nadi });
 
     if (!h.ok) {
-      pelanEl.innerHTML = `<div class="alert alert-warning"><p>${h.sebab}</p>${
+      pelanEl.innerHTML = `${a ? htmlAnalisis(a) : ""}<div class="alert alert-warning"><p>${h.sebab}</p>${
         h.cadanganBulan
           ? `<a class="btn btn-primary" href="?${new URLSearchParams({ ...Object.fromEntries(q), bulan: String(h.cadanganBulan) })}">Cuba ${h.cadanganBulan} bulan</a>`
           : ""
@@ -269,7 +299,7 @@ const tahun = new Date().getFullYear();
           <button class="btn btn-outline" type="button" onclick="print()">Cetak</button>
         </div>
       </div>
-      ${h.amaran.map((a) => `<div class="alert alert-warning amaran"><p>${a}</p></div>`).join("")}
+      ${a ? htmlAnalisis(a) : ""}
       <div class="kalendar no-print">
         <h3 class="display">Simpan ke kalendar</h3>
         ${
@@ -418,8 +448,70 @@ const tahun = new Date().getFullYear();
     justify-content: space-between;
     gap: 1rem;
   }
-  .amaran {
-    margin-top: 1.5rem;
+  .analisis {
+    margin: 1.5rem 0 0;
+    padding: 1.25rem 1.5rem;
+    border: 1px solid var(--line);
+    border-left-width: 4px;
+    border-radius: var(--radius-lg);
+  }
+  .analisis-munasabah {
+    border-left-color: var(--success-ink);
+  }
+  .analisis-mencabar {
+    border-left-color: var(--orange);
+  }
+  .analisis-tak-realistik {
+    border-left-color: var(--danger-ink);
+  }
+  .analisis-kepala {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .analisis-kepala h3 {
+    margin: 0;
+  }
+  .analisis-lencana {
+    padding: 0.2rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #fff;
+    background: var(--success-ink);
+  }
+  .analisis-mencabar .analisis-lencana {
+    background: var(--orange-ink);
+  }
+  .analisis-tak-realistik .analisis-lencana {
+    background: var(--danger-ink);
+  }
+  .analisis-ringkas {
+    margin: 0.75rem 0 0;
+    font-weight: 600;
+  }
+  .analisis-butiran {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+    gap: 1rem 1.5rem;
+    margin: 1.25rem 0 0;
+  }
+  .analisis-butiran dt {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .analisis-butiran dd {
+    margin: 0.25rem 0 0;
+    display: grid;
+    gap: 0.25rem;
+  }
+  .analisis-butiran dd span {
+    font-size: 0.9rem;
+    color: var(--muted);
   }
 
   .minggu {
