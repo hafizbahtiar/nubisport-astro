@@ -1,6 +1,7 @@
 // HTML pelan latihan yang dikongsi Pelan5k.astro dan PelanJarak.astro (gaya: src/styles/pelan.css).
 import { ikon } from "./ikon";
 import { bacaMasa, pelanSeterusnya, type Dari } from "./pace";
+import { dalamRamadan } from "./ramadan";
 import {
   HARI_SESI,
   isoTarikh,
@@ -60,13 +61,14 @@ export function htmlMinggu(w: Minggu, isnin: Date | null, hariIni: string, ujian
             ? ` ${d.toLocaleDateString("ms-MY", { day: "numeric", month: "short" })}`
             : "");
         const today = d?.toDateString() === hariIni;
+        const puasa = d ? dalamRamadan(isoTarikh(d)) : false;
         return `<li class="sesi ${s.jenis}${today ? " hari-ini" : ""}">
           <label>
             <input type="checkbox" data-sesi="${w.no}.${i}" aria-label="Minggu ${w.no}, ${label}, siap" />
             <span>
-              <strong>${today ? "Hari ini · " : ""}${label}: ${s.tajuk}</strong> <em>${s.minit} min</em>
+              <strong>${today ? "Hari ini · " : ""}${label}: ${s.tajuk}</strong> <em>${s.minit} min</em>${puasa ? ' <span class="tag">Puasa</span>' : ""}
               <span class="arahan">${s.arahan}</span>
-              <span class="usaha">${s.usaha}</span>
+              <span class="usaha">${s.usaha}${puasa ? " · Hari puasa: ringankan sesi ini, hidrasi selepas berbuka." : ""}</span>
             </span>
           </label>${s.segmen
             ? `<button class="btn-mula no-print" type="button" data-mula="${w.no}.${i}" data-tajuk="${s.tajuk}" data-usaha="${s.usaha.replace(/"/g, "&quot;")}" data-segmen='${JSON.stringify(s.segmen)}'>${ikon("main")}Mula pemasa</button>`
@@ -84,6 +86,25 @@ export function htmlMinggu(w: Minggu, isnin: Date | null, hariIni: string, ujian
       })
       .join("")}</ol>
   </li>`;
+}
+
+/**
+ * Banner bulan puasa: bilangan sesi yang jatuh dalam Hijri bulan 9. "" bila pelan tiada tarikh
+ * mula atau tiada sesi dalam Ramadan. Tarikh = anggaran Umm al-Qura (±1 hari), bukan takwim JAKIM.
+ */
+export function notisRamadan(minggu: Minggu[], isnin: Date | null): string {
+  if (!isnin) return "";
+  let jumlah = 0;
+  for (const w of minggu) {
+    const hari = w.sesi.length;
+    for (let i = 0; i < hari; i++)
+      if (dalamRamadan(isoTarikh(tarikhSesi(isnin, w.no, hari, i)))) jumlah++;
+  }
+  if (!jumlah) return "";
+  return `<div class="alert alert-info no-print">
+    <p class="alert-title">Bulan Ramadan · ${jumlah} sesi</p>
+    <p>Sesi ini jatuh dalam bulan puasa. Semasa berpuasa: jadikan sesi laju atau interval sebagai larian <strong>mudah</strong> sahaja, lari sebelum berbuka atau selepas tarawih, dan minum serta makan karbohidrat selepas berbuka. Panduan umum, bukan nasihat perubatan.</p>
+  </div>`;
 }
 
 /**
@@ -136,10 +157,10 @@ export function pasangUjian(akar: HTMLElement) {
     const r = pelanSeterusnya(f.dataset.ujian as Dari, minit, hari, location.pathname);
     // Teks dari lib (nombor + ayat tetap), bukan dari input - selamat untuk innerHTML.
     out.innerHTML = `<p>${r.teks}</p>${r.pautan.length
-        ? `<div class="actions">${r.pautan
-          .map((p, n) => `<a class="btn ${n ? "btn-outline" : "btn-primary"} btn-sm" href="${p.href}">${p.label}</a>`)
-          .join("")}</div>`
-        : ""
+      ? `<div class="actions">${r.pautan
+        .map((p, n) => `<a class="btn ${n ? "btn-outline" : "btn-primary"} btn-sm" href="${p.href}">${p.label}</a>`)
+        .join("")}</div>`
+      : ""
       }`;
   });
 }

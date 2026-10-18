@@ -8,7 +8,9 @@ Semakan terakhir: 2026-10-18.
 
 Pelan 5K bawah 30 minit · Pelan 10K / 21K (akaun) · **pemasa jalan-lari** · **sambung selepas terlepas sesi** · **kalkulator pace** (`/pace`) · **pelan seterusnya selepas hari ujian/lumba** · **kongsi pelan dengan kawan** · **panduan pemula + senarai semak hari lumba** (`/panduan`) · MAF / lari ikut nadi · fail `.ics` · had 3 pelan
 tanpa akaun · daftar + sahkan e-mel · profil + tukar kata laluan · simpan ke awan (3 slot, segerak tanda siap)
-· notis luar talian.
+· notis luar talian · **kad "Sesuai lari tak?"** (IPU JAS + ramalan MET ikut negeri) · **mod Ramadan**
+(sesi dalam Hijri 9 ditag "Puasa" + banner nasihat) · **waktu lari terbaik hari ini** (JAKIM + MET, elak
+11 pagi - 4 petang ikut KKM) · **kalkulator peluh** (`/panduan#peluh`, ACSM).
 
 ## Peraturan untuk setiap idea
 
@@ -28,10 +30,6 @@ Semua dibina - lihat "Sudah ada" dan `TODO.md`.
 
 | Idea | Kenapa | Nota bina |
 |---|---|---|
-| **Sesuai lari tak?** | Panas, jerebu dan ribut petir petang ialah risiko sebenar di sini | IPU (JAS) + ramalan MET untuk lokasi pengguna: "IPU > 100: lari dalam rumah", "ribut petir petang: lari pagi". Portfolio dah ada `lib/ipu.ts`, `lib/ramalan-cuaca.ts` -> jadikan endpoint kongsi di backend (cache colo), Nubi hanya baca |
-| **Mod Ramadan** | Ramai ahli berpuasa; pelan biasa tak sesuai | Bila bulan Hijri = 9 (takwim JAKIM, logik dah ada di portfolio): kurangkan intensiti, cadang masa (sebelum berbuka / selepas tarawih), ingatan hidrasi selepas berbuka. Label "panduan umum" |
-| **Waktu lari terbaik hari ini** | Elak 11 pagi - 4 petang | Gabung waktu solat (Subuh/Asar/Maghrib) + ramalan cuaca. Sumber JAKIM + MET |
-| **Kalkulator peluh / hidrasi** | Panas lembap = kehilangan peluh tinggi | Timbang sebelum & selepas lari 1 jam -> kadar peluh -> berapa minum. Dalam pelayar |
 | **Kalendar lumba Malaysia** | Sasaran = motivasi | Tiada API terbuka (semakan 2026-10-18; Ahotu hanya perkongsian syarikat). Senarai susun tangan `src/data/lumba.ts` (pautan rasmi penganjur + `disemak`, skrip semak gagal > 3 bulan), `.ics` per acara. Kemudian: borang hantar acara -> admin lulus |
 
 ## Gelombang 3 - komuniti (perlu backend, ikut `requireAppRole`)

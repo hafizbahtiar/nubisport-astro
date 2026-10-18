@@ -1,12 +1,13 @@
 ---
 // Panduan pemula + senarai semak hari lumba. Statik. Setiap nasihat kesihatan mesti dari sumber
-// rasmi yang disenaraikan di bawah (NHS, KKM) - semakan 2026-10-18. Angka yang tak dapat disahkan
+// rasmi yang disenaraikan di bawah (NHS, KKM, ACSM) - semakan 2026-10-18. Angka yang tak dapat disahkan
 // dari sumber rasmi (contoh "tukar kasut setiap X km") sengaja tidak ditulis.
 import Layout from "../layouts/Layout.astro";
 import PageHero from "../components/ui/PageHero.astro";
 import Section from "../components/ui/Section.astro";
 import Checkbox from "../components/ui/Checkbox.astro";
 import Alert from "../components/ui/Alert.astro";
+import Field from "../components/ui/Field.astro";
 
 const SENARAI = [
   {
@@ -77,7 +78,7 @@ const SENARAI = [
 
 <Layout
   title="Panduan pemula - Nubi Sport"
-  description="Panduan lari untuk pemula: kasut, panas dan sejuk badan, cuaca panas Malaysia, keselamatan, bila berhenti, dan senarai semak hari lumba yang boleh dicetak."
+  description="Panduan lari untuk pemula: kasut, panas dan sejuk badan, cuaca panas Malaysia, kalkulator peluh, keselamatan, bila berhenti, dan senarai semak hari lumba yang boleh dicetak."
 >
   <PageHero
     eyebrow="Panduan"
@@ -158,8 +159,10 @@ const SENARAI = [
           semasa lari. Kurangkan minuman manis dan berkafein.
         </li>
         <li>
-          <strong>Lari awal pagi atau lewat petang.</strong> Elak tengah hari. Hari
-          yang sangat panas: kurangkan atau tangguhkan larian.
+          <strong>Lari awal pagi atau lewat petang.</strong> KKM menasihatkan elak
+          waktu puncak panas, 11 pagi hingga 4 petang. Hari yang sangat panas: kurangkan
+          atau tangguhkan larian. Kad "Sesuai lari tak?" pada page pelan tunjuk waktu
+          terbaik untuk negeri anda.
         </li>
         <li>
           <strong>Berehat di tempat teduh</strong> bila terasa terlalu panas.
@@ -170,6 +173,79 @@ const SENARAI = [
         </li>
       </ul>
     </div>
+  </Section>
+
+  <Section
+    id="peluh"
+    band
+    eyebrow="Kalkulator"
+    title="Berapa banyak peluh anda?"
+    narrow
+  >
+    <div class="prose">
+      <p>
+        Kadar peluh berbeza setiap orang. Cara paling mudah mengetahuinya:
+        timbang sebelum dan selepas lari kira-kira sejam. Timbang tanpa kasut
+        dengan pakaian yang sama (lap peluh dulu), dan ke tandas sebelum
+        timbangan pertama.
+      </p>
+    </div>
+    <form class="form" id="borang-peluh">
+      <div class="dua">
+        <Field label="Berat sebelum (kg)">
+          <input
+            class="input"
+            type="number"
+            name="sebelum"
+            min="30"
+            max="200"
+            step="0.1"
+            inputmode="decimal"
+            required
+          />
+        </Field>
+        <Field label="Berat selepas (kg)">
+          <input
+            class="input"
+            type="number"
+            name="selepas"
+            min="30"
+            max="200"
+            step="0.1"
+            inputmode="decimal"
+            required
+          />
+        </Field>
+        <Field label="Minum semasa lari (ml)" hint="0 jika tak minum">
+          <input
+            class="input"
+            type="number"
+            name="minum"
+            min="0"
+            max="5000"
+            step="50"
+            inputmode="numeric"
+            value="0"
+            required
+          />
+        </Field>
+        <Field label="Tempoh lari (minit)">
+          <input
+            class="input"
+            type="number"
+            name="minit"
+            min="15"
+            max="300"
+            step="1"
+            inputmode="numeric"
+            value="60"
+            required
+          />
+        </Field>
+      </div>
+      <button class="btn btn-primary" type="submit">Kira</button>
+    </form>
+    <div id="hasil-peluh" aria-live="polite"></div>
   </Section>
 
   <Section
@@ -276,7 +352,20 @@ const SENARAI = [
             href="https://berita.rtm.gov.my/nasional/senarai-berita-nasional/senarai-artikel/dua-kematian-akibat-strok-haba-56-kes-penyakit-berkaitan-cuaca-panas/"
             rel="noopener"
             target="_blank">penyakit berkaitan cuaca panas</a
-          > (3 Mei 2026).
+          > (3 Mei 2026). KKM - <a
+            class="link"
+            href="https://www.moh.gov.my/images/kenyataan-media/2026/MAC%202026/KENYATAAN%20MEDIA%20CUACA%20PANAS%20_25%20Mac%202026-1.pdf"
+            rel="noopener"
+            target="_blank">Kenyataan Media Cuaca Panas</a
+          > (25 Mac 2026; elak 11 pagi hingga 4 petang).
+        </li>
+        <li>
+          American College of Sports Medicine - <a
+            class="link"
+            href="https://pubmed.ncbi.nlm.nih.gov/17277604/"
+            rel="noopener"
+            target="_blank">Exercise and Fluid Replacement</a
+          > (2007; kadar peluh dari timbang sebelum/selepas, had 2% berat badan).
         </li>
       </ul>
       <p class="muted">
@@ -297,6 +386,32 @@ const SENARAI = [
   addEventListener("afterprint", () =>
     document.body.classList.remove("cetak-senarai"),
   );
+
+  import { kadarPeluh } from "../lib/peluh";
+  const borang = document.getElementById("borang-peluh") as HTMLFormElement;
+  const hasil = document.getElementById("hasil-peluh")!;
+  borang.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const n = (k: string) =>
+      Number((borang.elements.namedItem(k) as HTMLInputElement).value);
+    const h = kadarPeluh(n("sebelum"), n("selepas"), n("minum"), n("minit"));
+    const ml = (l: number) =>
+      `${Math.round(l * 1000).toLocaleString("ms-MY")} ml`;
+    // Teks dari lib + nombor sahaja - selamat untuk innerHTML.
+    hasil.innerHTML = !h.ok
+      ? `<div class="alert alert-warning"><p>${h.sebab}</p></div>`
+      : h.naik
+        ? `<div class="alert alert-warning"><p>Berat naik selepas lari - anda minum lebih dari peluh yang hilang. Minum sedikit kurang semasa sesi sepanjang ini.</p></div>`
+        : `<div class="alert ${h.peratus > 2 ? "alert-warning" : "alert-success"}">
+            <p class="alert-title">Kadar peluh ~${ml(h.sejamL)} sejam</p>
+            <p>Peluh hilang ${ml(h.peluhL)}, iaitu ${h.peratus.toFixed(1)}% berat badan. ${
+              h.peratus > 2
+                ? "Lebih 2% - ACSM menasihatkan minum semasa lari supaya kekurangan air tidak melebihi 2% berat badan. Minum lebih kerap pada sesi sepanjang ini."
+                : "Bawah 2% berat badan (had ACSM) - cara minum anda sekarang mencukupi untuk sesi seperti ini."
+            }</p>
+            <p class="field-hint">Kadar peluh berubah ikut cuaca dan laju - timbang semula bila cuaca jauh berbeza. Panduan umum, bukan nasihat perubatan.</p>
+          </div>`;
+  });
 </script>
 
 <style>
@@ -312,6 +427,14 @@ const SENARAI = [
     margin: 0;
     padding: 0;
     border: 0;
+  }
+  .dua {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: 1rem;
+  }
+  #hasil-peluh:not(:empty) {
+    margin-top: 1.5rem;
   }
   legend {
     margin-bottom: 0.5rem;

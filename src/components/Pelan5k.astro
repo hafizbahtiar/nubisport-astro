@@ -6,6 +6,7 @@ import Field from "./ui/Field.astro";
 import DatePicker from "./ui/DatePicker.astro";
 import Checkbox from "./ui/Checkbox.astro";
 import Pemasa from "./Pemasa.astro";
+import Sesuai from "./Sesuai.astro";
 import { KATEGORI, UMUR_MAX, UMUR_MIN } from "../lib/maf";
 import {
   BULAN,
@@ -142,6 +143,8 @@ const tahun = new Date().getFullYear();
   <div class="container" id="pelan"></div>
 </section>
 
+<Sesuai />
+
 <Section band narrow title="Sebelum mula" class="nota">
   <ul>
     <li>
@@ -194,6 +197,7 @@ const tahun = new Date().getFullYear();
   import { sahkan } from "../lib/sahkan";
   import {
     htmlMinggu,
+    notisRamadan,
     papakAnalisis,
     pasangKongsi,
     pasangSambung,
@@ -374,6 +378,7 @@ const tahun = new Date().getFullYear();
           : `<div class="alert alert-warning no-print"><p>Pelan dan tanda siap disimpan dalam pelayar ini sahaja (localStorage) - hilang jika data pelayar dikosongkan atau anda tukar peranti. ${NOTA_AWAN}</p></div>`
       }
       ${a ? htmlAnalisis(a) : ""}
+      ${notisRamadan(h.minggu, isnin)}
       ${penuh ? "" : htmlPromosi()}
       ${
         penuh

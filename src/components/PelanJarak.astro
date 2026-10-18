@@ -9,6 +9,7 @@ import Field from "./ui/Field.astro";
 import DatePicker from "./ui/DatePicker.astro";
 import Checkbox from "./ui/Checkbox.astro";
 import Pemasa from "./Pemasa.astro";
+import Sesuai from "./Sesuai.astro";
 import { KATEGORI, UMUR_MAX, UMUR_MIN } from "../lib/maf";
 import { JARAK } from "../lib/pelan-jarak";
 import "../styles/pelan.css";
@@ -127,6 +128,8 @@ const tahun = new Date().getFullYear();
   <div class="container" id="pelan"></div>
 </section>
 
+<Sesuai />
+
 <Section band narrow title="Sebelum mula" class="nota">
   <ul>
     <li>
@@ -178,6 +181,7 @@ const tahun = new Date().getFullYear();
   } from "../lib/pelan-jarak";
   import {
     htmlMinggu,
+    notisRamadan,
     papakAnalisis,
     pasangKongsi,
     pasangSambung,
@@ -302,6 +306,7 @@ const tahun = new Date().getFullYear();
       <p class="awan-baris no-print" data-awan></p>
       ${h.amaran.map((t) => `<div class="alert alert-info"><p>${t}</p></div>`).join("")}
       ${a ? papakAnalisis(a) : ""}
+      ${notisRamadan(h.minggu, isnin)}
       <div class="kalendar no-print">
         <h3 class="display">Simpan ke kalendar</h3>
         ${

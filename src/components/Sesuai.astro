@@ -1,0 +1,145 @@
+---
+// "Sesuai lari tak hari ini?" - IPU (JAS) + ramalan cuaca (MET Malaysia) + waktu lari terbaik
+// (waktu solat JAKIM, elak 11 pagi - 4 petang ikut KKM) untuk negeri pilihan.
+// Tambahan sahaja: kalau sambungan atau sumber tiada, kad ini cuma beri mesej - pelan tetap berfungsi.
+// Sumber rasmi (eqms.doe.gov.my, api.data.gov.my, e-solat.gov.my); panduan umum, bukan nasihat perubatan.
+import Section from "./ui/Section.astro";
+import { NEGERI } from "../lib/sesuai";
+---
+
+<Section narrow title="Sesuai lari tak hari ini?" class="no-print">
+  <div class="card">
+    <label class="field">
+      <span class="field-label">Negeri anda</span>
+      <select class="input" id="sesuai-negeri">
+        <option value="">Pilih negeri…</option>
+        {NEGERI.map((n) => <option value={n.nama}>{n.nama}</option>)}
+      </select>
+    </label>
+    <p class="muted" id="sesuai-mesej">
+      Pilih negeri untuk nasihat IPU, cuaca dan waktu lari terbaik hari ini.
+    </p>
+    <div id="sesuai-hasil" aria-live="polite" hidden></div>
+    <p class="field-hint">
+      Sumber: Jabatan Alam Sekitar (IPU), MET Malaysia (ramalan cuaca), JAKIM
+      (waktu solat ibu negeri) dan KKM (elak 11 pagi - 4 petang). Panduan umum,
+      bukan nasihat perubatan.
+    </p>
+  </div>
+</Section>
+
+<script>
+  import {
+    NEGERI,
+    bacaCuaca,
+    bacaIpu,
+    bacaLokasi,
+    bacaWaktu,
+    ipuTertinggi,
+    jamMY,
+    nasihatCuaca,
+    simpanLokasi,
+    tahapIpu,
+    waktuLari,
+  } from "../lib/sesuai";
+  import { hariIniMY } from "../lib/tarikh";
+
+  const negeriEl = document.getElementById(
+    "sesuai-negeri",
+  ) as HTMLSelectElement;
+  const mesejEl = document.getElementById("sesuai-mesej")!;
+  const hasilEl = document.getElementById("sesuai-hasil")!;
+
+  // Teks dari sumber luar (nama stesen, ayat ramalan) - escape sebelum masuk innerHTML.
+  const esc = (t: string) =>
+    t.replace(
+      /[&<>"]/g,
+      (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!,
+    );
+  // APIMS menyimpan waktu Malaysia seolah-olah UTC - format dengan timeZone UTC supaya jam betul.
+  const jam = (ms: number) =>
+    new Date(ms).toLocaleTimeString("ms-MY", {
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone: "UTC",
+    });
+  const NADA: Record<string, string> = {
+    baik: "alert-success",
+    sederhana: "alert-warning",
+  };
+
+  async function papar(nama: string) {
+    const negeri = NEGERI.find((n) => n.nama === nama);
+    if (!negeri) return;
+    mesejEl.hidden = false;
+    mesejEl.textContent = "Memuatkan IPU dan cuaca…";
+    hasilEl.hidden = true;
+    const [stesen, cuaca, waktu] = await Promise.all([
+      bacaIpu(negeri.nama),
+      bacaCuaca(negeri.met),
+      bacaWaktu(negeri.zon),
+    ]);
+    if (!stesen && !cuaca && !waktu) {
+      mesejEl.textContent =
+        "Data IPU dan cuaca tidak dapat diambil sekarang. Cuba sebentar lagi.";
+      return;
+    }
+    mesejEl.hidden = true;
+
+    const bahagian: string[] = [];
+    const tertinggi = stesen ? ipuTertinggi(stesen) : null;
+    if (tertinggi) {
+      const t = tahapIpu(tertinggi.api!);
+      bahagian.push(`<div class="alert ${NADA[t.nada] ?? "alert-danger"}">
+        <p class="alert-title">IPU ${tertinggi.api} · ${esc(t.label)}</p>
+        <p>${esc(t.nasihat)}</p>
+        <p class="field-hint">Bacaan tertinggi di ${esc(negeri.nama)}: ${esc(tertinggi.station)} (JAS, ${jam(tertinggi.time)})</p>
+      </div>`);
+    } else if (!stesen) {
+      bahagian.push(`<p class="muted">Bacaan IPU tidak tersedia sekarang.</p>`);
+    }
+
+    const hari =
+      cuaca?.find((d) => d.date === hariIniMY()) ?? cuaca?.[0] ?? null;
+    if (hari) {
+      const butir = [
+        hari.morning ? `Pagi: ${esc(hari.morning)}.` : "",
+        hari.afternoon ? `Petang: ${esc(hari.afternoon)}.` : "",
+        hari.night ? `Malam: ${esc(hari.night)}.` : "",
+      ]
+        .filter(Boolean)
+        .join(" ");
+      const nasihat = nasihatCuaca(hari);
+      bahagian.push(`<p><strong>Cuaca hari ini (MET):</strong> ${esc(hari.summary)}, ${hari.min}-${hari.max} °C. ${butir}</p>
+        ${nasihat.length ? `<ul class="muted">${nasihat.map((n) => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}`);
+    } else {
+      bahagian.push(
+        `<p class="muted">Ramalan cuaca tidak tersedia sekarang.</p>`,
+      );
+    }
+
+    if (waktu) {
+      const tingkap = waktuLari(waktu, jamMY(), hari);
+      bahagian.push(
+        tingkap.length
+          ? `<p><strong>Waktu lari terbaik hari ini:</strong></p><ul>${tingkap
+              .map(
+                (t) =>
+                  `<li><strong>${t.nama} ${t.dari} - ${t.hingga}</strong>${t.ribut ? " (ribut petir diramal)" : ""}. <span class="muted">${t.nota}</span></li>`,
+              )
+              .join("")}</ul>`
+          : `<p><strong>Waktu lari terbaik hari ini dah lepas.</strong> Esok: lepas Subuh hingga 11 pagi, atau lepas 4 petang hingga Maghrib.</p>`,
+      );
+    }
+
+    hasilEl.innerHTML = bahagian.join("");
+    hasilEl.hidden = false;
+  }
+
+  negeriEl.value = bacaLokasi() ?? "";
+  negeriEl.addEventListener("change", () => {
+    simpanLokasi(negeriEl.value);
+    if (negeriEl.value) void papar(negeriEl.value);
+  });
+  if (negeriEl.value) void papar(negeriEl.value);
+</script>

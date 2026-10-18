@@ -89,6 +89,20 @@ Item yang dah siap dibuang (lihat git history).
 - **MAF** (`/maf`): formula 180 Maffetone dalam `src/lib/maf.ts` (16 ke bawah = 165; +10 untuk >65 hanya
   nota, bukan automatik), disemak `bun scripts/check-maf.ts` terhadap philmaffetone.com/180-formula.
   Julat "MAF-10 hingga MAF" dilabel amalan biasa - sumber hanya kata had atas.
+- **Sesuai lari tak + Ramadan** (2026-10-18): kad "Sesuai lari tak hari ini?" pada kedua-dua page pelan -
+  IPU (JAS) + ramalan (MET Malaysia) melalui endpoint awam backend kongsi:
+  `GET /api/v1/public/air-quality?state=` dan `GET /api/v1/public/weather/:id`
+  (`hono-workers/src/services/{air-quality,weather}.ts` + `routes/v1/public/` - repo itu semua Inggeris;
+  memo cache 15/60 min). Nubi: `src/lib/sesuai.ts` (16 negeri, id MET `St###`; negeri pilihan =
+  localStorage `nubi:lokasi`) - nama negeri mesti sama dengan `STATE_NAME` JAS. Teks nasihat Melayu hidup
+  dalam `lib/sesuai.ts`, bukan backend. Sesi dalam Hijri 9 dapat tag "Puasa" + banner (`lib/ramadan.ts`,
+  anggaran Umm al-Qura ±1 hari; JAKIM = kemudian). Kad senyap bila endpoint gagal - pelan tetap berfungsi.
+- **Waktu lari terbaik + kalkulator peluh** (2026-10-18): kad "Sesuai lari tak?" juga tunjuk Pagi (Subuh -> 11:00)
+  dan Petang (16:00 atau Asar jika lewat -> Maghrib) - 11 pagi-4 petang dari Kenyataan Media Cuaca Panas KKM
+  25 Mac 2026; waktu solat zon JAKIM ibu negeri (`NEGERI[].zon`) dari `GET /api/v1/public/prayer-times/:zone`
+  (backend `services/prayer-times.ts`, memo 6 j); tetingkap tamat dibuang, ribut petir MET disusun ke belakang
+  (`waktuLari` dalam `lib/sesuai.ts`). Kalkulator peluh `/panduan#peluh` (`lib/peluh.ts`, ACSM 2007: timbang
+  sebelum/selepas, had 2%) - dalam pelayar, tiada simpanan.
 - Palet: navy `#0A1A33`, oren `#FF5A1F`, oren teks atas putih `#C2410C`. Font paparan Barlow Condensed.
 - **Pelan 5K** (`/pelan-5k`): logik tulen dalam `src/lib/pelan-5k.ts` (dikira dalam browser - laman statik,
   jadi `?bulan=&tahap=&masa=&hari=&mula=` dibaca oleh skrip page). Tukar logik = jalankan
@@ -98,7 +112,10 @@ Item yang dah siap dibuang (lihat git history).
   Hari sesi tetap (`HARI_SESI`: 3 hari = Isn/Rab/Sab, 4 hari = Isn/Rab/Jum/Ahd - sesi akhir hujung
   minggu); `mula` dianjak ke Isnin (`isninMula`) dan minggu semasa + sesi hari ini diserlahkan.
 - Semak: `bun run build` + `bun scripts/check-pelan-5k.ts` + `bun scripts/check-maf.ts` +
-  `bun scripts/check-ics.ts` + `bun scripts/check-tarikh.ts`. Belum ada lint.
+  `bun scripts/check-ics.ts` + `bun scripts/check-tarikh.ts` + `bun scripts/check-sesuai.ts` +
+  `bun scripts/check-ramadan.ts` + `bun scripts/check-peluh.ts`. Belum ada lint. Tanda taip: `bunx tsc --noEmit -p .` sahaja tidak
+  membaca skrip dalam `.astro` - jalankan `npx -y -p @astrojs/check -p typescript@5 astro-check`
+  (`@astrojs/check` belum sokong TS 7, jadi tidak dipasang).
 
 ## 🚀 Owner - langkah manual
 
@@ -112,6 +129,9 @@ Item yang dah siap dibuang (lihat git history).
 - [ ] Uji import `.ics` pada iPhone (Safari: terus "Tambah semua" atau simpan ke Files?), Samsung Calendar,
   Google Calendar (web) dan Outlook - nota platform di page belum diuji pada peranti sebenar.
 - [ ] E-mel pengesahan untuk `app=nubi` masih teks English dari pengirim portfolio - mahu versi Melayu?
+- [ ] Deploy `hono-workers` untuk kad "Sesuai lari tak" (`/api/v1/public/air-quality`, `/api/v1/public/weather/:id`,
+  `/api/v1/public/prayer-times/:zone`)
+  - SEBELUM push Nubi; tanpa itu kad hanya kata data tidak dapat diambil.
 - [ ] Semak pratonton pautan selepas deploy (WhatsApp / Facebook debugger) - `og.png`.
 
 ## 🛠 Frontend - seterusnya

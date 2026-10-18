@@ -23,14 +23,14 @@ oleh owner, **sebelum** Nubi bila Nubi bergantung pada endpoint baru.
 | Laluan | Siapa | Isi |
 |---|---|---|
 | `/` | awam | Page utama: tentang, cara sertai, soalan lazim |
-| `/pelan-5k` | awam | Pelan "5K bawah 30 minit" + label "Realistik ke?" + pemasa jalan-lari; had lembut 3 pelan dalam pelayar |
+| `/pelan-5k` | awam | Pelan "5K bawah 30 minit" + label "Realistik ke?" + pemasa jalan-lari + kad "Sesuai lari tak?" (IPU + cuaca + waktu lari terbaik); had lembut 3 pelan dalam pelayar |
 | `/maf` | awam | Kira had nadi MAF (formula 180 Maffetone) |
 | `/pace` | awam | Kalkulator pace: masa ↔ pace, km/j, anggaran 5K-maraton (Riegel) |
-| `/panduan` | awam | Panduan pemula (NHS, KKM) + senarai semak hari lumba boleh cetak |
+| `/panduan` | awam | Panduan pemula (NHS, KKM) + kalkulator peluh (ACSM) + senarai semak hari lumba boleh cetak |
 | `/login`, `/register`, `/verify` | awam | Akaun dikongsi dengan hafizbahtiar.com (Turnstile) |
 | `/account` | akaun | Dashboard: pelan saya (lencana **Awan** / **Peranti ini**, meter slot, Ganti), profil, MAF |
 | `/account/pelan-5k` | akaun | Pelan 5K penuh: pecahan analisis, ikut nadi, kalendar `.ics`, simpan ke awan |
-| `/account/pelan-jarak` | akaun | Pelan 10K / 21K (bertangga dari masa 5K / 10K, masa sasaran pilihan) |
+| `/account/pelan-jarak` | akaun | Pelan 10K / 21K (bertangga dari masa 5K / 10K, masa sasaran pilihan) + kad "Sesuai lari tak?" |
 | `/account/maf` | akaun | MAF + butang buat Pelan 5K ikut nadi |
 | `/account/profil`, `/account/profil/kata-laluan` | akaun | Maklumat (nama) dan tukar kata laluan - card navigasi `ProfilShell` |
 
@@ -61,6 +61,9 @@ bun scripts/check-pace.ts          # kalkulator pace + pautan pelan seterusnya
 bun scripts/check-maf.ts
 bun scripts/check-ics.ts           # fail kalendar RFC 5545
 bun scripts/check-tarikh.ts        # DatePicker dd/mm/yyyy
+bun scripts/check-sesuai.ts         # band IPU (JAS) + nasihat cuaca (MET) + waktu lari terbaik (JAKIM)
+bun scripts/check-peluh.ts          # kalkulator peluh
+bun scripts/check-ramadan.ts        # bulan Hijri + tag/banner Ramadan
 bun run build
 ```
 
@@ -68,10 +71,10 @@ bun run build
 
 - `src/layouts/` - `Layout` (awam: Header + Footer), `AccountLayout` (sidebar akaun, satu-satunya pengawal
   sesi; nama/e-mel dilukis dari salinan `/me` sebelum lukisan pertama).
-- `src/components/` - `Pelan5k`, `PelanJarak`, `Pemasa` (pemasa jalan-lari skrin penuh), `Maf`, `ProfilShell`; `ui/` = atom (`PageHero`, `Section`,
+- `src/components/` - `Pelan5k`, `PelanJarak`, `Pemasa` (pemasa jalan-lari skrin penuh), `Sesuai` (kad "Sesuai lari tak?" - IPU + cuaca), `Maf`, `ProfilShell`; `ui/` = atom (`PageHero`, `Section`,
   `ChipGroup`, `Field`, `Checkbox`, `DatePicker`, `Alert`, `ConfirmDialog` + `lib/sahkan.ts`, `Sambungan` =
   notis luar talian, `Ikon` = ikon Lucide).
-- `src/lib/` - `ikon.ts` (semua ikon UI = Lucide, `lucide-static`; tiada path SVG tulisan tangan), logik tulen (pelan, MAF, tarikh, ics), `api.ts` (fetch `/api/v1`, satu refresh dikongsi,
+- `src/lib/` - `ikon.ts` (semua ikon UI = Lucide, `lucide-static`; tiada path SVG tulisan tangan), logik tulen (pelan, MAF, tarikh, ics, IPU/cuaca/waktu lari, Ramadan, peluh), `api.ts` (fetch `/api/v1`, satu refresh dikongsi,
   salinan `/me` 5 min), `awan.ts`, `pelan-papar.ts` (HTML kad minggu dikongsi).
 - `src/styles/` - `global.css` (token + atom), `pelan.css` (pelan dirender melalui `innerHTML`).
 - `src/data/site.ts` - nama, pautan hubungan (**kosong hingga pautan sebenar wujud**), kunci tapak
