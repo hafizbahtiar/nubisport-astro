@@ -103,10 +103,18 @@ Item yang dah siap dibuang (lihat git history).
   (backend `services/prayer-times.ts`, memo 6 j); tetingkap tamat dibuang, ribut petir MET disusun ke belakang
   (`waktuLari` dalam `lib/sesuai.ts`). Kalkulator peluh `/panduan#peluh` (`lib/peluh.ts`, ACSM 2007: timbang
   sebelum/selepas, had 2%) - dalam pelayar, tiada simpanan.
-- **Maklumat latihan** (2026-10-18): `/account/profil` simpan tarikh lahir, keadaan MAF, hari seminggu, masa 5K/10K
+- **Maklumat latihan** (2026-10-18): `/account/profil/latihan` (tab "Latihan" dalam `ProfilShell`) simpan tarikh lahir, keadaan MAF, hari seminggu, masa 5K/10K
   sebagai `app_items` kind `profil` (satu rekod `saya`, kuota 1 di `hono-workers services/app-items.ts`) - tiada
   jadual/migration baru. `isiBorang` (`lib/profil.ts`) isi borang MAF / Pelan 5K (akaun) / Pelan Jarak; medan dalam
   URL tidak disentuh. Umur dikira dari tarikh lahir pada hari ini (waktu Malaysia).
+- **Kalendar lumba** (2026-10-18): `/lumba` dari `src/data/lumba.ts` (susun tangan - laman rasmi penganjur /
+  page pendaftaran rasmi sahaja, `disemak` setiap acara), `/lumba/<id>.ics` statik, acara lepas disembunyikan dalam
+  pelayar (`tarikhMY`), lencana "Pendaftaran ditutup" ikut `tutup`. `bun scripts/check-lumba.ts` gagal bila acara
+  akan datang disemak > 3 bulan lalu - buka pautan, semak, kemas kini `disemak`. Buang acara lama sesekali.
+- **Pembaikan UI** (2026-10-18): seksyen `narrow` ikut garis kiri bekas (tidak ke tengah); page `404` (Assets
+  `not_found_handling: "404-page"` - dulu laluan tiada jatuh ke worker -> "hono-workers not found"); footer di bawah
+  skrin pada page pendek; bar `<progress>` dashboard bertrek (dulu nampak penuh pada 0%); 3 kad statistik sebaris di
+  telefon; jarak bawah kepala pelan; julat pace `~8:27-8:57/km` tidak dipatahkan.
 - Palet: navy `#0A1A33`, oren `#FF5A1F`, oren teks atas putih `#C2410C`. Font paparan Barlow Condensed.
 - **Pelan 5K** (`/pelan-5k`): logik tulen dalam `src/lib/pelan-5k.ts` (dikira dalam browser - laman statik,
   jadi `?bulan=&tahap=&masa=&hari=&mula=` dibaca oleh skrip page). Tukar logik = jalankan
@@ -117,7 +125,7 @@ Item yang dah siap dibuang (lihat git history).
   minggu); `mula` dianjak ke Isnin (`isninMula`) dan minggu semasa + sesi hari ini diserlahkan.
 - Semak: `bun run build` + `bun scripts/check-pelan-5k.ts` + `bun scripts/check-maf.ts` +
   `bun scripts/check-ics.ts` + `bun scripts/check-tarikh.ts` + `bun scripts/check-sesuai.ts` +
-  `bun scripts/check-ramadan.ts` + `bun scripts/check-peluh.ts` + `bun scripts/check-profil.ts`. Belum ada lint. Tanda taip: `bunx tsc --noEmit -p .` sahaja tidak
+  `bun scripts/check-ramadan.ts` + `bun scripts/check-peluh.ts` + `bun scripts/check-profil.ts` + `bun scripts/check-lumba.ts`. Belum ada lint. Tanda taip: `bunx tsc --noEmit -p .` sahaja tidak
   membaca skrip dalam `.astro` - jalankan `npx -y -p @astrojs/check -p typescript@5 astro-check`
   (`@astrojs/check` belum sokong TS 7, jadi tidak dipasang).
 

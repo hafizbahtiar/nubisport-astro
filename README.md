@@ -27,12 +27,13 @@ oleh owner, **sebelum** Nubi bila Nubi bergantung pada endpoint baru.
 | `/maf` | awam | Kira had nadi MAF (formula 180 Maffetone) |
 | `/pace` | awam | Kalkulator pace: masa ↔ pace, km/j, anggaran 5K-maraton (Riegel) |
 | `/panduan` | awam | Panduan pemula (NHS, KKM) + kalkulator peluh (ACSM) + senarai semak hari lumba boleh cetak |
+| `/lumba` | awam | Kalendar lumba Malaysia (susun tangan dari laman rasmi penganjur) + `.ics` per acara |
 | `/login`, `/register`, `/verify` | awam | Akaun dikongsi dengan hafizbahtiar.com (Turnstile) |
 | `/account` | akaun | Dashboard: pelan saya (lencana **Awan** / **Peranti ini**, meter slot, Ganti), profil, MAF |
 | `/account/pelan-5k` | akaun | Pelan 5K penuh: pecahan analisis, ikut nadi, kalendar `.ics`, simpan ke awan |
 | `/account/pelan-jarak` | akaun | Pelan 10K / 21K (bertangga dari masa 5K / 10K, masa sasaran pilihan) + kad "Sesuai lari tak?" |
 | `/account/maf` | akaun | MAF + butang buat Pelan 5K ikut nadi |
-| `/account/profil`, `/account/profil/kata-laluan` | akaun | Maklumat (nama + maklumat latihan: tarikh lahir, keadaan MAF, hari, masa 5K/10K - isi borang MAF/pelan) dan tukar kata laluan - card navigasi `ProfilShell` |
+| `/account/profil`, `/account/profil/latihan`, `/account/profil/kata-laluan` | akaun | Maklumat (nama), Latihan (tarikh lahir, keadaan MAF, hari, masa 5K/10K - isi borang MAF/pelan) dan tukar kata laluan - card navigasi `ProfilShell` |
 
 ## Storan pelan
 
@@ -63,6 +64,7 @@ bun scripts/check-ics.ts           # fail kalendar RFC 5545
 bun scripts/check-tarikh.ts        # DatePicker dd/mm/yyyy
 bun scripts/check-sesuai.ts         # band IPU (JAS) + nasihat cuaca (MET) + waktu lari terbaik (JAKIM)
 bun scripts/check-peluh.ts          # kalkulator peluh
+bun scripts/check-lumba.ts          # data kalendar lumba (disemak <= 3 bulan)
 bun scripts/check-profil.ts         # umur dari tarikh lahir
 bun scripts/check-ramadan.ts        # bulan Hijri + tag/banner Ramadan
 bun run build

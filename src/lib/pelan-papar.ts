@@ -68,7 +68,7 @@ export function htmlMinggu(w: Minggu, isnin: Date | null, hariIni: string, ujian
             <span>
               <strong>${today ? "Hari ini · " : ""}${label}: ${s.tajuk}</strong> <em>${s.minit} min</em>${puasa ? ' <span class="tag">Puasa</span>' : ""}
               <span class="arahan">${s.arahan}</span>
-              <span class="usaha">${s.usaha}${puasa ? " · Hari puasa: ringankan sesi ini, hidrasi selepas berbuka." : ""}</span>
+              <span class="usaha">${s.usaha.replace(/~\S+\/km/g, (m) => `<span class="nw">${m}</span>`)}${puasa ? " · Hari puasa: ringankan sesi ini, hidrasi selepas berbuka." : ""}</span>
             </span>
           </label>${s.segmen
             ? `<button class="btn-mula no-print" type="button" data-mula="${w.no}.${i}" data-tajuk="${s.tajuk}" data-usaha="${s.usaha.replace(/"/g, "&quot;")}" data-segmen='${JSON.stringify(s.segmen)}'>${ikon("main")}Mula pemasa</button>`

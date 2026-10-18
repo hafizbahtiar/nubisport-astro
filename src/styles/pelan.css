@@ -10,6 +10,12 @@
   align-items: end;
   justify-content: space-between;
   gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Julat pace ("~8:27-8:57/km") tidak dipatahkan di tengah. */
+.nw {
+  white-space: nowrap;
 }
 
 .promosi {

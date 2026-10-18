@@ -1,18 +1,9 @@
 ---
-// Profil Nubi - Maklumat: nama (PATCH /me) + maklumat latihan (lib/profil.ts, app_items `profil`)
-// yang mengisi borang MAF dan pelan. Nama (PATCH /me). Backend sama dengan portfolio - akaun satu, jadi
+// Profil Nubi - Maklumat: nama (PATCH /me). Backend sama dengan portfolio - akaun satu, jadi
 // perubahan di sini juga nampak di hafizbahtiar.com. E-mel tak boleh diubah (backend).
 import ProfilShell from "../../../components/ProfilShell.astro";
 import Field from "../../../components/ui/Field.astro";
 import Alert from "../../../components/ui/Alert.astro";
-import ChipGroup from "../../../components/ui/ChipGroup.astro";
-import DatePicker from "../../../components/ui/DatePicker.astro";
-import { KATEGORI } from "../../../lib/maf";
-import { HARI, MASA_MAX, MASA_MIN } from "../../../lib/pelan-5k";
-import { JARAK } from "../../../lib/pelan-jarak";
-
-const p10 = JARAK["21k"].prasyarat;
-const hariIni = new Date().toISOString().slice(0, 10);
 ---
 
 <ProfilShell title="Maklumat">
@@ -37,75 +28,10 @@ const hariIni = new Date().toISOString().slice(0, 10);
       <button class="btn btn-primary" type="submit">Simpan</button>
     </form>
   </section>
-
-  <section class="panel" aria-labelledby="t-latihan">
-    <h2 class="display" id="t-latihan">Maklumat latihan</h2>
-    <p class="muted">
-      Diisi sekali, borang MAF dan pelan terisi sendiri (pautan pelan tetap
-      menang). Semua pilihan - medan kosong tidak disimpan. Hanya anda yang
-      nampak.
-    </p>
-    <form class="form" id="latihan" novalidate>
-      <Field
-        label="Tarikh lahir"
-        for="lahir-text"
-        hint="Untuk kira umur (had nadi MAF)."
-      >
-        <DatePicker id="lahir" name="lahir" min="1930-01-01" max={hariIni} />
-      </Field>
-      <ChipGroup
-        legend="Keadaan anda sekarang (MAF)"
-        name="keadaan"
-        required={false}
-        stacked
-        options={Object.entries(KATEGORI).map(([value, k]) => ({
-          value,
-          label: k.label,
-        }))}
-      />
-      <ChipGroup
-        legend="Hari lari seminggu"
-        name="hari"
-        required={false}
-        options={HARI.map((h) => ({ value: h, label: `${h} hari` }))}
-      />
-      <Field label="Masa 5K terkini (minit)">
-        <input
-          class="input"
-          type="number"
-          name="masa5k"
-          min={MASA_MIN}
-          max={MASA_MAX}
-          step="1"
-          inputmode="numeric"
-        />
-      </Field>
-      <Field label="Masa 10K terkini (minit)">
-        <input
-          class="input"
-          type="number"
-          name="masa10k"
-          min={p10.min}
-          max={p10.max}
-          step="1"
-          inputmode="numeric"
-        />
-      </Field>
-      <Alert variant="danger" id="mesej-latihan" hidden />
-      <Alert variant="success" id="ok-latihan" hidden />
-      <button class="btn btn-primary" type="submit">Simpan</button>
-    </form>
-  </section>
 </ProfilShell>
 
 <script>
   import { api, ingatSaya, json, ralatAm, sesiSaya } from "../../../lib/api";
-  import {
-    bacaProfil,
-    simpanProfil,
-    umur,
-    type Profil,
-  } from "../../../lib/profil";
 
   const profil = document.getElementById("profil") as HTMLFormElement;
   const papar = (id: string, teks: string | null) => {
@@ -157,52 +83,6 @@ const hariIni = new Date().toISOString().slice(0, 10);
     } finally {
       butang.disabled = false;
     }
-  });
-
-  // Maklumat latihan
-  const latihan = document.getElementById("latihan") as HTMLFormElement;
-  const MEDAN = ["lahir", "keadaan", "hari", "masa5k", "masa10k"] as const;
-  const medan = (k: string) =>
-    latihan.elements.namedItem(k) as HTMLInputElement | RadioNodeList;
-  void bacaProfil().then((p) => {
-    for (const k of MEDAN) {
-      const v = p[k];
-      if (!v) continue;
-      medan(k).value = v;
-      if (k === "lahir")
-        (medan(k) as HTMLInputElement).dispatchEvent(new Event("change")); // DatePicker
-    }
-  });
-  latihan.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    papar("ok-latihan", null);
-    const p: Profil = Object.fromEntries(
-      MEDAN.map((k) => [k, String(medan(k).value).trim()]),
-    );
-    const salah =
-      p.lahir && umur(p.lahir) === null
-        ? "Tarikh lahir tak sah."
-        : [
-              ...latihan.querySelectorAll<HTMLInputElement>(
-                "input[type=number]",
-              ),
-            ].some((i) => !i.checkValidity())
-          ? "Semak masa 5K / 10K - di luar julat."
-          : null;
-    papar("mesej-latihan", salah);
-    if (salah) return;
-    const butang = latihan.querySelector<HTMLButtonElement>(
-      "button[type=submit]",
-    )!;
-    butang.disabled = true;
-    const ok = await simpanProfil(p);
-    butang.disabled = false;
-    if (ok) papar("ok-latihan", "Maklumat latihan disimpan.");
-    else
-      papar(
-        "mesej-latihan",
-        "Tak dapat simpan sekarang. Semak internet anda dan cuba lagi.",
-      );
   });
 </script>
 

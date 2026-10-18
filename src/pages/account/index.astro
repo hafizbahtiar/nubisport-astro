@@ -335,7 +335,7 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
     padding: 0;
     margin: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 1rem;
   }
   .stat li,
@@ -361,6 +361,23 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
     font-style: italic;
     font-size: 2rem;
     color: var(--navy);
+  }
+  /* Telefon: tiga kad kekal sebaris (bukan tiga skrin), teks lebih kecil. */
+  @media (max-width: 36rem) {
+    .stat {
+      gap: 0.5rem;
+    }
+    .stat li {
+      padding: 0.75rem;
+    }
+    .stat span {
+      font-size: 0.68rem;
+      letter-spacing: 0.06em;
+    }
+    .stat strong {
+      font-size: 1.35rem;
+      line-height: 1.1;
+    }
   }
 
   /* Pelan lebar di kiri, profil/alat di kanan; satu lajur bila sempit. */
@@ -488,9 +505,25 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
     color: var(--muted);
     font-size: 0.9rem;
   }
+  /* Trek kelabu + isian oren - lalai pelayar (Safari/Chrome) nampak penuh gelap pada 0%. */
   .senarai :global(progress) {
     width: 100%;
     height: 0.5rem;
-    accent-color: var(--orange);
+    appearance: none;
+    border: 0;
+    border-radius: 999px;
+    overflow: hidden;
+    background: var(--line);
+  }
+  .senarai :global(progress::-webkit-progress-bar) {
+    background: var(--line);
+  }
+  .senarai :global(progress::-webkit-progress-value) {
+    background: var(--orange);
+    border-radius: 999px;
+  }
+  .senarai :global(progress::-moz-progress-bar) {
+    background: var(--orange);
+    border-radius: 999px;
   }
 </style>
