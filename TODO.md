@@ -124,61 +124,9 @@ Item yang dah siap dibuang (lihat git history).
 - [ ] Analitik ringkas tanpa cookie (Cloudflare Web Analytics) - jika perlu.
 - [ ] Mod gelap? Laman kini sengaja terang + navy; buat hanya jika diminta.
 
-## 💡 Idea (belum diputuskan - bincang dulu sebelum bina)
+## 💡 Idea
 
-Disusun ikut nilai untuk pemula, yang paling murah dulu. ✅ = dah dibina.
-
-### Tanpa backend (statik, dikira dalam browser)
-- ✅ Pelan 5K bawah 30 minit (`/pelan-5k`) · ✅ MAF / lari ikut nadi (`/maf`)
-- **Pemasa jalan-lari** - mainkan sesi dari pelan 5K: "Lari 3 min ... jalan 2 min" dengan bunyi/getaran
-  dan Wake Lock supaya skrin tak padam. Paling berguna untuk pemula (tak perlu kira sendiri). Murah.
-- **Kalkulator pace** - masa ↔ pace ↔ jarak (5K/10K/21K/42K) + ramalan masa lumba (formula Riegel,
-  dilabel anggaran).
-- **Zon nadi lengkap** - selain MAF: zon 1-5 dari nadi rehat + nadi maksimum (Karvonen). Dilabel anggaran;
-  nadi maksimum 220-umur sangat kasar.
-- **Panduan pemula** - kasut (dan bila tukar, ~500-800 km), pemanasan, hidrasi + garam dalam panas Malaysia,
-  keselamatan larian malam (lampu, laluan terang, beritahu orang), regangan selepas lari.
-- **Kalkulator peluh / hidrasi** - timbang sebelum & selepas lari 1 jam -> kadar peluh -> berapa minum.
-- **Senarai semak hari lumba** - malam sebelum, pagi lumba, bib, kasut yang dah biasa, jangan cuba benda
-  baru. Boleh dicetak.
-- **Kod etika kumpulan** - tiada siapa ditinggalkan, sweeper di belakang, hormat laluan awam.
-- ✅ Fail `.ics` pelan 5K · ✅ Had 3 pelan tanpa akaun · ✅ Daftar + sahkan e-mel di Nubi
-- **Pelan 10K / 21K** - guna semula `ics.ts` dan struktur `buatPelan`; perlu ambang dan fasa sendiri.
-- **Senarai pelan yang dah dibuat** dalam mesej had (pautan terus) - kecil.
-- **PWA ringan** - pelan + pemasa boleh buka tanpa internet (taman sering tiada liputan).
-
-### Dengan backend (`hono-workers`, guna `requireAppRole`, login dah ada)
-- **Simpan pelan ke akaun** - tanda siap ikut pengguna, bukan hanya localStorage (tukar telefon tak hilang).
-- **Langganan kalendar** (`webcal://` dari backend, ikut akaun) - kemas kini sendiri bila pelan berubah;
-  Google (tambah melalui URL), Apple, Outlook. Lebih baik dari muat turun `.ics` sekali.
-- **Mohon jadi ahli** - butang di `/login` untuk pengguna berdaftar; admin lulus di App Access.
-- **Log larian** - jarak, masa, nadi purata, rasa (1-5). Graf kemajuan + hasil ujian MAF bulanan.
-  Data peribadi: lalai hanya diri sendiri nampak.
-- **Acara + RSVP** - admin Nubi cipta sesi larian; ahli tekan "Saya datang". Jadual `nubi_events`,
-  `nubi_rsvps`. Kiraan hadir untuk penganjur.
-- **Jadual larian mingguan** - hari, masa, lokasi (pautan Google Maps), jarak, pace "santai"; boleh jadi
-  sebahagian Acara.
-- **Profil Nubi** - nama panggilan, tahap (pemula / 5K / 10K), sasaran. Atas akaun dikongsi.
-- **Lencana pencapaian** - 5K pertama, 10 sesi hadir, sebulan konsisten, ujian MAF bertambah baik.
-- **Pengumuman** - admin Nubi hantar notis (batal sebab hujan, tukar lokasi). Sambung bot Telegram sedia ada.
-- **Peranan `coach`** - urus acara + pantau pelan ahli yang setuju dikongsi. Migration baru (`app_roles`).
-- **Tanya jurulatih (AI)** - lapisan AI backend dah siap (`getAi`, prompt `APP_CONTEXT`). Konteks = pelan +
-  log pengguna itu. Perlu: kunci Command Code, had kadar setiap pengguna, tiada PII dalam prompt, dan
-  jawapan sentiasa "panduan umum".
-
-### Integrasi
-- **Cuaca + jerebu sebelum lari** - ramalan MET + IPU untuk lokasi larian (portfolio dah ada
-  `lib/ramalan-cuaca.ts`, `lib/ipu.ts`; jadikan endpoint kongsi di backend). "IPU > 100: lari dalam rumah".
-- **Strava** - kelab Strava + pautan dulu; import aktiviti (OAuth) tangguh - kerja besar.
-- **Kalendar lumba Malaysia** - TIADA API terbuka (semakan 2026-10-18): data.gov.my tiada dataset;
-  Ahotu (kalendar besar, data ke Garmin/Strava) hanya perkongsian syarikat - hubungi
-  partners@worldssportsgroup.com jika mahu; JomRun / Finishers / Everythingboleh / HAID tiada API, dan
-  scraping = risiko terma + mudah rosak. Rancangan:
-  1. Senarai susun tangan `src/data/lumba.ts` - setiap acara: nama, tarikh, lokasi, jarak, pautan laman
-     RASMI penganjur, `disemak` (tarikh). Skrip semak gagal jika entri > 3 bulan tak disemak; acara lepas
-     disembunyikan sendiri. Muat turun `.ics` per acara (guna `src/lib/ics.ts`). Murah, belasan acara/tahun.
-  2. Kemudian (perlu backend + admin): ahli/penganjur hantar acara melalui borang -> admin Nubi lulus ->
-     jadual D1. Tetap wajib pautan rasmi.
+Semua idea (belum diputuskan, disusun ikut gelombang) dalam **`IDEA.md`**. Yang diputuskan -> pindah ke sini.
 
 ## Pelan 5K bawah 30 minit (`/pelan-5k`) - susulan
 
@@ -209,3 +157,44 @@ Disusun ikut nilai untuk pemula, yang paling murah dulu. ✅ = dah dibina.
   lukisan pertama; `/me` dipanggil semula hanya selepas 5 min. Log keluar / tiada cookie = dibuang.
 - Kos: Worker hanya `/api/*` (aset statik percuma); `public/_headers` simpan `/_astro/*` setahun;
   `prefetch` (hover) hanya aset statik; `@view-transition` (CSS, tanpa JS), sidebar akaun kekal.
+
+## Pemasa jalan-lari (2026-10-18) - siap
+
+- Butang "Mula pemasa" pada setiap sesi (bukan ujian/lumba - ikut jarak) dalam semua pelan, awam + akaun.
+  Skrin penuh `components/Pemasa.astro`: langkah dari `Sesi.segmen` (enjin `pelan-5k.ts` / `pelan-jarak.ts`
+  - tambah `segmen` bila buat jenis sesi baru), masa dari jam dinding (`lib/pemasa.ts`), bunyi + getaran
+  setiap tukar langkah, detik 3-2-1, Wake Lock, Jeda / Langkau, Esc atau X tanya dulu di tengah sesi.
+  Tamat -> "Tanda siap" = event `change` pada kotak sesi (simpan + segerak awan seperti biasa).
+  Semak: `bun scripts/check-pemasa.ts` (jalan-lari = tepat minit kad).
+- [ ] Uji pada telefon sebenar: bunyi iOS (suis senyap mematikan Web Audio), getaran (iOS tiada
+  `navigator.vibrate`), Wake Lock Safari 16.4+.
+
+## Terlepas sesi -> sambung (2026-10-18) - siap
+
+- Pelan bertarikh (5K + 10K/21K, awam + akaun): notis "Terlepas sesi? Tak apa." bila ada minggu sebelum
+  minggu semasa yang terlepas (selepas sesi terakhir yang ditanda). Butang "Sambung dari Minggu N" = buka
+  semula pelan dengan `mula` baru supaya minggu N mula Isnin depan (hari ini jika Isnin). Tanda siap ikut
+  nombor minggu jadi kekal; awan ikut sendiri (`kotakAwan`: param berubah -> pelayar menang).
+  Logik `sambungDari` dalam `lib/pelan-5k.ts`, notis `pasangSambung` dalam `lib/pelan-papar.ts`,
+  semak dalam `bun scripts/check-pelan-5k.ts`.
+- [ ] Fail `.ics` lama tak berubah sendiri - notis menyuruh muat turun semula. Langganan `webcal` (IDEA.md) selesaikan ini.
+
+## Kalkulator pace + pelan seterusnya (2026-10-18) - siap
+
+- `/pace` (awam, statik, pautan header desktop): jarak (5K/10K/21K/42K/lain km) + masa atau pace ->
+  pace, masa, km/j, anggaran jarak lain (Riegel, dilabel kasar). Logik `src/lib/pace.ts`.
+- Kad hari ujian 5K / lumba 10K / 21K: borang "Masa sebenar anda" -> tanda sesi itu siap + cadangan
+  `pelanSeterusnya`: 5K <= 30 min -> 10K; 5K > 30 -> pelan 5K baru dari masa itu (atau 10K); 10K -> 21K;
+  21K -> ramalan maraton sahaja. Masa dibundar ke atas. Pautan 10K/21K = akaun.
+- Semak: `bun scripts/check-pace.ts` (setiap pautan pelan seterusnya membuka pelan yang sah).
+
+## Kongsi pelan + panduan pemula (2026-10-18) - siap
+
+- "Kongsi" (5K dan kini 10K/21K): `pautanKongsi` dalam `lib/pelan-papar.ts` - 5K berkongsi page awam
+  `/pelan-5k` (kawan tak perlu akaun), 10K/21K `/account/pelan-jarak` (kawan perlu akaun). Param MAF
+  (`maf`, `umur`, `keadaan`) dibuang - peribadi. Tarikh mula kekal supaya jadual sama untuk lari berdua.
+- `/panduan` (statik, pautan header desktop + "Sebelum mula" dalam kedua-dua pelan): asas setiap larian,
+  kasut, cuaca panas (KKM), keselamatan, bila berhenti, senarai semak hari lumba (cetak senarai sahaja:
+  `body.cetak-senarai`). **Setiap nasihat kesihatan mesti dari sumber rasmi yang disenaraikan di page**
+  (NHS, KKM melalui Berita RTM - moh.gov.my menyekat bacaan automatik). Angka tanpa sumber rasmi (contoh
+  jarak tukar kasut) sengaja tidak ditulis. Semak semula pautan sumber setiap 6 bulan.

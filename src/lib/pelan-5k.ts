@@ -11,7 +11,21 @@ export interface Sesi {
   tajuk: string;
   arahan: string;
   usaha: string;
+  /** Langkah untuk pemasa (src/lib/pemasa.ts). Tiada = sesi ikut jarak (ujian/lumba), tiada pemasa. */
+  segmen?: Segmen[];
 }
+
+/** Satu langkah pemasa. `laju` = bahagian kualiti (interval, tempo, langkah laju); `rehat` = antara set. */
+export interface Segmen {
+  buat: "jalan" | "lari" | "laju" | "rehat";
+  saat: number;
+}
+export const seg = (buat: Segmen["buat"], minit: number): Segmen => ({ buat, saat: Math.round(minit * 60) });
+/** n × (kerja, rehat), tanpa rehat selepas set terakhir. */
+export const ulangSeg = (n: number, kerja: Segmen, rehat: Segmen): Segmen[] =>
+  Array.from({ length: n }, (_, i) => (i < n - 1 ? [kerja, rehat] : [kerja])).flat();
+/** Langkah laju di hujung lari mudah: n × 20 s laju, 40 s jalan. */
+export const langkahLaju = (n: number): Segmen[] => ulangSeg(n, { buat: "laju", saat: 20 }, { buat: "jalan", saat: 40 });
 
 export interface Minggu {
   no: number;
@@ -70,6 +84,37 @@ const LANGKAH_MULA: Record<Exclude<Tahap, "5k">, number> = { sifar: 0, jalan: 4 
 // jatuh hujung minggu, dan tiada dua sesi berturut-turut.
 export const NAMA_HARI = ["Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu", "Ahad"];
 export const HARI_SESI: Record<number, number[]> = { 3: [0, 2, 5], 4: [0, 2, 4, 6] };
+
+/**
+ * Terlepas sesi: minggu pertama yang ada sesi lepas belum siap, selepas sesi terakhir yang ditanda
+ * (lubang lama yang dah dilangkau tak dikira), dan hanya jika minggu itu sebelum minggu semasa - satu
+ * sesi terlepas minggu ini tak perlu anjak. Minggu itu disambung Isnin ini jika hari ini Isnin, jika
+ * tidak Isnin depan (supaya tiada sesi minggu itu yang dah lepas lagi). Tanda siap ikut nombor minggu,
+ * jadi kekal selepas dianjak.
+ */
+export function sambungDari(
+  minggu: Minggu[],
+  isnin: Date,
+  siap: Set<string>,
+  kini = new Date(),
+): { no: number; mula: Date; isninMinggu: Date; anjak: number } | null {
+  const hariIni = new Date(kini.getFullYear(), kini.getMonth(), kini.getDate());
+  const sesi = minggu.flatMap((w) => w.sesi.map((_, i) => ({ no: w.no, id: `${w.no}.${i}`, d: tarikhSesi(isnin, w.no, w.sesi.length, i) })));
+  let akhir = -1;
+  sesi.forEach((s, n) => siap.has(s.id) && (akhir = n));
+  const lepas = sesi.find((s, n) => n > akhir && s.d < hariIni);
+  const mingguKini = Math.floor((hariIni.getTime() - isnin.getTime()) / (7 * 864e5)) + 1;
+  if (!lepas || lepas.no >= mingguKini) return null;
+  const isninMinggu = isninMula(hariIni); // hari ini jika Isnin, jika tidak Isnin depan
+  const mula = new Date(isninMinggu);
+  mula.setDate(mula.getDate() - (lepas.no - 1) * 7);
+  const anjak = Math.round((mula.getTime() - isnin.getTime()) / (7 * 864e5));
+  return anjak > 0 ? { no: lepas.no, mula, isninMinggu, anjak } : null;
+}
+
+/** yyyy-mm-dd waktu tempatan (param `mula`). */
+export const isoTarikh = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
 /** Isnin pada atau selepas `d` - pelan bermula Isnin supaya hari sesi kekal sama setiap minggu. */
 export function isninMula(d: Date): Date {
@@ -263,6 +308,7 @@ export function buatPelan(input: Input): Hasil {
     tajuk: "Lari mudah",
     arahan: `Lari ${minit} min pada rentak santai.${tambah}`,
     usaha: USAHA_MUDAH,
+    segmen: [seg("lari", minit), ...(tambah ? langkahLaju(tambah.includes("6 ×") ? 6 : 4) : [])],
   });
   const panjang = (minit: number): Sesi => ({
     jenis: "panjang",
@@ -270,6 +316,7 @@ export function buatPelan(input: Input): Hasil {
     tajuk: "Larian panjang",
     arahan: `Lari ${minit} min tanpa henti, lebih perlahan dari biasa. Boleh jalan sekejap untuk minum.`,
     usaha: USAHA_MUDAH,
+    segmen: [seg("lari", minit)],
   });
   const mudahLaju = (minit: number): Sesi => ({
     ...mudah(minit, " Akhiri dengan 6 × 20 saat langkah laju (rehat jalan 40 saat) - laju tapi santai, bukan pecut."),
@@ -367,6 +414,7 @@ function jalanLari(minit: number, [lari, jalan]: [number, number], usaha: string
       tajuk: "Lari tanpa henti",
       arahan: `Jalan 5 min. Lari ${l} min tanpa henti. Jalan ${minit - 5 - l} min.`,
       usaha,
+      segmen: [seg("jalan", 5), seg("lari", l), seg("jalan", minit - 5 - l)],
     };
   }
   const ulang = Math.max(1, Math.floor(teras / (lari + jalan)));
@@ -378,6 +426,12 @@ function jalanLari(minit: number, [lari, jalan]: [number, number], usaha: string
     tajuk: "Jalan-lari",
     arahan: `Jalan 5 min. (Lari ${lari} min + jalan ${jalan} min) × ${ulang}${baki ? `, kemudian lari ${baki} min` : ""}. Jalan ${minit - 5 - ulang * (lari + jalan) - baki} min.`,
     usaha,
+    segmen: [
+      seg("jalan", 5),
+      ...Array.from({ length: ulang }, () => [seg("lari", lari), seg("jalan", jalan)]).flat(),
+      ...(baki ? [seg("lari", baki)] : []),
+      seg("jalan", minit - 5 - ulang * (lari + jalan) - baki),
+    ],
   };
 }
 
@@ -389,6 +443,7 @@ function interval(ulang: number, saat: number, peribadi: boolean): Sesi {
     minit,
     tajuk: "Interval",
     arahan: `Panas badan 10 min. ${ulang} × 400 m (atau 2 min) laju, rehat 90 saat jalan/joging antara set. Sejuk badan 5 min.`,
+    segmen: [seg("lari", 10), ...ulangSeg(ulang, seg("laju", 2), seg("rehat", 1.5)), seg("jalan", 5)],
     usaha: peribadi
       ? `Laju tapi terkawal · ~${pace(saat)}/km minggu ini`
       : `Laju tapi terkawal · sasaran akhir ~${pace(PACE_SASARAN - 30)}/km. Belum mampu? Ikut rasa: sukar bercakap.`,
@@ -401,6 +456,7 @@ function tempo(minitTempo: number, saat: number, peribadi: boolean): Sesi {
     minit: 20 + minitTempo,
     tajuk: "Tempo",
     arahan: `Panas badan 10 min. ${minitTempo} min pada rentak tempo. Sejuk badan 10 min.`,
+    segmen: [seg("lari", 10), seg("laju", minitTempo), seg("lari", 10)],
     usaha: peribadi
       ? `Sukar bercakap, tetap terkawal · ~${pace(saat)}/km minggu ini`
       : `Sukar bercakap, tetap terkawal · sasaran akhir ~${pace(PACE_SASARAN)}/km`,

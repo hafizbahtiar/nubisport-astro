@@ -5,6 +5,7 @@ import ChipGroup from "./ui/ChipGroup.astro";
 import Field from "./ui/Field.astro";
 import DatePicker from "./ui/DatePicker.astro";
 import Checkbox from "./ui/Checkbox.astro";
+import Pemasa from "./Pemasa.astro";
 import { KATEGORI, UMUR_MAX, UMUR_MIN } from "../lib/maf";
 import {
   BULAN,
@@ -169,9 +170,14 @@ const tahun = new Date().getFullYear();
       yang lebih tepat? Cuba <a class="link" href={maf}>lari ikut nadi (MAF)</a> untuk
       sesi mudah.
     </li>
+    <li>
+      Baru bermula? Baca <a class="link" href="/panduan">panduan pemula</a> - kasut,
+      panas badan, cuaca panas, keselamatan dan senarai semak hari lumba.
+    </li>
   </ul>
 </Section>
 
+<Pemasa />
 <script>
   import { buatIcs, waktuMalaysia } from "../lib/ics";
   import { kiraMaf, type Kategori } from "../lib/maf";
@@ -186,12 +192,17 @@ const tahun = new Date().getFullYear();
   } from "../lib/pelan-tersimpan";
   import { keluarAwan, kotakAwan } from "../lib/awan";
   import { sahkan } from "../lib/sahkan";
-  import { htmlMinggu, papakAnalisis } from "../lib/pelan-papar";
+  import {
+    htmlMinggu,
+    papakAnalisis,
+    pasangKongsi,
+    pasangSambung,
+    pasangUjian,
+    pautanKongsi,
+  } from "../lib/pelan-papar";
   import { NOTA_AWAN } from "../data/site";
   import {
     HAD_TANPA_AKAUN,
-    HARI_SESI,
-    NAMA_HARI,
     analisis,
     TAHAP,
     type Analisis,
@@ -199,7 +210,6 @@ const tahun = new Date().getFullYear();
     buatPelan,
     isninMula,
     tarikhSesi,
-    type Minggu,
     type Tahap,
   } from "../lib/pelan-5k";
 
@@ -219,6 +229,7 @@ const tahun = new Date().getFullYear();
   ) as HTMLFieldSetElement | null;
   const hasil = document.getElementById("hasil")!;
   const pelanEl = document.getElementById("pelan")!;
+  pasangUjian(pelanEl);
 
   const q = new URLSearchParams(location.search);
   for (const [k, v] of q) {
@@ -386,11 +397,22 @@ const tahun = new Date().getFullYear();
       </div>`
           : ""
       }
-      <ol class="minggu">${h.minggu.map((w) => htmlMinggu(w, isnin, hariIni)).join("")}</ol>`;
+      <div class="no-print" data-sambung-slot></div>
+      <ol class="minggu">${h.minggu.map((w) => htmlMinggu(w, isnin, hariIni, "5k")).join("")}</ol>`;
 
     const kemajuan = document.getElementById("kemajuan")!;
-    const kira = () =>
-      (kemajuan.textContent = `${siap.size} / ${jumlah} sesi siap.`);
+    const sambung = isnin
+      ? pasangSambung(
+          pelanEl.querySelector("[data-sambung-slot]")!,
+          h.minggu,
+          isnin,
+          siap,
+        )
+      : () => {};
+    const kira = () => {
+      kemajuan.textContent = `${siap.size} / ${jumlah} sesi siap.`;
+      sambung();
+    };
     kira();
     const kotak =
       pelanEl.querySelectorAll<HTMLInputElement>("input[data-sesi]");
@@ -427,22 +449,11 @@ const tahun = new Date().getFullYear();
         await keluarAwan(kunci);
         location.href = "/account";
       });
-    pelanEl
-      .querySelector<HTMLButtonElement>("[data-kongsi]")!
-      .addEventListener("click", async (e) => {
-        const btn = e.currentTarget as HTMLButtonElement;
-        try {
-          if (navigator.share)
-            return await navigator.share({
-              title: document.title,
-              url: location.href,
-            });
-          await navigator.clipboard.writeText(location.href);
-          btn.textContent = "Pautan disalin";
-        } catch {
-          /* dibatalkan */
-        }
-      });
+    pasangKongsi(
+      pelanEl.querySelector<HTMLButtonElement>("[data-kongsi]")!,
+      pautanKongsi("/pelan-5k", q),
+      `Jom lari sama-sama: pelan 5K bawah 30 minit (${bulan} bulan, ${hari} hari seminggu) dari Nubi Sport.`,
+    );
     pelanEl
       .querySelector<HTMLButtonElement>("[data-ics]")
       ?.addEventListener("click", () => {

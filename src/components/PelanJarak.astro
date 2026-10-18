@@ -8,6 +8,7 @@ import ChipGroup from "./ui/ChipGroup.astro";
 import Field from "./ui/Field.astro";
 import DatePicker from "./ui/DatePicker.astro";
 import Checkbox from "./ui/Checkbox.astro";
+import Pemasa from "./Pemasa.astro";
 import { KATEGORI, UMUR_MAX, UMUR_MIN } from "../lib/maf";
 import { JARAK } from "../lib/pelan-jarak";
 import "../styles/pelan.css";
@@ -156,9 +157,14 @@ const tahun = new Date().getFullYear();
       dan minggu terakhir sebelum lumba diturunkan (tirus) supaya kaki segar.
       Cuaca Malaysia panas - lari awal pagi, bawa air.
     </li>
+    <li>
+      Baru bermula? Baca <a class="link" href="/panduan">panduan pemula</a> - kasut,
+      panas badan, cuaca panas, keselamatan dan senarai semak hari lumba.
+    </li>
   </ul>
 </Section>
 
+<Pemasa />
 <script>
   import { buatIcs, waktuMalaysia } from "../lib/ics";
   import { kiraMaf, type Kategori } from "../lib/maf";
@@ -170,7 +176,14 @@ const tahun = new Date().getFullYear();
     jam,
     type Jarak,
   } from "../lib/pelan-jarak";
-  import { htmlMinggu, papakAnalisis } from "../lib/pelan-papar";
+  import {
+    htmlMinggu,
+    papakAnalisis,
+    pasangKongsi,
+    pasangSambung,
+    pasangUjian,
+    pautanKongsi,
+  } from "../lib/pelan-papar";
   import {
     KUNCI_DIBUAT,
     baca,
@@ -192,6 +205,7 @@ const tahun = new Date().getFullYear();
   const mafMedan = document.getElementById("maf-medan") as HTMLFieldSetElement;
   const hasil = document.getElementById("hasil")!;
   const pelanEl = document.getElementById("pelan")!;
+  pasangUjian(pelanEl);
 
   const q = new URLSearchParams(location.search);
   const ikutJarak = () => {
@@ -280,6 +294,7 @@ const tahun = new Date().getFullYear();
             <span id="kemajuan"></span></p>
         </div>
         <div class="actions no-print">
+          <button class="btn btn-outline" type="button" data-kongsi>Kongsi</button>
           <button class="btn btn-outline" type="button" onclick="print()">Cetak</button>
           <button class="btn btn-outline" type="button" data-padam>Padam pelan</button>
         </div>
@@ -299,11 +314,28 @@ const tahun = new Date().getFullYear();
             : `<p class="muted">Isi "Tarikh mula" di atas dan tekan "Buat pelan" - kalendar perlukan tarikh sebenar.</p>`
         }
       </div>
-      <ol class="minggu">${h.minggu.map((w) => htmlMinggu(w, isnin, hariIni)).join("")}</ol>`;
+      <div class="no-print" data-sambung-slot></div>
+      <ol class="minggu">${h.minggu.map((w) => htmlMinggu(w, isnin, hariIni, jarak)).join("")}</ol>`;
 
     const kemajuan = document.getElementById("kemajuan")!;
-    const kira = () =>
-      (kemajuan.textContent = `${siap.size} / ${jumlah} sesi siap.`);
+    // Pelan 10K/21K = akaun: kawan perlu akaun percuma untuk membukanya.
+    pasangKongsi(
+      pelanEl.querySelector<HTMLButtonElement>("[data-kongsi]")!,
+      pautanKongsi("/account/pelan-jarak", q),
+      `Jom lari sama-sama: pelan ${tajuk} dari Nubi Sport (perlu akaun percuma).`,
+    );
+    const sambung = isnin
+      ? pasangSambung(
+          pelanEl.querySelector("[data-sambung-slot]")!,
+          h.minggu,
+          isnin,
+          siap,
+        )
+      : () => {};
+    const kira = () => {
+      kemajuan.textContent = `${siap.size} / ${jumlah} sesi siap.`;
+      sambung();
+    };
     const kotak =
       pelanEl.querySelectorAll<HTMLInputElement>("input[data-sesi]");
     const kemas = () => {

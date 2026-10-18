@@ -4,7 +4,7 @@ Laman komuniti larian untuk pemula (newbie, est. 2026) - https://nubisport.hafiz
 Astro 7 (statik) + satu Worker kecil yang menghantar `/api/*` ke backend dikongsi
 ([hono-workers](../hono-workers), Hono + D1) melalui service binding. CSS biasa, tiada framework UI; ikon Lucide.
 
-Peraturan untuk agent dan butiran teknikal: **`TODO.md` → "Penting"** (wajib baca dulu) dan `AGENTS.md`.
+Peraturan untuk agent dan butiran teknikal: **`TODO.md` → "Penting"** (wajib baca dulu) dan `AGENTS.md`. Idea belum diputuskan: `IDEA.md`.
 
 ```sh
 bun install
@@ -23,8 +23,10 @@ oleh owner, **sebelum** Nubi bila Nubi bergantung pada endpoint baru.
 | Laluan | Siapa | Isi |
 |---|---|---|
 | `/` | awam | Page utama: tentang, cara sertai, soalan lazim |
-| `/pelan-5k` | awam | Pelan "5K bawah 30 minit" + label "Realistik ke?"; had lembut 3 pelan dalam pelayar |
+| `/pelan-5k` | awam | Pelan "5K bawah 30 minit" + label "Realistik ke?" + pemasa jalan-lari; had lembut 3 pelan dalam pelayar |
 | `/maf` | awam | Kira had nadi MAF (formula 180 Maffetone) |
+| `/pace` | awam | Kalkulator pace: masa ↔ pace, km/j, anggaran 5K-maraton (Riegel) |
+| `/panduan` | awam | Panduan pemula (NHS, KKM) + senarai semak hari lumba boleh cetak |
 | `/login`, `/register`, `/verify` | awam | Akaun dikongsi dengan hafizbahtiar.com (Turnstile) |
 | `/account` | akaun | Dashboard: pelan saya (lencana **Awan** / **Peranti ini**, meter slot, Ganti), profil, MAF |
 | `/account/pelan-5k` | akaun | Pelan 5K penuh: pecahan analisis, ikut nadi, kalendar `.ics`, simpan ke awan |
@@ -54,6 +56,8 @@ Nielsen 2014, Riegel, Maffetone) + senarai semak untuk jurulatih: `docs/semakan-
 bunx tsc --noEmit -p .
 bun scripts/check-pelan-5k.ts      # setiap gabungan input pelan 5K
 bun scripts/check-pelan-jarak.ts   # pelan 10K / 21K (lonjakan larian panjang, tirus, analisis)
+bun scripts/check-pemasa.ts        # segmen pemasa setiap sesi + kedudukan masa
+bun scripts/check-pace.ts          # kalkulator pace + pautan pelan seterusnya
 bun scripts/check-maf.ts
 bun scripts/check-ics.ts           # fail kalendar RFC 5545
 bun scripts/check-tarikh.ts        # DatePicker dd/mm/yyyy
@@ -64,7 +68,7 @@ bun run build
 
 - `src/layouts/` - `Layout` (awam: Header + Footer), `AccountLayout` (sidebar akaun, satu-satunya pengawal
   sesi; nama/e-mel dilukis dari salinan `/me` sebelum lukisan pertama).
-- `src/components/` - `Pelan5k`, `PelanJarak`, `Maf`, `ProfilShell`; `ui/` = atom (`PageHero`, `Section`,
+- `src/components/` - `Pelan5k`, `PelanJarak`, `Pemasa` (pemasa jalan-lari skrin penuh), `Maf`, `ProfilShell`; `ui/` = atom (`PageHero`, `Section`,
   `ChipGroup`, `Field`, `Checkbox`, `DatePicker`, `Alert`, `ConfirmDialog` + `lib/sahkan.ts`, `Sambungan` =
   notis luar talian, `Ikon` = ikon Lucide).
 - `src/lib/` - `ikon.ts` (semua ikon UI = Lucide, `lucide-static`; tiada path SVG tulisan tangan), logik tulen (pelan, MAF, tarikh, ics), `api.ts` (fetch `/api/v1`, satu refresh dikongsi,

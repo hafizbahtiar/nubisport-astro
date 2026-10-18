@@ -1,0 +1,222 @@
+---
+// Kalkulator pace: jarak + masa (atau pace) -> pace, laju, masa, ramalan lumba (Riegel). Dalam pelayar.
+// Logik: src/lib/pace.ts (semak: bun scripts/check-pace.ts).
+import Layout from "../layouts/Layout.astro";
+import PageHero from "../components/ui/PageHero.astro";
+import Section from "../components/ui/Section.astro";
+import ChipGroup from "../components/ui/ChipGroup.astro";
+import Field from "../components/ui/Field.astro";
+import Alert from "../components/ui/Alert.astro";
+import { KM_MAX, KM_MIN, LUMBA } from "../lib/pace";
+---
+
+<Layout
+  title="Kalkulator pace - Nubi Sport"
+  description="Kira pace per km, masa dan anggaran masa 5K, 10K, separuh maraton dan maraton. Percuma, dikira dalam pelayar."
+>
+  <PageHero
+    eyebrow="Kalkulator"
+    title="Pace berapa"
+    accent="untuk sasaran anda?"
+    lead="Masukkan jarak dan masa untuk dapat pace - atau jarak dan pace untuk dapat masa. Anggaran 5K hingga maraton dikira sekali."
+  >
+    <form class="form" method="get" id="borang">
+      <ChipGroup
+        legend="Jarak"
+        name="jarak"
+        checked="5k"
+        options={[
+          ...LUMBA.map((l) => ({ value: l.id, label: l.nama })),
+          { value: "lain", label: "Lain" },
+        ]}
+      />
+      <Field label="Jarak lain (km)" id="medan-km" hidden>
+        <input
+          class="input"
+          type="number"
+          name="km"
+          min={KM_MIN}
+          max={KM_MAX}
+          step="0.1"
+          inputmode="decimal"
+          placeholder="cth. 3"
+        />
+      </Field>
+      <div class="dua">
+        <Field label="Masa" hint="cth. 28:45 atau 1:05:30">
+          <input
+            class="input"
+            type="text"
+            name="masa"
+            inputmode="numeric"
+            autocomplete="off"
+            placeholder="mm:ss"
+          />
+        </Field>
+        <Field label="atau pace (per km)" hint="cth. 6:00">
+          <input
+            class="input"
+            type="text"
+            name="pace"
+            inputmode="numeric"
+            autocomplete="off"
+            placeholder="mm:ss"
+          />
+        </Field>
+      </div>
+      <button class="btn btn-primary" type="submit">Kira</button>
+    </form>
+  </PageHero>
+
+  <section id="hasil" hidden aria-live="polite">
+    <div class="container narrow" id="keputusan"></div>
+  </section>
+
+  <Section eyebrow="Panduan" title="Pace yang mana untuk latihan?" band narrow>
+    <div class="prose">
+      <ul>
+        <li>
+          <strong>Pace lumba</strong> ialah apa yang kalkulator ini beri - untuk hari
+          lumba atau sesi tempo/interval, bukan setiap hari.
+        </li>
+        <li>
+          <strong>Lari mudah</strong> kira-kira 1:15-1:45 min/km lebih perlahan dari
+          pace 5K anda - boleh bercakap ayat penuh. Kebanyakan larian minggu anda
+          patut di sini.
+        </li>
+        <li>
+          <strong>Panas dan lembap</strong> memperlahankan semua orang. Pace yang
+          sama terasa jauh lebih sukar pada jam 9 pagi berbanding 6 pagi.
+        </li>
+        <li>
+          Anggaran jarak lain guna <strong>formula Riegel</strong> dan menganggap
+          anda dah berlatih untuk jarak itu. Dari 5K ke maraton, anggaran biasanya
+          terlalu optimistik.
+        </li>
+      </ul>
+    </div>
+  </Section>
+
+  <section>
+    <div class="container narrow">
+      <Alert variant="info" title="Ada sasaran?">
+        <p>
+          <a class="link" href="/pelan-5k">Pelan 5K bawah 30 minit</a> untuk pemula,
+          dan pelan 10K / 21K untuk
+          <a class="link" href="/register">akaun percuma</a> - pace setiap sesi dikira
+          dari masa anda.
+        </p>
+      </Alert>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { bacaMasa, kiraPace, LUMBA } from "../lib/pace";
+  import { pace } from "../lib/pelan-5k";
+  import { jam } from "../lib/pelan-jarak";
+
+  const borang = document.getElementById("borang") as HTMLFormElement;
+  const medanKm = document.getElementById("medan-km")!;
+  const hasil = document.getElementById("hasil")!;
+  const keputusan = document.getElementById("keputusan")!;
+  const q = new URLSearchParams(location.search);
+
+  for (const [k, v] of q) {
+    const el = borang.elements.namedItem(k);
+    if (el instanceof RadioNodeList || el instanceof HTMLInputElement)
+      el.value = v;
+  }
+  const ikutJarak = () => (medanKm.hidden = borang.jarak.value !== "lain");
+  ikutJarak();
+  borang.addEventListener("change", ikutJarak);
+  // Masa dan pace: satu sahaja - isi satu, kosongkan yang lain.
+  borang.masa.addEventListener("input", () => (borang.pace.value = ""));
+  borang.pace.addEventListener("input", () => (borang.masa.value = ""));
+
+  if (q.has("jarak")) {
+    const j = q.get("jarak");
+    const km =
+      j === "lain"
+        ? Number(q.get("km"))
+        : (LUMBA.find((l) => l.id === j)?.km ?? NaN);
+    const masa = q.get("masa") ? bacaMasa(q.get("masa")!) : undefined;
+    const p = q.get("pace") ? bacaMasa(q.get("pace")!) : undefined;
+    const h =
+      masa === null || p === null
+        ? ({
+            ok: false,
+            sebab:
+              "Format masa tak dikenali - guna mm:ss (28:45) atau h:mm:ss (1:05:30).",
+          } as const)
+        : kiraPace(km, masa, p === undefined ? undefined : p * 60);
+    hasil.hidden = false;
+    // Semua teks dari lib/nombor, bukan dari URL - selamat untuk innerHTML.
+    keputusan.innerHTML = h.ok
+      ? `<p class="eyebrow">${+h.km.toFixed(2)} km</p>
+        <div class="pace-angka">
+          <div><span class="display">${pace(h.paceSaat)}</span><small>min/km</small></div>
+          <div><span class="display">${jam(h.minit)}</span><small>masa</small></div>
+          <div><span class="display">${h.kmj.toFixed(1)}</span><small>km/j</small></div>
+        </div>
+        <h2 class="display pace-tajuk">Anggaran jarak lain</h2>
+        <table class="pace-jadual">
+          <thead><tr><th scope="col">Jarak</th><th scope="col">Masa</th><th scope="col">Pace</th></tr></thead>
+          <tbody>${h.ramalan
+            .map((r) => {
+              const km = LUMBA.find((l) => l.nama === r.nama)!.km;
+              return `<tr><th scope="row">${r.nama}</th><td>${jam(r.minit)}</td><td>${pace((r.minit * 60) / km)}/km</td></tr>`;
+            })
+            .join("")}</tbody>
+        </table>
+        <p class="muted">Anggaran Riegel - kasar, terutama untuk jarak yang jauh beza. Bukan janji.</p>`
+      : `<div class="alert alert-warning"><p>${h.sebab}</p></div>`;
+    hasil.scrollIntoView({ behavior: "smooth" });
+  }
+</script>
+
+<style is:global>
+  /* Global: keputusan dirender dengan innerHTML. */
+  .dua {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: 1rem;
+  }
+  .pace-angka {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin: 0 0 2rem;
+  }
+  .pace-angka > div {
+    display: grid;
+  }
+  .pace-angka .display {
+    font-size: clamp(2.2rem, 9vw, 4rem);
+    line-height: 1;
+    color: var(--orange-ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .pace-angka small {
+    color: var(--muted);
+  }
+  .pace-tajuk {
+    margin: 0 0 0.75rem;
+  }
+  .pace-jadual {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+  .pace-jadual th,
+  .pace-jadual td {
+    padding: 0.6rem 0.5rem;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+  }
+  .pace-jadual thead th {
+    font-size: 0.85rem;
+    color: var(--muted);
+    font-weight: 600;
+  }
+</style>

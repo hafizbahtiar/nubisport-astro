@@ -3,7 +3,7 @@
 // Bertangga: 10K mula dari masa 5K, 21K dari masa 10K (boleh lari jarak itu tanpa henti).
 // Sasaran lalai = habis dengan selamat; masa sasaran pilihan menambah sesi laju + analisis.
 // Anggaran masa guna formula Riegel (T2 = T1 × (D2/D1)^1.06) - anggaran kasar, dilabel di page.
-import { pace, type Analisis, type Fasa, type Minggu, type Penilaian, type Sesi } from "./pelan-5k";
+import { langkahLaju, pace, seg, ulangSeg, type Analisis, type Fasa, type Minggu, type Penilaian, type Sesi } from "./pelan-5k";
 
 export type Jarak = "10k" | "21k";
 
@@ -105,6 +105,7 @@ export function buatPelanJarak(input: InputJarak): HasilJarak {
 
   const mudah = (minit: number, tambah = "", tajuk = "Lari mudah"): Sesi => ({
     jenis: "mudah", minit, tajuk, arahan: `Lari ${minit} min pada rentak santai.${tambah}`, usaha: USAHA_MUDAH,
+    segmen: [seg("lari", minit), ...(tambah ? langkahLaju(tambah.includes("6 ×") ? 6 : 4) : [])],
   });
   const laju6 = " Akhiri dengan 6 × 20 saat langkah laju (rehat jalan 40 saat) - laju tapi santai, bukan pecut.";
   const panjang = (km: number): Sesi => ({
@@ -113,12 +114,14 @@ export function buatPelanJarak(input: InputJarak): HasilJarak {
     tajuk: `Larian panjang ${km} km`,
     arahan: `Lari ${km} km tanpa henti, lebih perlahan dari biasa. Bawa air; ${km >= 15 ? "makan gel/kurma setiap 45 min, " : ""}boleh jalan sekejap untuk minum.`,
     usaha: USAHA_MUDAH,
+    segmen: [seg("lari", minitKm(km))], // anggaran masa untuk km itu
   });
   const fartlek = (minit: number): Sesi => ({
     jenis: "tempo",
     minit,
     tajuk: "Fartlek ringan",
     arahan: `Panas badan 10 min. ${Math.max(4, Math.round((minit - 20) / 3))} × 1 min sedikit laju, 2 min mudah antara. Sejuk badan 10 min.`,
+    segmen: [seg("lari", 10), ...ulangSeg(Math.max(4, Math.round((minit - 20) / 3)), seg("laju", 1), seg("lari", 2)), seg("lari", 10)],
     usaha: "Bahagian laju: sukar sedikit, masih boleh cakap beberapa perkataan",
   });
   const tempo = (minitTempo: number, saat: number): Sesi => ({
@@ -126,6 +129,7 @@ export function buatPelanJarak(input: InputJarak): HasilJarak {
     minit: 20 + minitTempo,
     tajuk: "Tempo",
     arahan: `Panas badan 10 min. ${minitTempo} min pada rentak tempo. Sejuk badan 10 min.`,
+    segmen: [seg("lari", 10), seg("laju", minitTempo), seg("lari", 10)],
     usaha: `Sukar bercakap, tetap terkawal · ~${pace(saat)}/km minggu ini`,
   });
   const interval = (ulang: number, saat: number): Sesi => ({
@@ -133,6 +137,7 @@ export function buatPelanJarak(input: InputJarak): HasilJarak {
     minit: 15 + ulang * 5,
     tajuk: "Interval",
     arahan: `Panas badan 10 min. ${ulang} × 800 m (atau 3-4 min) laju, rehat 2 min joging antara set. Sejuk badan 5 min.`,
+    segmen: [seg("lari", 10), ...ulangSeg(ulang, seg("laju", 3.5), seg("rehat", 2)), seg("jalan", 5)],
     usaha: `Laju tapi terkawal · ~${pace(saat)}/km minggu ini`,
   });
 

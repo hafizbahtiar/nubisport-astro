@@ -1,6 +1,6 @@
 // bun scripts/check-pelan-5k.ts - semak src/lib/pelan-5k.ts untuk setiap gabungan input.
 import {
-  analisis, BULAN, HAD_TANPA_AKAUN, HARI, HARI_SESI, bolehBuatPelan, MASA_MAX, MASA_MIN, MINGGU_MIN, buatPelan, isninMula, pace, tarikhSesi, type Tahap
+  analisis, BULAN, isoTarikh, sambungDari, HAD_TANPA_AKAUN, HARI, HARI_SESI, bolehBuatPelan, MASA_MAX, MASA_MIN, MINGGU_MIN, buatPelan, isninMula, pace, tarikhSesi, type Tahap
 } from "../src/lib/pelan-5k";
 
 let gagal = 0;
@@ -127,6 +127,32 @@ ok(!bolehBuatPelan("d", tiga, false), "pelan ke-4 tanpa akaun = tidak");
 ok(bolehBuatPelan("b", tiga, false), "buka semula pelan lama = boleh");
 ok(bolehBuatPelan("d", tiga, true), "log masuk = tiada had");
 ok(bolehBuatPelan("c", ["a", "a", "b"], false), "kunci berulang dikira sekali");
+
+// Terlepas sesi: pelan 3 hari (Isnin/Rabu/Sabtu) mula Isnin 5 Okt 2026.
+{
+  const h = buatPelan({ bulan: 3, tahap: "sifar", hari: 3 });
+  if (h.ok) {
+    const isnin = new Date(2026, 9, 5);
+    const m1 = new Set(["1.0", "1.1", "1.2"]);
+    const rabu3 = new Date(2026, 9, 21, 9); // Rabu minggu 3
+    // Minggu 1 siap, minggu 2 terlepas -> minggu 2 mula Isnin depan 26 Okt (mula 19 Okt, anjak 2).
+    const r = sambungDari(h.minggu, isnin, m1, rabu3);
+    ok(r?.no === 2 && isoTarikh(r.mula) === "2026-10-19" && isoTarikh(r.isninMinggu) === "2026-10-26" && r.anjak === 2, `terlepas minggu 2: ${JSON.stringify(r)}`);
+    // Hari ini Isnin -> minggu itu mula hari ini.
+    const r2 = sambungDari(h.minggu, isnin, m1, new Date(2026, 9, 19, 7));
+    ok(r2?.no === 2 && isoTarikh(r2.isninMinggu) === "2026-10-19" && r2.anjak === 1, `Isnin: ${JSON.stringify(r2)}`);
+    // Hanya sesi minggu ini terlepas -> tiada anjak.
+    ok(sambungDari(h.minggu, isnin, new Set([...m1, "2.0", "2.1", "2.2"]), rabu3) === null, "terlepas minggu ini sahaja = tiada");
+    // Lubang lama tapi sesi lebih baru ditanda -> abaikan.
+    ok(sambungDari(h.minggu, isnin, new Set(["1.0", "2.2"]), rabu3) === null, "lubang lama diabaikan");
+    // Belum tanda apa-apa, minggu 3 -> sambung dari minggu 1.
+    const r3 = sambungDari(h.minggu, isnin, new Set(), rabu3);
+    ok(r3?.no === 1 && isoTarikh(r3.mula) === "2026-10-26", `belum mula: ${JSON.stringify(r3)}`);
+    // Selepas anjak, tiada notis lagi (tiada gelung).
+    ok(r && sambungDari(h.minggu, r.mula, m1, rabu3) === null, "selepas anjak = tiada");
+    ok(sambungDari(h.minggu, isnin, new Set(), new Date(2026, 9, 7, 18)) === null, "minggu pertama = tiada");
+  }
+}
 
 if (gagal) throw new Error(`${gagal} semakan gagal`);
 console.log(`ok - ${pelan} pelan disemak`);
