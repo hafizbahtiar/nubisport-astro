@@ -35,7 +35,7 @@ const tahun = new Date().getFullYear();
   title="5K bawah"
   accent="30 minit."
   lead={penuh
-    ? "Versi penuh: pecahan kenapa sasaran anda realistik atau tidak, latihan ikut nadi, dan simpan ke kalendar."
+    ? "Versi penuh: pecahan kenapa sasaran anda realistik atau tidak, latihan ikut nadi, simpan ke kalendar, dan simpan sehingga 3 pelan ke awan."
     : "Pilih tempoh dan tahap anda sekarang. Pelan dikira dalam pelayar anda - tiada daftar, tiada data dihantar ke mana-mana."}
 >
   <form
@@ -146,7 +146,10 @@ const tahun = new Date().getFullYear();
     <li>
       Pelan ini panduan umum, <strong>bukan nasihat perubatan</strong>. Jika ada
       masalah jantung, tekanan darah, sendi atau baru sembuh dari kecederaan,
-      rujuk doktor dulu. Berhenti jika sakit (bukan sekadar penat).
+      rujuk doktor dulu. Berhenti jika sakit (bukan sekadar penat). Pelan dijana
+      mengikut prinsip latihan umum (contoh NHS Couch to 5K) dan <strong
+        >belum disemak jurulatih bertauliah</strong
+      >.
     </li>
     <li>
       Ambang "munasabah" adalah <strong>anggaran kasar</strong>: dari sifar ~{
@@ -177,8 +180,11 @@ const tahun = new Date().getFullYear();
     baca,
     kunciPelan,
     padamPelan,
+    paramPelan,
     simpan,
+    simpanParam,
   } from "../lib/pelan-tersimpan";
+  import { keluarAwan, kotakAwan } from "../lib/awan";
   import { sahkan } from "../lib/sahkan";
   import { htmlMinggu, papakAnalisis } from "../lib/pelan-papar";
   import { NOTA_AWAN } from "../data/site";
@@ -255,6 +261,7 @@ const tahun = new Date().getFullYear();
         <li><strong>Ikut nadi (MAF)</strong> - sesi mudah dengan julat kadar nadi anda.</li>
         <li><strong>Simpan ke kalendar</strong> - setiap sesi masuk kalendar telefon (iPhone, Android, Google, Outlook).</li>
         <li><strong>Pelan 10K dan 21K</strong> - langkah seterusnya selepas 5K, dengan masa sasaran pilihan.</li>
+        <li><strong>Simpan ke awan</strong> - sehingga 3 pelan ikut akaun anda ke telefon atau komputer lain.</li>
         <li><strong>Dashboard</strong> - semua pelan anda dan kemajuan dalam satu tempat.</li>
       </ul>
       <div class="actions">
@@ -326,6 +333,7 @@ const tahun = new Date().getFullYear();
       return;
     }
     if (!dibuat.includes(kunci)) simpan(KUNCI_DIBUAT, [...dibuat, kunci]);
+    if (penuh) simpanParam(kunci, paramPelan(q));
     const siap = new Set<string>(baca(kunci));
     const isnin = /^\d{4}-\d{2}-\d{2}$/.test(q.get("mula") ?? "")
       ? isninMula(new Date(`${q.get("mula")}T00:00:00`))
@@ -349,7 +357,11 @@ const tahun = new Date().getFullYear();
           ${penuh ? `<button class="btn btn-outline" type="button" data-padam>Padam pelan</button>` : ""}
         </div>
       </div>
-      <div class="alert alert-warning no-print"><p>Pelan dan tanda siap disimpan dalam pelayar ini sahaja (localStorage) - hilang jika data pelayar dikosongkan atau anda tukar peranti.${penuh ? ` ${NOTA_AWAN}` : ""}</p></div>
+      ${
+        penuh
+          ? `<p class="awan-baris no-print" data-awan></p>`
+          : `<div class="alert alert-warning no-print"><p>Pelan dan tanda siap disimpan dalam pelayar ini sahaja (localStorage) - hilang jika data pelayar dikosongkan atau anda tukar peranti. ${NOTA_AWAN}</p></div>`
+      }
       ${a ? htmlAnalisis(a) : ""}
       ${penuh ? "" : htmlPromosi()}
       ${
@@ -380,28 +392,39 @@ const tahun = new Date().getFullYear();
     const kira = () =>
       (kemajuan.textContent = `${siap.size} / ${jumlah} sesi siap.`);
     kira();
-    pelanEl
-      .querySelectorAll<HTMLInputElement>("input[data-sesi]")
-      .forEach((c) => {
-        c.checked = siap.has(c.dataset.sesi!);
-        c.addEventListener("change", () => {
-          c.checked ? siap.add(c.dataset.sesi!) : siap.delete(c.dataset.sesi!);
-          simpan(kunci, [...siap]);
-          kira();
-        });
-      });
+    const kotak =
+      pelanEl.querySelectorAll<HTMLInputElement>("input[data-sesi]");
+    const kemas = () => {
+      kotak.forEach((c) => (c.checked = siap.has(c.dataset.sesi!)));
+      kira();
+    };
+    // Versi akaun: lencana awan + segerak tanda siap (lib/awan.ts).
+    const slotAwan = pelanEl.querySelector<HTMLElement>("[data-awan]");
+    const keAwan = slotAwan
+      ? kotakAwan(slotAwan, kunci, siap, kemas)
+      : () => {};
+    kemas();
+    kotak.forEach((c) =>
+      c.addEventListener("change", () => {
+        c.checked ? siap.add(c.dataset.sesi!) : siap.delete(c.dataset.sesi!);
+        simpan(kunci, [...siap]);
+        kira();
+        keAwan();
+      }),
+    );
     // Versi penuh sahaja: di versi awam, padam akan membuka semula slot had 3 pelan.
     pelanEl
       .querySelector("[data-padam]")
       ?.addEventListener("click", async () => {
         const ya = await sahkan({
           tajuk: "Padam pelan ini?",
-          mesej: `Pelan ${bulan} bulan · ${hari} hari seminggu dan ${siap.size} tanda siap akan dibuang dari pelayar ini. Tindakan ini tak boleh diundur.`,
+          mesej: `Pelan ${bulan} bulan · ${hari} hari seminggu dan ${siap.size} tanda siap akan dibuang dari pelayar ini dan dari awan. Tindakan ini tak boleh diundur.`,
           ya: "Padam",
           bahaya: true,
         });
         if (!ya) return;
         padamPelan(kunci);
+        await keluarAwan(kunci);
         location.href = "/account";
       });
     pelanEl

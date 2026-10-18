@@ -59,9 +59,10 @@ const NISBAH_FASA: Record<Tahap, [asas: number, dayaTahan: number]> = {
   jalan: [0.3, 0.35],
   "5k": [0, 0.4],
 };
-// [lari, jalan] minit; tahap "jalan" mula di langkah 4
+// [lari, jalan] minit; tahap "jalan" mula di langkah 4. 20 -> 25 -> 30 min (NHS Couch to 5K naik
+// 20 -> 25 -> 28 -> 30), bukan terus 20 -> 30. docs/semakan-latihan.md
 const LANGKAH: [number, number][] = [
-  [1, 2], [2, 2], [3, 2], [5, 2], [8, 2], [10, 1], [15, 1], [20, 1], [30, 0],
+  [1, 2], [2, 2], [3, 2], [5, 2], [8, 2], [10, 1], [15, 1], [20, 1], [25, 1], [30, 0],
 ];
 const LANGKAH_MULA: Record<Exclude<Tahap, "5k">, number> = { sifar: 0, jalan: 4 };
 

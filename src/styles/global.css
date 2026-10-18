@@ -81,6 +81,13 @@ svg {
   max-width: 100%;
 }
 
+/* Ikon Lucide (src/lib/ikon.ts): saiz lalai ikut teks; konteks boleh tetapkan width/height. */
+.lucide {
+  width: 1.25em;
+  height: 1.25em;
+  flex: none;
+}
+
 a {
   color: inherit;
 }
@@ -399,8 +406,8 @@ legend,
 .check input:checked {
   background-color: var(--orange);
   border-color: var(--orange);
-  /* tanda semak navy */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='%230a1a33' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  /* tanda semak navy = path Lucide `check` (garis 3: kotak kecil) */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20 6 9 17l-5-5' fill='none' stroke='%230a1a33' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 .check input:focus-visible {
@@ -455,8 +462,9 @@ legend,
   border-radius: 0 var(--radius) var(--radius) 0;
 }
 
-.dp-buka svg {
+.dp-buka .lucide {
   width: 1.15rem;
+  height: 1.15rem;
 }
 
 .dp-buka:hover,
@@ -552,8 +560,9 @@ legend,
   cursor: pointer;
 }
 
-.dp-nav svg {
+.dp-nav .lucide {
   width: 1.1rem;
+  height: 1.1rem;
 }
 
 .dp-nav:hover {
@@ -816,4 +825,43 @@ legend,
   section {
     padding-block: 0;
   }
+}
+
+/* Transisi antara page (MPA, tanpa JS): pelayar yang menyokong memudar kandungan; sidebar dan
+   navbar akaun (view-transition-name dalam AccountLayout) kekal di tempatnya. */
+@view-transition {
+  navigation: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @view-transition {
+    navigation: none;
+  }
+}
+
+/* Lencana kecil (status storan pelan: Awan / Peranti ini - lib/awan.ts). */
+.lencana {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--paper-2);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.lencana .lucide {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.lencana-awan {
+  border-color: var(--info-line);
+  background: var(--info-bg);
+  color: var(--info-ink);
 }

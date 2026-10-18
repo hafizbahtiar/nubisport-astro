@@ -6,4 +6,7 @@ import { defineConfig } from 'astro/config';
 // are left out (they need an absolute URL; a made-up domain breaks link previews).
 export default defineConfig({
   site: "https://nubisport.hafizbahtiar.com",
+  // Laman statik: muat page seterusnya bila tetikus/jari di atas pautan (aset statik - percuma,
+  // tidak menyentuh Worker /api/*). Navigasi terasa serta-merta.
+  prefetch: { prefetchAll: true, defaultStrategy: "hover" },
 });

@@ -1,7 +1,5 @@
 ---
 import AccountLayout from "../../layouts/AccountLayout.astro";
-import Alert from "../../components/ui/Alert.astro";
-import { NOTA_AWAN } from "../../data/site";
 ---
 
 <AccountLayout title="Dashboard">
@@ -9,14 +7,6 @@ import { NOTA_AWAN } from "../../data/site";
     <p class="eyebrow">Akaun</p>
     <h2 class="display">Hai, <span data-saya-nama>…</span>.</h2>
   </section>
-
-  <Alert variant="warning" title="Pelan disimpan dalam pelayar ini sahaja">
-    <p>
-      Pelan latihan, tanda siap dan had MAF anda tersimpan di peranti ini
-      (localStorage), bukan dalam akaun. Ia hilang jika anda kosongkan data
-      pelayar, guna mod peribadi, atau tukar ke telefon lain. {NOTA_AWAN}
-    </p>
-  </Alert>
 
   <ul class="stat" aria-label="Ringkasan">
     <li><span>Pelan</span><strong id="bil-pelan">0</strong></li>
@@ -35,6 +25,25 @@ import { NOTA_AWAN } from "../../data/site";
             >Pelan 10K / 21K</a
           >
         </div>
+      </div>
+      <div class="awan-meter" id="awan">
+        <p id="awan-teks" class="muted">Menyemak awan…</p>
+        <span class="awan-slot" id="awan-slot" aria-hidden="true"></span>
+      </div>
+      <p class="muted awan-nota">
+        Pelan <strong>Awan</strong> ikut akaun anda ke peranti lain. Pelan{" "}
+        <strong>Peranti ini</strong> hanya dalam pelayar ini - hilang jika data pelayar
+        dikosongkan.
+      </p>
+      <div class="alert alert-info tukar" id="tukar" hidden>
+        <p>
+          Awan penuh. Pilih pelan awan untuk diganti dengan
+          <strong id="tukar-nama"></strong> - pelan yang diganti kekal di peranti
+          ini.
+        </p>
+        <button class="btn btn-outline btn-sm" type="button" id="tukar-batal"
+          >Batal</button
+        >
       </div>
       <ol class="senarai" id="pelan"></ol>
       <p class="muted" id="tiada-pelan" hidden>
@@ -74,7 +83,21 @@ import { NOTA_AWAN } from "../../data/site";
     jam,
     type Jarak,
   } from "../../lib/pelan-jarak";
-  import { KUNCI_DIBUAT, baca, padamPelan } from "../../lib/pelan-tersimpan";
+  import {
+    KUNCI_DIBUAT,
+    baca,
+    bacaParam,
+    padamPelan,
+  } from "../../lib/pelan-tersimpan";
+  import {
+    VERSI_ENJIN,
+    keluarAwan,
+    lencana,
+    senaraiAwan,
+    simpanAwan,
+    tarikAwan,
+    type Awan,
+  } from "../../lib/awan";
   import { sahkan } from "../../lib/sahkan";
 
   const $ = (id: string) => document.getElementById(id)!;
@@ -114,7 +137,7 @@ import { NOTA_AWAN } from "../../data/site";
           h,
           nama: `5K · ${a} bulan · ${hari} hari seminggu`,
           sub: `${TAHAP[b as Tahap]}${c ? ` (${c} min)` : ""}`,
-          href: `/account/pelan-5k?${new URLSearchParams({ bulan: a, tahap: b, hari, ...(c ? { masa: c } : {}) })}`,
+          href: `/account/pelan-5k?${new URLSearchParams(bacaParam(kunci) ?? { bulan: a, tahap: b, hari, ...(c ? { masa: c } : {}) })}`,
         }
       );
     }
@@ -133,55 +156,162 @@ import { NOTA_AWAN } from "../../data/site";
         h,
         nama: `${k.nama} · ${a} minggu · ${hari} hari seminggu`,
         sub: `${k.prasyarat.nama} ${b} min → ${c ? `bawah ${jam(+c)}` : "habis"}`,
-        href: `/account/pelan-jarak?${new URLSearchParams({ jarak, minggu: a, masa: b, hari, ...(c ? { sasaran: c } : {}) })}`,
+        href: `/account/pelan-jarak?${new URLSearchParams(bacaParam(kunci) ?? { jarak, minggu: a, masa: b, hari, ...(c ? { sasaran: c } : {}) })}`,
       }
     );
   }
 
   const senarai = $("pelan");
+  // awan: null = belum tahu / tak dapat dicapai. menukar = pelan peranti yang menunggu slot awan.
+  let awan: Awan | null = null;
+  let menukar: string | null = null;
+  const segar = async () => {
+    awan = await senaraiAwan();
+    papar();
+  };
+  // Butang dalam item: [teks, tindakan, kelas]
+  const butang = (
+    teks: string,
+    buat: () => Promise<unknown> | void,
+    kelas = "btn-outline",
+  ) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = `btn ${kelas} btn-sm`;
+    b.textContent = teks;
+    b.addEventListener("click", async () => {
+      b.disabled = true;
+      await buat();
+      b.disabled = false;
+    });
+    return b;
+  };
+  const gagal = () =>
+    ($("awan-teks").textContent =
+      "Tak dapat hubungi awan. Semak internet dan cuba lagi.");
+
   function papar() {
     senarai.replaceChildren();
     let jumlahSiap = 0;
-    for (const kunci of new Set(baca(KUNCI_DIBUAT))) {
-      const p = butiran(kunci);
+    const diAwan = new Set(awan?.items.map((i) => i.key));
+    const versiLama = new Set(
+      awan?.items.filter((i) => i.engine < VERSI_ENJIN).map((i) => i.key),
+    );
+    // Awan dulu, kemudian peranti ini (susunan dibuat).
+    const kunci = [...new Set(baca(KUNCI_DIBUAT))].sort(
+      (x, y) => +diAwan.has(y) - +diAwan.has(x),
+    );
+    for (const k of kunci) {
+      const p = butiran(k);
       if (!p) continue;
       const { h, nama } = p;
-      const jumlah = h.minggu.reduce((a, w) => a + w.sesi.length, 0);
-      const siap = new Set(baca(kunci)).size;
+      const jumlah = h.minggu.reduce((n, w) => n + w.sesi.length, 0);
+      const siap = new Set(baca(k)).size;
       jumlahSiap += siap;
+      const awanIni = diAwan.has(k);
       const li = document.createElement("li");
+      if (menukar === k) li.className = "menunggu";
       li.innerHTML = `<a href="${p.href}">
           <strong>${nama}</strong>
           <span>${p.sub}</span>
           <progress max="${jumlah}" value="${siap}"></progress>
           <small>${siap} / ${jumlah} sesi siap · ${Math.round((siap / jumlah) * 100)}%</small>
         </a>
-        <button class="btn btn-outline btn-sm padam" type="button" aria-label="Padam pelan ${nama}">Padam</button>`;
-      li.querySelector("button")!.addEventListener("click", async () => {
-        const ya = await sahkan({
-          tajuk: "Padam pelan ini?",
-          mesej: `Pelan ${nama} dan ${siap} tanda siap akan dibuang dari pelayar ini. Tindakan ini tak boleh diundur.`,
-          ya: "Padam",
-          bahaya: true,
-        });
-        if (!ya) return;
-        padamPelan(kunci);
-        papar();
-      });
+        <div class="item-bawah">${awan ? lencana(awanIni) : ""}${
+          versiLama.has(k)
+            ? `<span class="muted kecil">Pelan dikemas kini sejak disimpan</span>`
+            : ""
+        }<span class="item-butang"></span></div>`;
+      const kotak = li.querySelector(".item-butang")!;
+
+      if (awan && menukar && awanIni)
+        kotak.append(
+          butang(
+            "Ganti dengan pelan ini",
+            async () => {
+              const r = await simpanAwan(menukar!, k);
+              if (r !== "ok") return gagal();
+              menukar = null;
+              await segar();
+            },
+            "btn-primary",
+          ),
+        );
+      else if (awan && !menukar && awanIni)
+        kotak.append(
+          butang("Keluarkan dari awan", async () => {
+            if (!(await keluarAwan(k))) return gagal();
+            await segar();
+          }),
+        );
+      else if (awan && !menukar && !awanIni)
+        kotak.append(
+          butang("Simpan ke awan", async () => {
+            if (awan!.items.length >= awan!.limit) {
+              menukar = k;
+              return papar();
+            }
+            const r = await simpanAwan(k);
+            if (r === "penuh") menukar = k;
+            else if (r === "ralat") return gagal();
+            await segar();
+          }),
+        );
+      if (!menukar)
+        kotak.append(
+          butang("Padam", async () => {
+            const ya = await sahkan({
+              tajuk: "Padam pelan ini?",
+              mesej: `Pelan ${nama} dan ${siap} tanda siap akan dibuang dari pelayar ini${awanIni ? " dan dari awan" : ""}. Tindakan ini tak boleh diundur.`,
+              ya: "Padam",
+              bahaya: true,
+            });
+            if (!ya) return;
+            padamPelan(k);
+            if (awanIni) await keluarAwan(k);
+            await segar();
+          }),
+        );
       senarai.append(li);
     }
     $("tiada-pelan").hidden = senarai.children.length > 0;
     $("bil-pelan").textContent = String(senarai.children.length);
     $("bil-siap").textContent = String(jumlahSiap);
+
+    // Meter slot awan + mod tukar.
+    if (awan) {
+      const guna = awan.items.length;
+      $("awan-teks").textContent =
+        `Awan: ${guna} / ${awan.limit} slot digunakan`;
+      $("awan-slot").innerHTML = Array.from(
+        { length: awan.limit },
+        (_, i) => `<i${i < guna ? ' class="penuh"' : ""}></i>`,
+      ).join("");
+    }
+    $("tukar").hidden = !menukar;
+    if (menukar)
+      $("tukar-nama").textContent = butiran(menukar)
+        ? (butiran(menukar) as { nama: string }).nama
+        : "";
   }
+  $("tukar-batal").addEventListener("click", () => {
+    menukar = null;
+    papar();
+  });
+
   papar();
+  // Gabung awan (pelan dari peranti lain + tanda siap terkini), kemudian lukis dengan lencana.
+  awan = await tarikAwan();
+  if (!awan) gagal();
+  papar();
+  if (location.hash === "#awan") $("awan").scrollIntoView();
 
   // Had MAF terakhir (Maf.astro versi akaun).
   try {
     const m = JSON.parse(localStorage.getItem("maf:terakhir") ?? "null");
     if (m && Number.isInteger(m.maf) && Number.isInteger(m.bawah))
       $("maf-terakhir").textContent =
-        `Had MAF anda: ${m.maf} denyut/min (julat ${m.bawah}-${m.maf}).`;
+        `Had MAF anda: ${m.maf} denyut/min (julat ${m.bawah}-${m.maf}) - disimpan dalam pelayar ini.`;
   } catch {
     /* tiada / rosak */
   }
@@ -282,24 +412,76 @@ import { NOTA_AWAN } from "../../data/site";
   }
   /* Item dijana skrip - tiada atribut skop Astro, jadi :global. */
   .senarai :global(li) {
-    position: relative;
+    display: grid;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+  }
+  .senarai :global(li:hover) {
+    border-color: var(--orange);
+  }
+  .senarai :global(li.menunggu) {
+    border-color: var(--info-line);
+    background: var(--info-bg);
   }
   .senarai :global(a) {
     display: grid;
     gap: 0.3rem;
-    padding: 1rem 6.5rem 1rem 1rem; /* ruang untuk butang Padam */
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
+    padding: 1rem 1rem 0.5rem;
     color: var(--ink);
     text-decoration: none;
   }
-  .senarai :global(a:hover) {
-    border-color: var(--orange);
+  .senarai :global(.item-bawah) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0 1rem 0.85rem;
   }
-  .senarai :global(.padam) {
-    position: absolute;
-    top: 0.75rem;
-    right: 0.75rem;
+  .senarai :global(.item-butang) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-left: auto;
+  }
+  .senarai :global(.kecil) {
+    font-size: 0.8rem;
+  }
+
+  .awan-meter {
+    justify-self: stretch;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+    scroll-margin-top: 5rem;
+  }
+  .awan-meter p {
+    font-weight: 600;
+  }
+  .awan-slot {
+    display: flex;
+    gap: 0.35rem;
+  }
+  .awan-slot :global(i) {
+    width: 2.25rem;
+    height: 0.5rem;
+    border-radius: 999px;
+    background: var(--line);
+  }
+  .awan-slot :global(i.penuh) {
+    background: var(--info-ink);
+  }
+  .awan-nota {
+    font-size: 0.85rem;
+  }
+  .tukar {
+    justify-self: stretch;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
   }
   .senarai :global(span),
   .senarai :global(small) {

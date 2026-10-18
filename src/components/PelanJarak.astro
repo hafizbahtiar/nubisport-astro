@@ -131,7 +131,14 @@ const tahun = new Date().getFullYear();
     <li>
       Pelan ini panduan umum, <strong>bukan nasihat perubatan</strong>. Rujuk
       doktor jika ada masalah jantung, tekanan darah, sendi atau baru sembuh
-      dari kecederaan. Berhenti jika sakit (bukan sekadar penat).
+      dari kecederaan. Berhenti jika sakit (bukan sekadar penat). Pelan dijana
+      mengikut prinsip latihan umum (contoh pelan pemula Hal Higdon) dan <strong
+        >belum disemak jurulatih bertauliah</strong
+      >.
+    </li>
+    <li>
+      Pelan disimpan dalam pelayar ini. Tekan "Simpan ke awan" (sehingga 3
+      pelan) supaya ia dan tanda siap ikut akaun anda ke peranti lain.
     </li>
     <li>
       Bertangga: 10K perlukan masa 5K (boleh lari 5 km tanpa henti), 21K
@@ -155,7 +162,6 @@ const tahun = new Date().getFullYear();
 <script>
   import { buatIcs, waktuMalaysia } from "../lib/ics";
   import { kiraMaf, type Kategori } from "../lib/maf";
-  import { NOTA_AWAN } from "../data/site";
   import { isninMula, tarikhSesi } from "../lib/pelan-5k";
   import {
     JARAK,
@@ -170,8 +176,11 @@ const tahun = new Date().getFullYear();
     baca,
     kunciJarak,
     padamPelan,
+    paramPelan,
     simpan,
+    simpanParam,
   } from "../lib/pelan-tersimpan";
+  import { keluarAwan, kotakAwan } from "../lib/awan";
   import { sahkan } from "../lib/sahkan";
 
   const borang = document.getElementById("borang") as HTMLFormElement;
@@ -251,6 +260,7 @@ const tahun = new Date().getFullYear();
     const kunci = kunciJarak(jarak, minggu, masa, sasaran, hari);
     const dibuat = baca(KUNCI_DIBUAT);
     if (!dibuat.includes(kunci)) simpan(KUNCI_DIBUAT, [...dibuat, kunci]);
+    simpanParam(kunci, paramPelan(q));
     const siap = new Set<string>(baca(kunci));
     const isnin = /^\d{4}-\d{2}-\d{2}$/.test(q.get("mula") ?? "")
       ? isninMula(new Date(`${q.get("mula")}T00:00:00`))
@@ -274,7 +284,7 @@ const tahun = new Date().getFullYear();
           <button class="btn btn-outline" type="button" data-padam>Padam pelan</button>
         </div>
       </div>
-      <div class="alert alert-warning no-print"><p>Pelan dan tanda siap disimpan dalam pelayar ini sahaja (localStorage) - hilang jika data pelayar dikosongkan atau anda tukar peranti. ${NOTA_AWAN}</p></div>
+      <p class="awan-baris no-print" data-awan></p>
       ${h.amaran.map((t) => `<div class="alert alert-info"><p>${t}</p></div>`).join("")}
       ${a ? papakAnalisis(a) : ""}
       <div class="kalendar no-print">
@@ -294,30 +304,39 @@ const tahun = new Date().getFullYear();
     const kemajuan = document.getElementById("kemajuan")!;
     const kira = () =>
       (kemajuan.textContent = `${siap.size} / ${jumlah} sesi siap.`);
-    kira();
-    pelanEl
-      .querySelectorAll<HTMLInputElement>("input[data-sesi]")
-      .forEach((cb) => {
-        cb.checked = siap.has(cb.dataset.sesi!);
-        cb.addEventListener("change", () => {
-          cb.checked
-            ? siap.add(cb.dataset.sesi!)
-            : siap.delete(cb.dataset.sesi!);
-          simpan(kunci, [...siap]);
-          kira();
-        });
-      });
+    const kotak =
+      pelanEl.querySelectorAll<HTMLInputElement>("input[data-sesi]");
+    const kemas = () => {
+      kotak.forEach((cb) => (cb.checked = siap.has(cb.dataset.sesi!)));
+      kira();
+    };
+    const keAwan = kotakAwan(
+      pelanEl.querySelector<HTMLElement>("[data-awan]")!,
+      kunci,
+      siap,
+      kemas,
+    );
+    kemas();
+    kotak.forEach((cb) =>
+      cb.addEventListener("change", () => {
+        cb.checked ? siap.add(cb.dataset.sesi!) : siap.delete(cb.dataset.sesi!);
+        simpan(kunci, [...siap]);
+        kira();
+        keAwan();
+      }),
+    );
     pelanEl
       .querySelector("[data-padam]")!
       .addEventListener("click", async () => {
         const ya = await sahkan({
           tajuk: "Padam pelan ini?",
-          mesej: `Pelan ${tajuk} dan ${siap.size} tanda siap akan dibuang dari pelayar ini. Tindakan ini tak boleh diundur.`,
+          mesej: `Pelan ${tajuk} dan ${siap.size} tanda siap akan dibuang dari pelayar ini dan dari awan. Tindakan ini tak boleh diundur.`,
           ya: "Padam",
           bahaya: true,
         });
         if (!ya) return;
         padamPelan(kunci);
+        await keluarAwan(kunci);
         location.href = "/account";
       });
     pelanEl

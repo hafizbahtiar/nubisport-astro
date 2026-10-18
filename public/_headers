@@ -1,0 +1,4 @@
+# Workers Static Assets: fail /_astro/* bernama hash (berubah setiap build) - simpan setahun,
+# pelayar tak perlu tanya semula (tiada 304) pada setiap page.
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable

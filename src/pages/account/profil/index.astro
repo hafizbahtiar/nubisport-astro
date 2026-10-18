@@ -31,7 +31,7 @@ import Alert from "../../../components/ui/Alert.astro";
 </ProfilShell>
 
 <script>
-  import { api, json, ralatAm, sesiSaya } from "../../../lib/api";
+  import { api, ingatSaya, json, ralatAm, sesiSaya } from "../../../lib/api";
 
   const profil = document.getElementById("profil") as HTMLFormElement;
   const papar = (id: string, teks: string | null) => {
@@ -73,6 +73,7 @@ import Alert from "../../../components/ui/Alert.astro";
       document
         .querySelectorAll("[data-saya-awal]")
         .forEach((el) => (el.textContent = nama.charAt(0).toUpperCase()));
+      if (s) ingatSaya({ ...s, name: nama });
       papar("ok-profil", "Nama disimpan.");
     } catch {
       papar(

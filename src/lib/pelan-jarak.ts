@@ -15,8 +15,8 @@ export const JARAK = {
     prasyarat: { nama: "5K", km: 5, min: 15, max: 60 },
     sasaran: { min: 35, max: 120 },
     mulaKm: 6, // larian panjang minggu 1 (> jarak prasyarat)
-    puncakKm: 12,
-    langkahKm: 1.5, // larian panjang naik paling banyak sebanyak ini seminggu
+    puncakKm: 10, // = jarak lumba; Higdon Novice 10K ~6 batu (docs/semakan-latihan.md)
+    langkahKm: 1, // larian panjang naik paling banyak sebanyak ini seminggu
     mudah: [30, 45], // minit satu sesi mudah: awal -> puncak
     tirus: 1,
   },
@@ -27,7 +27,7 @@ export const JARAK = {
     prasyarat: { nama: "10K", km: 10, min: 35, max: 110 },
     sasaran: { min: 75, max: 240 },
     mulaKm: 11,
-    puncakKm: 18,
+    puncakKm: 16, // Higdon Novice 1 half: 10 batu (docs/semakan-latihan.md)
     langkahKm: 2,
     mudah: [35, 55],
     tirus: 2,

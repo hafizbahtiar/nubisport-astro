@@ -1,15 +1,28 @@
 ---
-// Halaman profil akaun: navigasi kecil (Maklumat / Kata laluan) di sebelah kandungan.
-// Lebar: menu menegak di kiri. Sempit: jadi tab mendatar di atas.
+// Halaman profil akaun: card navigasi (Maklumat / Kata laluan) di sebelah kandungan.
+// Lebar: card menegak di kiri (melekat semasa skrol). Sempit (<= 48rem): card jadi tab segmen di atas.
 import AccountLayout from "../layouts/AccountLayout.astro";
+import Ikon from "./ui/Ikon.astro";
+import type { NamaIkon } from "../lib/ikon";
 
 interface Props {
   title: string;
 }
 const { title } = Astro.props;
-const SUB = [
-  { href: "/account/profil", label: "Maklumat" },
-  { href: "/account/profil/kata-laluan", label: "Kata laluan" },
+// ikon: nama Lucide (src/lib/ikon.ts), sama dengan NAV dalam AccountLayout.
+const SUB: { href: string; label: string; nota: string; ikon: NamaIkon }[] = [
+  {
+    href: "/account/profil",
+    label: "Maklumat",
+    nota: "Nama dan e-mel",
+    ikon: "pengguna",
+  },
+  {
+    href: "/account/profil/kata-laluan",
+    label: "Kata laluan",
+    nota: "Tukar kata laluan",
+    ikon: "mangga",
+  },
 ];
 const laluan = Astro.url.pathname.replace(/\/$/, "");
 ---
@@ -17,16 +30,27 @@ const laluan = Astro.url.pathname.replace(/\/$/, "");
 <AccountLayout title={`Profil · ${title}`}>
   <div class="profil">
     <nav class="profil-nav" aria-label="Tetapan profil">
-      {
-        SUB.map((s) => (
-          <a
-            href={s.href}
-            aria-current={laluan === s.href ? "page" : undefined}
-          >
-            {s.label}
-          </a>
-        ))
-      }
+      <p class="profil-nav-tajuk">Tetapan akaun</p>
+      <ul>
+        {
+          SUB.map((s) => (
+            <li>
+              <a
+                href={s.href}
+                aria-current={laluan === s.href ? "page" : undefined}
+              >
+                <span class="ikon" aria-hidden="true">
+                  <Ikon nama={s.ikon} />
+                </span>
+                <span class="teks">
+                  <strong>{s.label}</strong>
+                  <small>{s.nota}</small>
+                </span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
     </nav>
     <div class="profil-isi">
       <slot />
@@ -37,35 +61,95 @@ const laluan = Astro.url.pathname.replace(/\/$/, "");
 <style>
   .profil {
     display: grid;
-    grid-template-columns: 13rem minmax(0, 1fr);
+    grid-template-columns: 16rem minmax(0, 1fr);
     gap: 1.5rem;
     align-items: start;
   }
+
+  /* Card navigasi */
   .profil-nav {
     position: sticky;
     top: calc(var(--navbar-h, 4rem) + 1.5rem);
+    padding: 0.75rem;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+  }
+  .profil-nav-tajuk {
+    margin: 0.25rem 0.5rem 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .profil-nav ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
     display: grid;
     gap: 0.25rem;
   }
   .profil-nav a {
-    padding: 0.6rem 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.65rem;
     border-radius: var(--radius);
     color: var(--ink);
-    font-weight: 600;
     text-decoration: none;
+    transition:
+      background 0.15s ease,
+      color 0.15s ease;
   }
   .profil-nav a:hover {
-    background: var(--paper);
-  }
-  .profil-nav a[aria-current="page"] {
-    background: var(--paper);
-    color: var(--navy);
-    box-shadow: inset 3px 0 0 var(--orange);
+    background: var(--paper-2);
   }
   .profil-nav a:focus-visible {
     outline: 2px solid var(--orange);
     outline-offset: 2px;
   }
+  .ikon {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: var(--radius);
+    background: var(--paper-2);
+    border: 1px solid var(--line);
+    color: var(--muted);
+  }
+  .ikon :global(.lucide) {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+  .teks {
+    display: grid;
+    line-height: 1.25;
+  }
+  .teks strong {
+    font-size: 0.95rem;
+  }
+  .teks small {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .profil-nav a[aria-current="page"] {
+    background: var(--paper-2);
+    box-shadow: inset 3px 0 0 var(--orange);
+  }
+  .profil-nav a[aria-current="page"] .ikon {
+    background: var(--orange);
+    border-color: var(--orange);
+    color: #fff;
+  }
+  .profil-nav a[aria-current="page"] strong {
+    color: var(--navy);
+  }
+
+  /* Kandungan: panel dari page (Maklumat / Kata laluan) */
   .profil-isi {
     max-width: 40rem;
   }
@@ -76,6 +160,7 @@ const laluan = Astro.url.pathname.replace(/\/$/, "");
     background: var(--paper);
     border: 1px solid var(--line);
     border-radius: var(--radius-lg);
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
   }
   .profil-isi :global(.panel h2) {
     margin: 0;
@@ -85,6 +170,8 @@ const laluan = Astro.url.pathname.replace(/\/$/, "");
   .profil-isi :global(.panel p) {
     margin: 0;
   }
+
+  /* Telefon: card yang sama jadi tab segmen mendatar */
   @media (max-width: 48rem) {
     .profil {
       grid-template-columns: minmax(0, 1fr);
@@ -92,22 +179,30 @@ const laluan = Astro.url.pathname.replace(/\/$/, "");
     }
     .profil-nav {
       position: static;
-      display: flex;
-      gap: 0.5rem;
-      overflow-x: auto;
+      padding: 0.35rem;
+    }
+    .profil-nav-tajuk,
+    .teks small {
+      display: none;
+    }
+    .profil-nav ul {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
     .profil-nav a {
-      white-space: nowrap;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      padding: 0.45rem 1rem;
-      background: var(--paper);
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.55rem;
     }
     .profil-nav a[aria-current="page"] {
       box-shadow: none;
       background: var(--navy);
-      border-color: var(--navy);
+    }
+    .profil-nav a[aria-current="page"] strong {
       color: #fff;
+    }
+    .ikon {
+      width: 1.75rem;
+      height: 1.75rem;
     }
   }
 </style>

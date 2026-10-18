@@ -35,14 +35,19 @@ Item yang dah siap dibuang (lihat git history).
   hidden disabled>` ditogol skrip), `Field` (label + input + petunjuk; `for` untuk kawalan berbilang
   elemen), `Alert`, `DatePicker` (dd/mm/yyyy + kalendar, hantar ISO dari input tersembunyi `id`/`name`;
   isi dari skrip = set nilai + `change`; logik `src/lib/tarikh.ts`, semak `bun scripts/check-tarikh.ts`).
-  Jangan guna `<input type="date">` - format ikut locale pelayar, bukan dd/mm/yyyy. `Layout.astro` sudah ada
+  Jangan guna `<input type="date">` - format ikut locale pelayar, bukan dd/mm/yyyy.
+  **Ikon = Lucide sahaja** (`lucide-static`): `<Ikon nama="..." />` dalam Astro, `ikon("...")` dalam skrip
+  (`src/lib/ikon.ts` - daftar ikon baru di situ). Jangan lukis path SVG sendiri; pengecualian = jenama dan
+  tanda semak `.check` (path Lucide `check` dalam CSS). `Layout.astro` sudah ada
   `Header` + `<main>` + `Footer` (`src/components/layout/`) - page hanya tulis kandungan. HTML dari skrip
   (`innerHTML`) guna kelas global yang sama. Jangan buat warna/butang baru dalam page - tambah ke global.
   Formatter memecah baris sebelum `<strong>`/`<a>` dan Astro buang ruang itu - tulis `{" "}` di hujung baris.
 - **Login** (`/login`): `src/lib/api.ts` (`api()` = `/api/v1` + satu refresh dikongsi bila 401, `saya()` =
   `/me` jika cookie `session_active`). Turnstile widget yang sama dengan portfolio (kunci tapak dalam
-  `src/data/site.ts`, action `login`). Daftar / urus akaun di hafizbahtiar.com (`ACCOUNT`). Header tukar
+  `src/data/site.ts`, action `login`). Daftar di `/register`, urus profil di `/account/profil`. Header tukar
   "Log masuk" -> "Akaun" bila `session_active`. Kebenaran sebenar sentiasa di backend.
+- **Penafian / info**: setiap page pelan ada "bukan nasihat perubatan" + "belum disemak jurulatih bertauliah"
+  (`docs/semakan-latihan.md`); login/daftar menyebut 3 slot awan. Tukar teks itu bila had atau status semakan berubah.
 - **Daftar / sahkan** (`/register`, `/verify`): daftar hantar `app: "nubi"`, jadi pautan e-mel ke
   `nubisport.hafizbahtiar.com/verify`. Alamat pautan datang dari senarai `APP_SITES` di backend
   (`services/registration.ts`) - laman baru = entri baru di situ; URL tidak pernah diterima dari klien
@@ -67,8 +72,10 @@ Item yang dah siap dibuang (lihat git history).
   Padam pelan: dashboard + pelan penuh sahaja (di awam ia membuka semula slot had 3 pelan).
 - **Akaun lain**: `/account/maf` (`components/Maf.astro penuh`: simpan `maf:terakhir` untuk dashboard + butang
   Pelan 5K ikut nadi; `/maf` lencong ke situ bila log masuk), `/account/profil` (Maklumat: nama `PATCH /me`) +
-  `/account/profil/kata-laluan` (`PUT /me/password` - tamatkan semua sesi); sub-nav = `components/ProfilShell.astro`. Sidebar: X tutup laci (telefon) / lipat (desktop, `akaun:sidebar`).
-- **Simpan awan (langganan)**: rancangan di `docs/plans/simpan-awan.md`; penafian `NOTA_AWAN` hingga siap.
+  `/account/profil/kata-laluan` (`PUT /me/password` - tamatkan semua sesi); navigasi = card dalam `components/ProfilShell.astro` (tab segmen bawah 48rem). Sidebar: X tutup laci (telefon) / lipat (desktop, `akaun:sidebar`).
+- **Simpan awan**: akaun percuma 3 slot (`lib/awan.ts`, backend `/me/apps/nubi/plan`, migration 029).
+  Pelayar = salinan kerja, awan = ikut akaun; dashboard: lencana Awan / Peranti ini, meter slot, "Ganti"
+  bila penuh. Naikkan `VERSI_ENJIN` bila enjin pelan berubah. Langganan: `docs/plans/simpan-awan.md`.
 - **Dialog sahkan**: `await sahkan({ tajuk, mesej, ya, bahaya })` (`lib/sahkan.ts`) atas `ConfirmDialog.astro`
   (dipasang sekali dalam `Layout` + `AccountLayout`). Untuk padam pelan dan log keluar; jangan guna `confirm()`.
 - **Pelan 5K dinamik**: dengan masa 5K (wajib tahap "5k", pilihan "jalan"), pace interval/tempo
@@ -175,10 +182,11 @@ Disusun ikut nilai untuk pemula, yang paling murah dulu. ✅ = dah dibina.
 
 ## Pelan 5K bawah 30 minit (`/pelan-5k`) - susulan
 
-- [ ] **Semakan kandungan latihan** oleh jurulatih bertauliah sebelum dipromosi. Ambang "munasabah"
-  (`MINGGU_MIN`, `MINGGU_SETIAP_MINIT`) dan zon pace ialah anggaran kasar.
+- [ ] **Semakan kandungan latihan** oleh jurulatih bertauliah sebelum dipromosi. Semakan dalaman
+  (sumber awam) siap 2026-10-18: `docs/semakan-latihan.md` - 3 pembetulan (langkah 25 min, puncak
+  10K 10 km, 21K 16 km); senarai semak untuk jurulatih di situ. Ambang munasabah + zon pace masih anggaran.
 - [ ] Unit: kini minit (+ pace /km). Tambah km bagi yang ada jam GPS?
-- [ ] Sasaran lain (bawah 28 / 25 minit, 10K) - `buatPelan` kini tetap 30 minit.
+- [ ] Sasaran lain (bawah 28 / 25 minit) - `buatPelan` kini tetap 30 minit. (10K/21K: `/account/pelan-jarak`.)
 - [ ] Perlu backend: simpan pelan ke akaun, log larian sebenar vs pelan, coach pantau ahli.
 
 ## Soalan terbuka
@@ -190,6 +198,14 @@ Disusun ikut nilai untuk pemula, yang paling murah dulu. ✅ = dah dibina.
 
 - `/account/pelan-jarak` (`components/PelanJarak.astro`, enjin `lib/pelan-jarak.ts`, semak
   `bun scripts/check-pelan-jarak.ts`). Bertangga: 10K dari masa 5K, 21K dari masa 10K; 10K 8/10/12
-  minggu, 21K 12/16/20; sasaran lalai habis, masa sasaran pilihan (sesi laju + "Realistik ke?",
+  minggu, 21K 12/16/20 (puncak larian panjang 10 / 16 km); sasaran lalai habis, masa sasaran pilihan (sesi laju + "Realistik ke?",
   anggaran Riegel - kasar). Kad minggu + analisis dikongsi dengan 5K (`lib/pelan-papar.ts`,
   `styles/pelan.css`). Kunci storan `pelan-10k|21k:<minggu>-<masa>-<sasaran>-<hari>`.
+
+## Sambungan, sesi, kos (2026-10-18)
+
+- `components/ui/Sambungan.astro` (Layout + AccountLayout): notis luar talian / kembali dalam talian.
+- Salinan `/me` dalam sessionStorage `nubi:saya` (`lib/api.ts` `ingatSaya`): sidebar dilukis sebelum
+  lukisan pertama; `/me` dipanggil semula hanya selepas 5 min. Log keluar / tiada cookie = dibuang.
+- Kos: Worker hanya `/api/*` (aset statik percuma); `public/_headers` simpan `/_astro/*` setahun;
+  `prefetch` (hover) hanya aset statik; `@view-transition` (CSS, tanpa JS), sidebar akaun kekal.

@@ -1,0 +1,54 @@
+---
+// Notis sambungan internet (global): muncul bila pelayar luar talian, "Kembali dalam talian" sekejap
+// bila pulih. Dipasang sekali dalam Layout + AccountLayout. Pelan/MAF dikira dalam pelayar, jadi
+// kebanyakan page masih berfungsi - yang perlu talian ialah log masuk dan simpan profil.
+---
+
+<div class="sambungan" id="sambungan" role="status" aria-live="polite" hidden>
+</div>
+
+<script>
+  const el = document.getElementById("sambungan")!;
+  let pemasa: ReturnType<typeof setTimeout> | undefined;
+  const papar = (luar: boolean) => {
+    clearTimeout(pemasa);
+    el.dataset.luar = luar ? "1" : "";
+    el.textContent = luar
+      ? "Anda di luar talian. Pelan masih boleh dibuka; log masuk dan simpan perlu internet."
+      : "Kembali dalam talian.";
+    el.hidden = false;
+    if (!luar) pemasa = setTimeout(() => (el.hidden = true), 3000);
+  };
+  addEventListener("offline", () => papar(true));
+  addEventListener("online", () => papar(false));
+  if (!navigator.onLine) papar(true);
+</script>
+
+<style>
+  .sambungan {
+    position: fixed;
+    left: 50%;
+    bottom: calc(1rem + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    z-index: 60;
+    width: max-content;
+    max-width: calc(100vw - 2rem);
+    padding: 0.7rem 1rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--success-line);
+    background: var(--success-bg);
+    color: var(--success-ink);
+    font-weight: 600;
+    box-shadow: 0 8px 24px rgb(15 23 42 / 0.15);
+  }
+  .sambungan[data-luar="1"] {
+    border-color: var(--warning-line);
+    background: var(--warning-bg);
+    color: var(--warning-ink);
+  }
+  @media print {
+    .sambungan {
+      display: none;
+    }
+  }
+</style>

@@ -28,11 +28,35 @@ export function simpan(k: string, v: string[]) {
   }
 }
 
-/** Buang pelan dan tanda siapnya. */
+// Parameter URL pelan (tarikh mula, MAF...) disimpan di "<kunci>#p" supaya dashboard dan awan
+// buka semula pelan yang sama, bukan hanya input dalam kunci.
+const PARAM = /^(bulan|tahap|hari|masa|mula|maf|umur|keadaan|jarak|minggu|sasaran)$/;
+export const paramPelan = (q: URLSearchParams): Record<string, string> =>
+  Object.fromEntries([...q].filter(([k, v]) => PARAM.test(k) && v && v.length <= 100));
+
+export function bacaParam(kunci: string): Record<string, string> | null {
+  try {
+    const v = JSON.parse(localStorage.getItem(`${kunci}#p`) ?? "null");
+    return v && typeof v === "object" ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+export function simpanParam(kunci: string, p: Record<string, string>) {
+  try {
+    localStorage.setItem(`${kunci}#p`, JSON.stringify(p));
+  } catch {
+    /* mod peribadi */
+  }
+}
+
+/** Buang pelan, tanda siap dan parameternya (pelayar ini sahaja - awan: lib/awan.ts). */
 export function padamPelan(kunci: string) {
   simpan(KUNCI_DIBUAT, baca(KUNCI_DIBUAT).filter((k) => k !== kunci));
   try {
     localStorage.removeItem(kunci);
+    localStorage.removeItem(`${kunci}#p`);
   } catch {
     /* mod peribadi */
   }

@@ -1,6 +1,18 @@
 # Pelan: langganan Simpan Awan (Nubi Sport)
 
-Status: **rancangan** - belum dibina. Tarikh: 2026-10-18.
+Status: **peringkat percuma siap** (2026-10-18) - langganan belum. Akaun percuma: 3 slot awan.
+
+## Yang sudah dibina (peringkat percuma)
+
+- Backend: jadual generik `app_items` (migration 029 hono-workers), `GET/PUT/DELETE
+  /me/apps/nubi/plan[/:kunci]`, had dari `QUOTA` (`services/app-items.ts`), `?replace=` tukar atomik.
+  Bukan `nubi_plans`: app/jenis lain = satu entri `QUOTA`, bukan jadual baru.
+- Frontend: `lib/awan.ts` (senarai, simpan, keluarkan, segerak tanda siap dikumpul 1.5 s,
+  tertunda bila luar talian, `VERSI_ENJIN`), lencana Awan / Peranti ini, meter slot + mod "Ganti"
+  di dashboard, butang di page pelan. Pelayar kekal salinan kerja.
+- **Untuk langganan nanti**: hanya `quotaFor` di backend berubah (baca hak langganan). Route, jadual,
+  `limit` dalam respons dan UI frontend kekal. Turun had = item sedia ada kekal, cuma kunci baru ditolak.
+- Belum: MAF (`maf:terakhir`) ke awan - `QUOTA.nubi.settings` bila perlu.
 
 ## Masalah
 
@@ -13,7 +25,7 @@ peranti lain. Dashboard dan pelan memaparkan penafian (`NOTA_AWAN` dalam `src/da
 | Peringkat | Storan | Harga |
 | --- | --- | --- |
 | Awam (tanpa akaun) | pelayar, had 3 pelan | percuma |
-| Akaun percuma | pelayar, tanpa had, versi penuh | percuma |
+| Akaun percuma | pelayar tanpa had + **3 pelan di awan** | percuma |
 | **Langganan Simpan Awan** | D1 (backend), segerak antara peranti | bulanan / tahunan - harga belum ditetapkan |
 
 Prinsip: ciri latihan kekal percuma. Langganan hanya membayar storan dan segerak, jadi pengguna
