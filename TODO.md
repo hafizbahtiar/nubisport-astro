@@ -63,7 +63,14 @@ Item yang dah siap dibuang (lihat git history).
 - **Pelan 5K awam vs penuh**: `components/Pelan5k.astro` (kandungan sahaja; page pilih layout).
   `/pelan-5k` = pelan + label "Realistik ke?" + kotak promosi; log masuk -> lencong ke `/account/pelan-5k`
   (`penuh`: pecahan analisis, ikut nadi MAF, .ics, tiada had 3 pelan). Sekatan di pelayar sahaja.
-  Dashboard baca kunci `pelan-5k:dibuat` - pelan per pelayar, bukan per akaun (simpan di D1 = kemudian).
+  Storan pelan = `lib/pelan-tersimpan.ts` (`baca`/`simpan`/`padamPelan`); dashboard baca `pelan-5k:dibuat` - pelan per pelayar, bukan per akaun (simpan di D1 = kemudian).
+  Padam pelan: dashboard + pelan penuh sahaja (di awam ia membuka semula slot had 3 pelan).
+- **Akaun lain**: `/account/maf` (`components/Maf.astro penuh`: simpan `maf:terakhir` untuk dashboard + butang
+  Pelan 5K ikut nadi; `/maf` lencong ke situ bila log masuk), `/account/profil` (nama `PATCH /me`, kata laluan
+  `PUT /me/password` - tamatkan semua sesi). Sidebar: X tutup laci (telefon) / lipat (desktop, `akaun:sidebar`).
+- **Simpan awan (langganan)**: rancangan di `docs/plans/simpan-awan.md`; penafian `NOTA_AWAN` hingga siap.
+- **Dialog sahkan**: `await sahkan({ tajuk, mesej, ya, bahaya })` (`lib/sahkan.ts`) atas `ConfirmDialog.astro`
+  (dipasang sekali dalam `Layout` + `AccountLayout`). Untuk padam pelan dan log keluar; jangan guna `confirm()`.
 - **Pelan 5K dinamik**: dengan masa 5K (wajib tahap "5k", pilihan "jalan"), pace interval/tempo
   turun setiap sesi laju dari pace sekarang ke 6:00/km; sesi mudah seminggu berbeza panjang; Daya
   tahan ada langkah laju; fasa Asas ulang langkah lama di sesi pertama. "Realistik ke?" = `analisis()`

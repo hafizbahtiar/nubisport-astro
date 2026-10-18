@@ -1,14 +1,22 @@
 ---
 import AccountLayout from "../../layouts/AccountLayout.astro";
-import { ACCOUNT } from "../../data/site";
+import Alert from "../../components/ui/Alert.astro";
+import { NOTA_AWAN } from "../../data/site";
 ---
 
 <AccountLayout title="Dashboard">
   <section class="salam">
     <p class="eyebrow">Akaun</p>
     <h2 class="display">Hai, <span data-saya-nama>…</span>.</h2>
-    <p class="muted">Pelan dan tanda siap disimpan di pelayar ini sahaja.</p>
   </section>
+
+  <Alert variant="warning" title="Pelan disimpan dalam pelayar ini sahaja">
+    <p>
+      Pelan 5K, tanda siap dan had MAF anda tersimpan di peranti ini
+      (localStorage), bukan dalam akaun. Ia hilang jika anda kosongkan data
+      pelayar, guna mod peribadi, atau tukar ke telefon lain. {NOTA_AWAN}
+    </p>
+  </Alert>
 
   <ul class="stat" aria-label="Ringkasan">
     <li><span>Pelan</span><strong id="bil-pelan">0</strong></li>
@@ -40,16 +48,14 @@ import { ACCOUNT } from "../../data/site";
             data-saya-emel></span>
         </p>
         <p class="muted" id="peranan"></p>
-        <a class="btn btn-outline btn-sm" href={ACCOUNT.manage} rel="noopener"
-          >Urus profil</a
-        >
+        <a class="btn btn-outline btn-sm" href="/account/profil">Urus profil</a>
       </section>
       <section class="panel">
         <h3 class="display">Lari ikut nadi</h3>
-        <p class="muted">
+        <p class="muted" id="maf-terakhir">
           Kira had kadar nadi MAF, kemudian tanda "Ikut nadi" dalam pelan.
         </p>
-        <a class="btn btn-outline btn-sm" href="/maf">Kira MAF</a>
+        <a class="btn btn-outline btn-sm" href="/account/maf">Kira MAF</a>
       </section>
     </div>
   </div>
@@ -58,15 +64,10 @@ import { ACCOUNT } from "../../data/site";
 <script>
   import { sesiSaya } from "../../lib/api";
   import { TAHAP, buatPelan, type Tahap } from "../../lib/pelan-5k";
+  import { KUNCI_DIBUAT, baca, padamPelan } from "../../lib/pelan-tersimpan";
+  import { sahkan } from "../../lib/sahkan";
 
   const $ = (id: string) => document.getElementById(id)!;
-  const baca = (k: string): string[] => {
-    try {
-      return JSON.parse(localStorage.getItem(k) ?? "[]");
-    } catch {
-      return [];
-    }
-  };
 
   // Pengawal sesi + nama/e-mel = AccountLayout. Di sini hanya peranan.
   const s = await sesiSaya();
@@ -86,41 +87,68 @@ import { ACCOUNT } from "../../data/site";
         : "Pengguna berdaftar - keahlian Nubi Sport diluluskan oleh admin.";
   }
 
-  // Kunci pelan (Pelan5k.astro): "pelan-5k:<bulan>-<tahap>-<masa>-<hari>"; tanda siap di bawah kunci itu.
+  // Pelan tersimpan (lib/pelan-tersimpan.ts): kunci "pelan-5k:<bulan>-<tahap>-<masa>-<hari>".
   const senarai = $("pelan");
-  let jumlahSiap = 0;
-  for (const kunci of new Set(baca("pelan-5k:dibuat"))) {
-    const [bulan, tahap, masa, hari] = kunci
-      .slice("pelan-5k:".length)
-      .split("-");
-    const h = buatPelan({
-      bulan: +bulan,
-      tahap: tahap as Tahap,
-      hari: +hari,
-      masa5k: masa ? +masa : undefined,
-    });
-    if (!h.ok) continue;
-    const jumlah = h.minggu.reduce((a, w) => a + w.sesi.length, 0);
-    const siap = new Set(baca(kunci)).size;
-    jumlahSiap += siap;
-    const q = new URLSearchParams({
-      bulan,
-      tahap,
-      hari,
-      ...(masa ? { masa } : {}),
-    });
-    const li = document.createElement("li");
-    li.innerHTML = `<a href="/account/pelan-5k?${q}">
-        <strong>${bulan} bulan · ${hari} hari seminggu</strong>
-        <span>${TAHAP[tahap as Tahap]}${masa ? ` (${masa} min)` : ""}</span>
-        <progress max="${jumlah}" value="${siap}"></progress>
-        <small>${siap} / ${jumlah} sesi siap · ${Math.round((siap / jumlah) * 100)}%</small>
-      </a>`;
-    senarai.append(li);
+  function papar() {
+    senarai.replaceChildren();
+    let jumlahSiap = 0;
+    for (const kunci of new Set(baca(KUNCI_DIBUAT))) {
+      const [bulan, tahap, masa, hari] = kunci
+        .slice("pelan-5k:".length)
+        .split("-");
+      const h = buatPelan({
+        bulan: +bulan,
+        tahap: tahap as Tahap,
+        hari: +hari,
+        masa5k: masa ? +masa : undefined,
+      });
+      if (!h.ok) continue;
+      const jumlah = h.minggu.reduce((a, w) => a + w.sesi.length, 0);
+      const siap = new Set(baca(kunci)).size;
+      jumlahSiap += siap;
+      const q = new URLSearchParams({
+        bulan,
+        tahap,
+        hari,
+        ...(masa ? { masa } : {}),
+      });
+      const nama = `${bulan} bulan · ${hari} hari seminggu`;
+      const li = document.createElement("li");
+      li.innerHTML = `<a href="/account/pelan-5k?${q}">
+          <strong>${nama}</strong>
+          <span>${TAHAP[tahap as Tahap]}${masa ? ` (${masa} min)` : ""}</span>
+          <progress max="${jumlah}" value="${siap}"></progress>
+          <small>${siap} / ${jumlah} sesi siap · ${Math.round((siap / jumlah) * 100)}%</small>
+        </a>
+        <button class="btn btn-outline btn-sm padam" type="button" aria-label="Padam pelan ${nama}">Padam</button>`;
+      li.querySelector("button")!.addEventListener("click", async () => {
+        const ya = await sahkan({
+          tajuk: "Padam pelan ini?",
+          mesej: `Pelan ${nama} dan ${siap} tanda siap akan dibuang dari pelayar ini. Tindakan ini tak boleh diundur.`,
+          ya: "Padam",
+          bahaya: true,
+        });
+        if (!ya) return;
+        padamPelan(kunci);
+        papar();
+      });
+      senarai.append(li);
+    }
+    $("tiada-pelan").hidden = senarai.children.length > 0;
+    $("bil-pelan").textContent = String(senarai.children.length);
+    $("bil-siap").textContent = String(jumlahSiap);
   }
-  $("tiada-pelan").hidden = senarai.children.length > 0;
-  $("bil-pelan").textContent = String(senarai.children.length);
-  $("bil-siap").textContent = String(jumlahSiap);
+  papar();
+
+  // Had MAF terakhir (Maf.astro versi akaun).
+  try {
+    const m = JSON.parse(localStorage.getItem("maf:terakhir") ?? "null");
+    if (m && Number.isInteger(m.maf) && Number.isInteger(m.bawah))
+      $("maf-terakhir").textContent =
+        `Had MAF anda: ${m.maf} denyut/min (julat ${m.bawah}-${m.maf}).`;
+  } catch {
+    /* tiada / rosak */
+  }
 </script>
 
 <style>
@@ -217,10 +245,13 @@ import { ACCOUNT } from "../../data/site";
     gap: 0.75rem;
   }
   /* Item dijana skrip - tiada atribut skop Astro, jadi :global. */
+  .senarai :global(li) {
+    position: relative;
+  }
   .senarai :global(a) {
     display: grid;
     gap: 0.3rem;
-    padding: 1rem;
+    padding: 1rem 6.5rem 1rem 1rem; /* ruang untuk butang Padam */
     border: 1px solid var(--line);
     border-radius: var(--radius);
     color: var(--ink);
@@ -228,6 +259,11 @@ import { ACCOUNT } from "../../data/site";
   }
   .senarai :global(a:hover) {
     border-color: var(--orange);
+  }
+  .senarai :global(.padam) {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
   }
   .senarai :global(span),
   .senarai :global(small) {

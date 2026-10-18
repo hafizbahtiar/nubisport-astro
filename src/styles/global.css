@@ -677,6 +677,43 @@ legend,
   color: var(--muted);
 }
 
+/* ---------- Dialog sahkan (ConfirmDialog.astro + lib/sahkan.ts) ---------- */
+.sahkan {
+  width: min(28rem, calc(100% - 2rem));
+  padding: 1.5rem;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 1.5rem 3rem rgb(10 26 51 / 0.3);
+}
+
+.sahkan::backdrop {
+  background: rgb(10 26 51 / 0.55);
+}
+
+.sahkan-tajuk {
+  margin: 0;
+  font-size: 1.75rem;
+  color: var(--navy);
+}
+
+.sahkan-mesej {
+  margin: 0.5rem 0 1.5rem;
+  color: var(--muted);
+}
+
+.sahkan .actions {
+  justify-content: flex-end;
+}
+
+.btn-bahaya,
+.btn-bahaya:hover {
+  background: var(--danger-ink);
+  border-color: var(--danger-ink);
+  color: #fff;
+}
+
 /* ---------- Alert ---------- */
 .alert {
   display: grid;

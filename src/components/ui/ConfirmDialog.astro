@@ -1,0 +1,20 @@
+---
+// Dialog sahkan dikongsi - dipasang sekali dalam setiap layout, dibuka dengan sahkan() dari
+// src/lib/sahkan.ts. <dialog> asli: fokus terperangkap, Esc = batal, latar belakang modal.
+---
+
+<dialog
+  class="sahkan"
+  id="sahkan"
+  aria-labelledby="sahkan-tajuk"
+  aria-describedby="sahkan-mesej"
+>
+  <div>
+    <h2 class="display sahkan-tajuk" id="sahkan-tajuk"></h2>
+    <p class="sahkan-mesej" id="sahkan-mesej"></p>
+    <div class="actions">
+      <button class="btn btn-outline" type="button" data-batal>Batal</button>
+      <button class="btn btn-primary" type="button" data-ya>Ya</button>
+    </div>
+  </div>
+</dialog>

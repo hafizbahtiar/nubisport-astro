@@ -3,7 +3,7 @@ import Layout from "../layouts/Layout.astro";
 import PageHero from "../components/ui/PageHero.astro";
 import Field from "../components/ui/Field.astro";
 import Alert from "../components/ui/Alert.astro";
-import { ACCOUNT, TURNSTILE_SITE_KEY } from "../data/site";
+import { TURNSTILE_SITE_KEY } from "../data/site";
 ---
 
 <Layout
@@ -61,11 +61,9 @@ import { ACCOUNT, TURNSTILE_SITE_KEY } from "../data/site";
     <div class="container narrow">
       <Alert variant="info" title="Data anda">
         <p>
-          Nubi Sport hanya menyimpan sesi log masuk (cookie). Akaun, kata laluan
-          dan profil diurus di{" "}
-          <a class="link" href={ACCOUNT.manage} rel="noopener"
-            >hafizbahtiar.com/account</a
-          >.
+          Satu akaun untuk Nubi Sport dan hafizbahtiar.com (backend yang sama).
+          Selepas log masuk, ubah nama dan kata laluan di halaman Profil akaun
+          anda.
         </p>
       </Alert>
     </div>

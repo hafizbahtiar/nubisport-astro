@@ -4,7 +4,8 @@
 // Page di dalamnya ambil pengguna dengan sesiSaya() (src/lib/api.ts) - promise yang sama, satu /me.
 import "../styles/global.css";
 import Head from "../components/layout/Head.astro";
-import { ACCOUNT, SITE } from "../data/site";
+import ConfirmDialog from "../components/ui/ConfirmDialog.astro";
+import { SITE } from "../data/site";
 
 interface Props {
   title: string; // tajuk navbar + <title>
@@ -24,15 +25,11 @@ const NAV = [
     label: "Pelan 5K",
     ikon: "M4 20V10m6 10V4m6 16v-8m4 8H2",
   },
-  { href: "/maf", label: "Kira MAF", ikon: "M3 12h4l3-8 4 16 3-8h4" },
-];
-const PAUTAN = [
-  { href: "/", label: "Laman utama", ikon: "M10 19l-7-7 7-7M3 12h18" },
+  { href: "/account/maf", label: "Kira MAF", ikon: "M3 12h4l3-8 4 16 3-8h4" },
   {
-    href: ACCOUNT.manage,
-    label: "Urus profil",
+    href: "/account/profil",
+    label: "Profil",
     ikon: "M12 12a4 4 0 100-8 4 4 0 000 8zm-8 9a8 8 0 0116 0",
-    luar: true,
   },
 ];
 const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
@@ -46,14 +43,34 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
   <body class="app">
     <a class="langkau" href="#kandungan">Langkau ke kandungan</a>
 
+    <script is:inline>
+      // Sidebar dilipat (desktop) diingat - pasang kelas sebelum lukisan pertama.
+      try {
+        if (localStorage.getItem("akaun:sidebar") === "tutup")
+          document.body.classList.add("sidebar-tutup");
+      } catch {}
+    </script>
     <aside class="app-sidebar" id="sidebar" aria-label="Navigasi akaun">
-      <a
-        class="app-logo"
-        href="/account"
-        aria-label={`${SITE.name} - dashboard`}
-      >
-        <img src="/brand/logo-on-dark.svg" alt="" width="142" height="40" />
-      </a>
+      <div class="app-sidebar-kepala">
+        <a
+          class="app-logo"
+          href="/account"
+          aria-label={`${SITE.name} - dashboard`}
+        >
+          <img src="/brand/logo-on-dark.svg" alt="" width="142" height="40" />
+        </a>
+        <button
+          class="app-tutup"
+          type="button"
+          aria-controls="sidebar"
+          aria-label="Tutup menu"
+          data-tutup-sidebar
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true"
+            ><path d="M6 6l12 12M18 6L6 18"></path></svg
+          >
+        </button>
+      </div>
       <nav class="app-nav">
         {
           NAV.map((n) => (
@@ -61,17 +78,6 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
               href={n.href}
               aria-current={laluan === n.href ? "page" : undefined}
             >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d={n.ikon} />
-              </svg>
-              {n.label}
-            </a>
-          ))
-        }
-        <hr />
-        {
-          PAUTAN.map((n) => (
-            <a href={n.href} rel={n.luar ? "noopener" : undefined}>
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d={n.ikon} />
               </svg>
@@ -117,11 +123,13 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
         <slot />
       </main>
     </div>
+    <ConfirmDialog />
   </body>
 </html>
 
 <script>
   import { api, sesiSaya } from "../lib/api";
+  import { sahkan } from "../lib/sahkan";
 
   const s = await sesiSaya();
   if (!s) {
@@ -141,30 +149,61 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
       .forEach((e) => (e.textContent = awal));
   }
 
-  // Laci (bawah 64rem). Atas 64rem sidebar sentiasa terbuka - kelas ini tiada kesan di sana.
+  // Bawah 64rem sidebar = laci (body.menu-buka); atas 64rem ia boleh dilipat (body.sidebar-tutup,
+  // diingat dalam localStorage). Butang menu di navbar membuka, butang X di sidebar menutup.
+  const desktop = matchMedia("(min-width: 64rem)");
   const menu = document.querySelector<HTMLButtonElement>("[data-menu]")!;
+  const tutup = document.querySelector<HTMLButtonElement>(
+    "[data-tutup-sidebar]",
+  )!;
   const scrim = document.querySelector<HTMLElement>("[data-tutup]")!;
-  const set = (buka: boolean) => {
-    document.body.classList.toggle("menu-buka", buka);
+  const body = document.body;
+  const terbuka = () =>
+    desktop.matches
+      ? !body.classList.contains("sidebar-tutup")
+      : body.classList.contains("menu-buka");
+  const segerak = () => {
+    const buka = terbuka();
     menu.setAttribute("aria-expanded", String(buka));
     menu.setAttribute("aria-label", buka ? "Tutup menu" : "Buka menu");
-    scrim.hidden = !buka;
-    if (buka) document.querySelector<HTMLElement>(".app-nav a")?.focus();
+    scrim.hidden = desktop.matches || !buka;
   };
-  menu.addEventListener("click", () =>
-    set(!document.body.classList.contains("menu-buka")),
-  );
+  const set = (buka: boolean) => {
+    if (desktop.matches) {
+      body.classList.toggle("sidebar-tutup", !buka);
+      try {
+        localStorage.setItem("akaun:sidebar", buka ? "buka" : "tutup");
+      } catch {
+        /* mod peribadi */
+      }
+    } else {
+      body.classList.toggle("menu-buka", buka);
+    }
+    segerak();
+    (buka ? document.querySelector<HTMLElement>(".app-nav a") : menu)?.focus();
+  };
+  menu.addEventListener("click", () => set(!terbuka()));
+  tutup.addEventListener("click", () => set(false));
   scrim.addEventListener("click", () => set(false));
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && document.body.classList.contains("menu-buka")) {
-      set(false);
-      menu.focus();
-    }
+    if (e.key === "Escape" && !desktop.matches && terbuka()) set(false);
   });
+  desktop.addEventListener("change", () => {
+    body.classList.remove("menu-buka"); // laci tak terbawa ke desktop
+    segerak();
+  });
+  segerak();
 
   document
     .querySelector("[data-keluar]")!
     .addEventListener("click", async () => {
+      const ya = await sahkan({
+        tajuk: "Log keluar?",
+        mesej:
+          "Anda perlu log masuk semula untuk buka dashboard dan pelan versi penuh.",
+        ya: "Log keluar",
+      });
+      if (!ya) return;
       await api("/auth/logout", { method: "POST" }).catch(() => {});
       // Cookie httpOnly dipadam oleh backend; session_active juga, tapi pastikan UI ikut.
       document.cookie = "session_active=; Max-Age=0; path=/";
@@ -205,6 +244,31 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
     background: var(--navy);
     color: var(--on-dark);
     overflow-y: auto;
+  }
+  .app-sidebar-kepala {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .app-tutup {
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 0;
+    border-radius: var(--radius);
+    background: none;
+    color: var(--on-dark);
+    cursor: pointer;
+  }
+  .app-tutup:hover {
+    background: var(--navy-2);
+    color: #fff;
+  }
+  .app-tutup:focus-visible {
+    outline: 2px solid var(--orange);
+    outline-offset: 2px;
   }
   .app-logo img {
     height: 2.25rem;
@@ -295,6 +359,28 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
   .app-utama {
     margin-left: var(--sidebar-w);
     min-width: 0;
+    transition: margin-left 0.2s ease;
+  }
+  .app-sidebar {
+    transition:
+      transform 0.2s ease,
+      visibility 0s;
+  }
+  /* Desktop: sidebar dilipat - kandungan ambil lebar penuh, butang menu muncul untuk buka semula. */
+  @media (min-width: 64rem) {
+    :global(body.sidebar-tutup) .app-sidebar {
+      transform: translateX(-100%);
+      visibility: hidden;
+      transition:
+        transform 0.2s ease,
+        visibility 0s 0.2s;
+    }
+    :global(body.sidebar-tutup) .app-utama {
+      margin-left: 0;
+    }
+    :global(body.sidebar-tutup) .app-menu {
+      display: grid;
+    }
   }
   .app-navbar {
     position: sticky;
@@ -407,6 +493,7 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
     }
   }
   @media (prefers-reduced-motion: reduce) {
+    .app-utama,
     .app-sidebar {
       transition: none !important;
     }

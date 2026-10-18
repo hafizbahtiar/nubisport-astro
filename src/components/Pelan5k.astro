@@ -24,6 +24,7 @@ interface Props {
   penuh?: boolean;
 }
 const { penuh = false } = Astro.props;
+const maf = penuh ? "/account/maf" : "/maf";
 // Julat tarikh mula: dikira semasa build (laman statik - setiap deploy menyegarkannya).
 const tahun = new Date().getFullYear();
 ---
@@ -110,7 +111,7 @@ const tahun = new Date().getFullYear();
             />
             <p class="field-hint">
               Apa itu MAF?{" "}
-              <a class="link" href="/maf">
+              <a class="link" href={maf}>
                 Baca panduan lari ikut nadi
               </a>
               .
@@ -161,8 +162,8 @@ const tahun = new Date().getFullYear();
     <li>
       Cuaca Malaysia panas dan lembap: lari awal pagi atau lewat petang, bawa
       air, perlahankan pace bila panas - ikut rasa usaha, bukan jam. Mahu ukuran
-      yang lebih tepat? Cuba <a class="link" href="/maf">lari ikut nadi (MAF)</a
-      > untuk sesi mudah.
+      yang lebih tepat? Cuba <a class="link" href={maf}>lari ikut nadi (MAF)</a> untuk
+      sesi mudah.
     </li>
   </ul>
 </Section>
@@ -170,6 +171,15 @@ const tahun = new Date().getFullYear();
 <script>
   import { buatIcs, waktuMalaysia } from "../lib/ics";
   import { kiraMaf, type Kategori } from "../lib/maf";
+  import {
+    KUNCI_DIBUAT,
+    baca,
+    kunciPelan,
+    padamPelan,
+    simpan,
+  } from "../lib/pelan-tersimpan";
+  import { sahkan } from "../lib/sahkan";
+  import { NOTA_AWAN } from "../data/site";
   import {
     HAD_TANPA_AKAUN,
     HARI_SESI,
@@ -306,8 +316,8 @@ const tahun = new Date().getFullYear();
       return;
     }
 
-    const kunci = `pelan-5k:${bulan}-${tahap}-${masa5k ?? ""}-${hari}`;
-    const dibuat = baca("pelan-5k:dibuat");
+    const kunci = kunciPelan(bulan, tahap, masa5k, hari);
+    const dibuat = baca(KUNCI_DIBUAT);
     if (!bolehBuatPelan(kunci, dibuat, penuh || logMasuk)) {
       pelanEl.innerHTML = `<div class="alert alert-info">
         <p class="alert-title">${HAD_TANPA_AKAUN} pelan percuma tanpa akaun</p>
@@ -321,7 +331,7 @@ const tahun = new Date().getFullYear();
       hasil.scrollIntoView({ behavior: "smooth" });
       return;
     }
-    if (!dibuat.includes(kunci)) simpan("pelan-5k:dibuat", [...dibuat, kunci]);
+    if (!dibuat.includes(kunci)) simpan(KUNCI_DIBUAT, [...dibuat, kunci]);
     const siap = new Set<string>(baca(kunci));
     const isnin = /^\d{4}-\d{2}-\d{2}$/.test(q.get("mula") ?? "")
       ? isninMula(new Date(`${q.get("mula")}T00:00:00`))
@@ -342,8 +352,10 @@ const tahun = new Date().getFullYear();
         <div class="actions no-print">
           <button class="btn btn-outline" type="button" data-kongsi>Kongsi</button>
           <button class="btn btn-outline" type="button" onclick="print()">Cetak</button>
+          ${penuh ? `<button class="btn btn-outline" type="button" data-padam>Padam pelan</button>` : ""}
         </div>
       </div>
+      <div class="alert alert-warning no-print"><p>Pelan dan tanda siap disimpan dalam pelayar ini sahaja (localStorage) - hilang jika data pelayar dikosongkan atau anda tukar peranti.${penuh ? ` ${NOTA_AWAN}` : ""}</p></div>
       ${a ? htmlAnalisis(a) : ""}
       ${penuh ? "" : htmlPromosi()}
       ${
@@ -383,6 +395,20 @@ const tahun = new Date().getFullYear();
           simpan(kunci, [...siap]);
           kira();
         });
+      });
+    // Versi penuh sahaja: di versi awam, padam akan membuka semula slot had 3 pelan.
+    pelanEl
+      .querySelector("[data-padam]")
+      ?.addEventListener("click", async () => {
+        const ya = await sahkan({
+          tajuk: "Padam pelan ini?",
+          mesej: `Pelan ${bulan} bulan · ${hari} hari seminggu dan ${siap.size} tanda siap akan dibuang dari pelayar ini. Tindakan ini tak boleh diundur.`,
+          ya: "Padam",
+          bahaya: true,
+        });
+        if (!ya) return;
+        padamPelan(kunci);
+        location.href = "/account";
       });
     pelanEl
       .querySelector<HTMLButtonElement>("[data-kongsi]")!
@@ -468,21 +494,6 @@ const tahun = new Date().getFullYear();
         })
         .join("")}</ol>
     </li>`;
-  }
-
-  function baca(k: string): string[] {
-    try {
-      return JSON.parse(localStorage.getItem(k) ?? "[]");
-    } catch {
-      return [];
-    }
-  }
-  function simpan(k: string, v: string[]) {
-    try {
-      localStorage.setItem(k, JSON.stringify(v));
-    } catch {
-      /* mod peribadi: tanda siap tak disimpan */
-    }
   }
 </script>
 
