@@ -170,6 +170,7 @@ const tahun = new Date().getFullYear();
 <Pemasa />
 <script>
   import { buatIcs, waktuMalaysia } from "../lib/ics";
+  import { isiBorang } from "../lib/profil";
   import { kiraMaf, type Kategori } from "../lib/maf";
   import { isninMula, tarikhSesi } from "../lib/pelan-5k";
   import {
@@ -231,6 +232,9 @@ const tahun = new Date().getFullYear();
   // Pilih jarak dulu (tempoh bergantung padanya), kemudian isi medan lain dari URL.
   if (q.get("jarak") === "21k") (el("jarak") as RadioNodeList).value = "21k";
   ikutJarak();
+  void isiBorang(borang, q, (p) =>
+    (el("jarak") as RadioNodeList).value === "21k" ? p.masa10k : p.masa5k,
+  );
   for (const [k, v] of q) {
     const e = el(k);
     // "minggu": nilai 12 wujud dalam kedua-dua kumpulan - tanda dalam kumpulan jarak aktif.

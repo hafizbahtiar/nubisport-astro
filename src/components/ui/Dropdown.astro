@@ -1,0 +1,180 @@
+---
+/**
+ * Pilihan tunggal bergaya (menu seperti panel DatePicker). Tiada library.
+ *
+ * - `<select>` asli tersembunyi memegang nilai: borang GET, `form.elements[name]`, dan
+ *   `select.value = "..."` + event `change` kekal berfungsi - butang ikut sendiri.
+ * - Pilih dari menu = nilai select ditukar + `change` (bubbles) dihantar.
+ * - Papan kekunci (corak listbox ARIA): Enter/Space/↓ buka; ↑ ↓ Home End, taip huruf untuk
+ *   lompat, Enter pilih, Esc/Tab tutup. Klik di luar tutup.
+ * - Label: <Field label="..." for={`${id}-butang`}>.
+ */
+import Ikon from "./Ikon.astro";
+
+interface Props {
+  id: string;
+  name?: string;
+  options: { value: string; label: string }[];
+  value?: string;
+  /** Teks bila tiada pilihan (nilai ""). */
+  placeholder?: string;
+  required?: boolean;
+}
+const {
+  id,
+  name,
+  options,
+  value = "",
+  placeholder = "Pilih…",
+  required,
+} = Astro.props;
+const pilihan = options.find((o) => o.value === value);
+---
+
+<div class="dd" data-dropdown>
+  <select
+    id={id}
+    name={name}
+    required={required}
+    hidden
+    tabindex="-1"
+    aria-hidden="true"
+  >
+    <option value="">{placeholder}</option>
+    {
+      options.map((o) => (
+        <option value={o.value} selected={o.value === value}>
+          {o.label}
+        </option>
+      ))
+    }
+  </select>
+  <button
+    class="input dd-butang"
+    type="button"
+    id={`${id}-butang`}
+    data-butang
+    aria-haspopup="listbox"
+    aria-expanded="false"
+    aria-controls={`${id}-menu`}
+  >
+    <span data-label class:list={[!pilihan && "dd-kosong"]}
+      >{pilihan?.label ?? placeholder}</span
+    >
+    <Ikon nama="bawah" />
+  </button>
+  <ul
+    class="dd-menu"
+    id={`${id}-menu`}
+    role="listbox"
+    tabindex="-1"
+    data-menu
+    hidden
+  >
+    {
+      options.map((o, i) => (
+        <li
+          id={`${id}-p${i}`}
+          role="option"
+          data-value={o.value}
+          aria-selected={o.value === value ? "true" : "false"}
+        >
+          <span>{o.label}</span>
+          <Ikon nama="tanda" />
+        </li>
+      ))
+    }
+  </ul>
+</div>
+
+<script>
+  function pasang(root: HTMLElement) {
+    if (root.dataset.bound === "1") return;
+    root.dataset.bound = "1";
+    const select = root.querySelector("select")!;
+    const butang = root.querySelector<HTMLButtonElement>("[data-butang]")!;
+    const label = root.querySelector<HTMLElement>("[data-label]")!;
+    const menu = root.querySelector<HTMLElement>("[data-menu]")!;
+    const items = [...menu.querySelectorAll<HTMLElement>("[role=option]")];
+    let aktif = -1;
+
+    const segerak = () => {
+      const i = items.findIndex((li) => li.dataset.value === select.value);
+      items.forEach((li, n) =>
+        li.setAttribute("aria-selected", String(n === i)),
+      );
+      label.textContent =
+        i < 0 ? select.options[0].text : items[i].textContent!.trim();
+      label.classList.toggle("dd-kosong", i < 0);
+    };
+    const tanda = (i: number) => {
+      aktif = Math.max(0, Math.min(items.length - 1, i));
+      items.forEach((li, n) => li.toggleAttribute("data-aktif", n === aktif));
+      menu.setAttribute("aria-activedescendant", items[aktif].id);
+      items[aktif].scrollIntoView({ block: "nearest" });
+    };
+    const buka = () => {
+      menu.hidden = false;
+      butang.setAttribute("aria-expanded", "true");
+      tanda(
+        Math.max(
+          0,
+          items.findIndex((li) => li.dataset.value === select.value),
+        ),
+      );
+      menu.focus();
+    };
+    const tutup = (fokus = true) => {
+      if (menu.hidden) return;
+      menu.hidden = true;
+      butang.setAttribute("aria-expanded", "false");
+      if (fokus) butang.focus();
+    };
+    const pilih = (i: number) => {
+      const v = items[i].dataset.value!;
+      tutup();
+      if (v === select.value) return;
+      select.value = v;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+
+    select.addEventListener("change", segerak);
+    butang.addEventListener("click", () => (menu.hidden ? buka() : tutup()));
+    butang.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp")
+        (e.preventDefault(), buka());
+    });
+    items.forEach((li, i) => {
+      li.addEventListener("click", () => pilih(i));
+      li.addEventListener("pointermove", () => aktif !== i && tanda(i));
+    });
+    let taip = "";
+    let taipMasa = 0;
+    menu.addEventListener("keydown", (e) => {
+      const k: Record<string, () => void> = {
+        ArrowDown: () => tanda(aktif + 1),
+        ArrowUp: () => tanda(aktif - 1),
+        Home: () => tanda(0),
+        End: () => tanda(items.length - 1),
+        Enter: () => pilih(aktif),
+        " ": () => pilih(aktif),
+        Escape: () => tutup(),
+      };
+      if (k[e.key]) return (e.preventDefault(), k[e.key]());
+      if (e.key === "Tab") return tutup(false);
+      if (e.key.length === 1) {
+        // Taip untuk lompat: "pe" -> Perak, Perlis ... (huruf dikumpul 0.6 s).
+        taip = (Date.now() - taipMasa < 600 ? taip : "") + e.key.toLowerCase();
+        taipMasa = Date.now();
+        const i = items.findIndex((li) =>
+          li.textContent!.trim().toLowerCase().startsWith(taip),
+        );
+        if (i >= 0) tanda(i);
+      }
+    });
+    document.addEventListener("pointerdown", (e) => {
+      if (!root.contains(e.target as Node)) tutup(false);
+    });
+  }
+  document.querySelectorAll<HTMLElement>("[data-dropdown]").forEach(pasang);
+</script>

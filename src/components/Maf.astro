@@ -194,6 +194,7 @@ const pelan = penuh ? "/account/pelan-5k" : "/pelan-5k";
 
 <script>
   import { KATEGORI, kiraMaf, type Kategori } from "../lib/maf";
+  import { isiBorang } from "../lib/profil";
 
   const penuh = document.getElementById("borang")!.dataset.penuh === "1";
   // Log masuk -> versi akaun (pengawal sesi = AccountLayout).
@@ -210,6 +211,7 @@ const pelan = penuh ? "/account/pelan-5k" : "/pelan-5k";
     if (el instanceof RadioNodeList || el instanceof HTMLInputElement)
       el.value = v;
   }
+  if (penuh) void isiBorang(borang, q, () => undefined);
 
   if (q.has("umur")) {
     const kategori = q.get("keadaan") as Kategori;

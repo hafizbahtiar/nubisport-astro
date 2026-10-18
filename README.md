@@ -32,7 +32,7 @@ oleh owner, **sebelum** Nubi bila Nubi bergantung pada endpoint baru.
 | `/account/pelan-5k` | akaun | Pelan 5K penuh: pecahan analisis, ikut nadi, kalendar `.ics`, simpan ke awan |
 | `/account/pelan-jarak` | akaun | Pelan 10K / 21K (bertangga dari masa 5K / 10K, masa sasaran pilihan) + kad "Sesuai lari tak?" |
 | `/account/maf` | akaun | MAF + butang buat Pelan 5K ikut nadi |
-| `/account/profil`, `/account/profil/kata-laluan` | akaun | Maklumat (nama) dan tukar kata laluan - card navigasi `ProfilShell` |
+| `/account/profil`, `/account/profil/kata-laluan` | akaun | Maklumat (nama + maklumat latihan: tarikh lahir, keadaan MAF, hari, masa 5K/10K - isi borang MAF/pelan) dan tukar kata laluan - card navigasi `ProfilShell` |
 
 ## Storan pelan
 
@@ -63,6 +63,7 @@ bun scripts/check-ics.ts           # fail kalendar RFC 5545
 bun scripts/check-tarikh.ts        # DatePicker dd/mm/yyyy
 bun scripts/check-sesuai.ts         # band IPU (JAS) + nasihat cuaca (MET) + waktu lari terbaik (JAKIM)
 bun scripts/check-peluh.ts          # kalkulator peluh
+bun scripts/check-profil.ts         # umur dari tarikh lahir
 bun scripts/check-ramadan.ts        # bulan Hijri + tag/banner Ramadan
 bun run build
 ```
@@ -72,7 +73,7 @@ bun run build
 - `src/layouts/` - `Layout` (awam: Header + Footer), `AccountLayout` (sidebar akaun, satu-satunya pengawal
   sesi; nama/e-mel dilukis dari salinan `/me` sebelum lukisan pertama).
 - `src/components/` - `Pelan5k`, `PelanJarak`, `Pemasa` (pemasa jalan-lari skrin penuh), `Sesuai` (kad "Sesuai lari tak?" - IPU + cuaca), `Maf`, `ProfilShell`; `ui/` = atom (`PageHero`, `Section`,
-  `ChipGroup`, `Field`, `Checkbox`, `DatePicker`, `Alert`, `ConfirmDialog` + `lib/sahkan.ts`, `Sambungan` =
+  `ChipGroup`, `Field`, `Checkbox`, `DatePicker`, `Dropdown` (pilihan tunggal; `<select>` asli tersembunyi pegang nilai), `Alert`, `ConfirmDialog` + `lib/sahkan.ts`, `Sambungan` =
   notis luar talian, `Ikon` = ikon Lucide).
 - `src/lib/` - `ikon.ts` (semua ikon UI = Lucide, `lucide-static`; tiada path SVG tulisan tangan), logik tulen (pelan, MAF, tarikh, ics, IPU/cuaca/waktu lari, Ramadan, peluh), `api.ts` (fetch `/api/v1`, satu refresh dikongsi,
   salinan `/me` 5 min), `awan.ts`, `pelan-papar.ts` (HTML kad minggu dikongsi).

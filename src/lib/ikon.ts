@@ -5,6 +5,8 @@
 // Hanya ikon yang diimport masuk ke bundle (skrip pelayar guna ini untuk innerHTML).
 import {
   Calendar,
+  Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CircleCheck,
@@ -25,6 +27,7 @@ import {
 
 const IKON = {
   awan: Cloud,
+  bawah: ChevronDown,
   bendera: Flag,
   kalendar: Calendar,
   kanan: ChevronRight,
@@ -40,6 +43,7 @@ const IKON = {
   peranti: Smartphone,
   rumah: House,
   selesai: CircleCheck,
+  tanda: Check,
   tutup: X,
 };
 export type NamaIkon = keyof typeof IKON;

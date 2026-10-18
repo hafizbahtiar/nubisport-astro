@@ -667,6 +667,96 @@ legend,
   background: var(--paper-2);
 }
 
+/* ---------- Dropdown (components/ui/Dropdown.astro) - menu sama gaya dengan .dp-panel ---------- */
+.dd {
+  position: relative;
+  width: min(100%, 22rem);
+}
+
+.dd-butang {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dd-butang .lucide {
+  flex: none;
+  width: 1.15rem;
+  height: 1.15rem;
+  color: var(--muted);
+  transition: transform 0.15s;
+}
+
+.dd-butang[aria-expanded="true"] {
+  border-color: var(--orange);
+}
+
+.dd-butang[aria-expanded="true"] .lucide {
+  transform: rotate(180deg);
+}
+
+.dd-kosong {
+  color: var(--muted);
+}
+
+.dd-menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  right: 0;
+  max-height: min(20rem, 60vh);
+  overflow-y: auto;
+  margin: 0;
+  padding: 0.35rem;
+  list-style: none;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 1px 2px rgb(10 26 51 / 0.06),
+    0 24px 48px -16px rgb(10 26 51 / 0.35);
+  animation: dp-masuk 0.14s ease-out;
+}
+
+.dd-menu:focus-visible {
+  outline: none;
+}
+
+.dd-menu [role="option"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.dd-menu [role="option"] .lucide {
+  width: 1rem;
+  height: 1rem;
+  color: var(--orange-ink);
+  visibility: hidden;
+}
+
+.dd-menu [data-aktif] {
+  background: var(--paper-2);
+}
+
+.dd-menu [aria-selected="true"] {
+  font-weight: 600;
+}
+
+.dd-menu [aria-selected="true"] .lucide {
+  visibility: visible;
+}
+
 /* ---------- Kad ---------- */
 .card {
   background: var(--paper-2);

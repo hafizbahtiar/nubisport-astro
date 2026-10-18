@@ -195,6 +195,7 @@ const tahun = new Date().getFullYear();
   } from "../lib/pelan-tersimpan";
   import { keluarAwan, kotakAwan } from "../lib/awan";
   import { sahkan } from "../lib/sahkan";
+  import { isiBorang } from "../lib/profil";
   import {
     htmlMinggu,
     notisRamadan,
@@ -236,6 +237,7 @@ const tahun = new Date().getFullYear();
   pasangUjian(pelanEl);
 
   const q = new URLSearchParams(location.search);
+  if (penuh) void isiBorang(borang, q, (p) => p.masa5k);
   for (const [k, v] of q) {
     const el = borang.elements.namedItem(k);
     if (el instanceof RadioNodeList) el.value = v;
