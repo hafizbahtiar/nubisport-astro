@@ -12,7 +12,7 @@ import { NOTA_AWAN } from "../../data/site";
 
   <Alert variant="warning" title="Pelan disimpan dalam pelayar ini sahaja">
     <p>
-      Pelan 5K, tanda siap dan had MAF anda tersimpan di peranti ini
+      Pelan latihan, tanda siap dan had MAF anda tersimpan di peranti ini
       (localStorage), bukan dalam akaun. Ia hilang jika anda kosongkan data
       pelayar, guna mod peribadi, atau tukar ke telefon lain. {NOTA_AWAN}
     </p>
@@ -27,10 +27,14 @@ import { NOTA_AWAN } from "../../data/site";
   <div class="grid">
     <section class="panel">
       <div class="panel-kepala">
-        <h3 class="display">Pelan 5K saya</h3>
-        <a class="btn btn-primary btn-sm" href="/account/pelan-5k"
-          >Buat pelan baru</a
-        >
+        <h3 class="display">Pelan saya</h3>
+        <div class="actions">
+          <a class="btn btn-primary btn-sm" href="/account/pelan-5k">Pelan 5K</a
+          >
+          <a class="btn btn-outline btn-sm" href="/account/pelan-jarak"
+            >Pelan 10K / 21K</a
+          >
+        </div>
       </div>
       <ol class="senarai" id="pelan"></ol>
       <p class="muted" id="tiada-pelan" hidden>
@@ -64,6 +68,12 @@ import { NOTA_AWAN } from "../../data/site";
 <script>
   import { sesiSaya } from "../../lib/api";
   import { TAHAP, buatPelan, type Tahap } from "../../lib/pelan-5k";
+  import {
+    JARAK,
+    buatPelanJarak,
+    jam,
+    type Jarak,
+  } from "../../lib/pelan-jarak";
   import { KUNCI_DIBUAT, baca, padamPelan } from "../../lib/pelan-tersimpan";
   import { sahkan } from "../../lib/sahkan";
 
@@ -87,36 +97,62 @@ import { NOTA_AWAN } from "../../data/site";
         : "Pengguna berdaftar - keahlian Nubi Sport diluluskan oleh admin.";
   }
 
-  // Pelan tersimpan (lib/pelan-tersimpan.ts): kunci "pelan-5k:<bulan>-<tahap>-<masa>-<hari>".
+  // Pelan tersimpan (lib/pelan-tersimpan.ts): "pelan-5k:<bulan>-<tahap>-<masa>-<hari>" atau
+  // "pelan-10k|21k:<minggu>-<masa>-<sasaran>-<hari>".
+  function butiran(kunci: string) {
+    const [jenis, isi] = kunci.split(":");
+    const [a, b, c, hari] = isi.split("-");
+    if (jenis === "pelan-5k") {
+      const h = buatPelan({
+        bulan: +a,
+        tahap: b as Tahap,
+        hari: +hari,
+        masa5k: c ? +c : undefined,
+      });
+      return (
+        h.ok && {
+          h,
+          nama: `5K · ${a} bulan · ${hari} hari seminggu`,
+          sub: `${TAHAP[b as Tahap]}${c ? ` (${c} min)` : ""}`,
+          href: `/account/pelan-5k?${new URLSearchParams({ bulan: a, tahap: b, hari, ...(c ? { masa: c } : {}) })}`,
+        }
+      );
+    }
+    const jarak = jenis.slice("pelan-".length) as Jarak;
+    if (!(jarak in JARAK)) return false;
+    const h = buatPelanJarak({
+      jarak,
+      minggu: +a,
+      masa: +b,
+      sasaran: c ? +c : undefined,
+      hari: +hari,
+    });
+    const k = JARAK[jarak];
+    return (
+      h.ok && {
+        h,
+        nama: `${k.nama} · ${a} minggu · ${hari} hari seminggu`,
+        sub: `${k.prasyarat.nama} ${b} min → ${c ? `bawah ${jam(+c)}` : "habis"}`,
+        href: `/account/pelan-jarak?${new URLSearchParams({ jarak, minggu: a, masa: b, hari, ...(c ? { sasaran: c } : {}) })}`,
+      }
+    );
+  }
+
   const senarai = $("pelan");
   function papar() {
     senarai.replaceChildren();
     let jumlahSiap = 0;
     for (const kunci of new Set(baca(KUNCI_DIBUAT))) {
-      const [bulan, tahap, masa, hari] = kunci
-        .slice("pelan-5k:".length)
-        .split("-");
-      const h = buatPelan({
-        bulan: +bulan,
-        tahap: tahap as Tahap,
-        hari: +hari,
-        masa5k: masa ? +masa : undefined,
-      });
-      if (!h.ok) continue;
+      const p = butiran(kunci);
+      if (!p) continue;
+      const { h, nama } = p;
       const jumlah = h.minggu.reduce((a, w) => a + w.sesi.length, 0);
       const siap = new Set(baca(kunci)).size;
       jumlahSiap += siap;
-      const q = new URLSearchParams({
-        bulan,
-        tahap,
-        hari,
-        ...(masa ? { masa } : {}),
-      });
-      const nama = `${bulan} bulan · ${hari} hari seminggu`;
       const li = document.createElement("li");
-      li.innerHTML = `<a href="/account/pelan-5k?${q}">
+      li.innerHTML = `<a href="${p.href}">
           <strong>${nama}</strong>
-          <span>${TAHAP[tahap as Tahap]}${masa ? ` (${masa} min)` : ""}</span>
+          <span>${p.sub}</span>
           <progress max="${jumlah}" value="${siap}"></progress>
           <small>${siap} / ${jumlah} sesi siap · ${Math.round((siap / jumlah) * 100)}%</small>
         </a>

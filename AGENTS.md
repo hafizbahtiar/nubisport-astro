@@ -1,3 +1,8 @@
+> **Ponytail ultra is mandatory** for every agent working in this repo (Claude, Codex, subagents).
+> Claude Code gets it from `.claude/settings.json` (`PONYTAIL_DEFAULT_MODE=ultra` - the plugin's own
+> setting, also injected into subagents). Other agents: load the ponytail skill at **ultra** before any
+> change. Don't switch it to lite/full/off unless the owner asks in that session.
+
 ## Development
 
 When starting the dev server, use background mode:

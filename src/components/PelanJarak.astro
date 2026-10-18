@@ -1,0 +1,353 @@
+---
+// Pelan 10K / 21K - akaun sahaja (/account/pelan-jarak, pengawal sesi = AccountLayout).
+// Bertangga: 10K dari masa 5K, 21K dari masa 10K. Sasaran lalai = habis; masa sasaran pilihan.
+// Enjin: src/lib/pelan-jarak.ts. Render kad minggu dikongsi dengan Pelan 5K (lib/pelan-papar.ts).
+import PageHero from "./ui/PageHero.astro";
+import Section from "./ui/Section.astro";
+import ChipGroup from "./ui/ChipGroup.astro";
+import Field from "./ui/Field.astro";
+import DatePicker from "./ui/DatePicker.astro";
+import Checkbox from "./ui/Checkbox.astro";
+import { KATEGORI, UMUR_MAX, UMUR_MIN } from "../lib/maf";
+import { JARAK } from "../lib/pelan-jarak";
+import "../styles/pelan.css";
+
+const tahun = new Date().getFullYear();
+---
+
+<PageHero
+  eyebrow="Pelan latihan"
+  title="10K dan"
+  accent="21K."
+  lead="Langkah seterusnya selepas 5K. Sasaran utama habis dengan selamat - masukkan masa sasaran jika mahu sesi laju dan pecahan 'Realistik ke?'."
+>
+  <form class="form" method="get" id="borang">
+    <ChipGroup
+      legend="Jarak"
+      name="jarak"
+      checked="10k"
+      options={[
+        { value: "10k", label: "10K" },
+        { value: "21k", label: "21K (separuh maraton)" },
+      ]}
+    />
+    {
+      (Object.keys(JARAK) as (keyof typeof JARAK)[]).map((j) => (
+        <fieldset class="form-group" data-untuk={j} hidden disabled>
+          <ChipGroup
+            legend="Tempoh"
+            name="minggu"
+            checked={JARAK[j].minggu[1]}
+            options={JARAK[j].minggu.map((m) => ({
+              value: m,
+              label: `${m} minggu`,
+            }))}
+          />
+        </fieldset>
+      ))
+    }
+    <Field label="Masa 5K sekarang (minit)" id="masa-medan">
+      <input
+        class="input"
+        type="number"
+        name="masa"
+        step="1"
+        inputmode="numeric"
+        required
+      />
+    </Field>
+    <Field
+      label="Masa sasaran (minit, pilihan)"
+      id="sasaran-medan"
+      hint="Kosongkan untuk sasaran habis dengan selamat."
+    >
+      <input
+        class="input"
+        type="number"
+        name="sasaran"
+        step="1"
+        inputmode="numeric"
+      />
+    </Field>
+    <ChipGroup
+      legend="Hari seminggu"
+      name="hari"
+      checked={3}
+      options={[3, 4].map((h) => ({ value: h, label: `${h} hari` }))}
+    />
+    <Checkbox
+      name="maf"
+      id="maf"
+      label="Ikut nadi (MAF)"
+      hint="Sesi mudah dan larian panjang dikawal had kadar nadi anda. Perlu jam atau tali dada pengukur nadi."
+    />
+    <fieldset class="form-group" id="maf-medan" hidden disabled>
+      <Field label="Umur (tahun)">
+        <input
+          class="input"
+          type="number"
+          name="umur"
+          min={UMUR_MIN}
+          max={UMUR_MAX}
+          step="1"
+          inputmode="numeric"
+          required
+          placeholder="cth. 32"
+        />
+      </Field>
+      <ChipGroup
+        legend="Keadaan anda sekarang"
+        name="keadaan"
+        checked="terganggu"
+        stacked
+        options={Object.entries(KATEGORI).map(([value, k]) => ({
+          value,
+          label: k.label,
+        }))}
+      />
+    </fieldset>
+    <Field
+      label="Tarikh mula (pilihan)"
+      for="mula-text"
+      hint="Pelan bermula pada hari Isnin pada atau selepas tarikh ini."
+    >
+      <DatePicker
+        id="mula"
+        name="mula"
+        min={`${tahun - 1}-01-01`}
+        max={`${tahun + 2}-12-31`}
+      />
+    </Field>
+    <button class="btn btn-primary" type="submit">Buat pelan</button>
+  </form>
+</PageHero>
+
+<section class="hasil" id="hasil" hidden aria-live="polite">
+  <div class="container" id="pelan"></div>
+</section>
+
+<Section band narrow title="Sebelum mula" class="nota">
+  <ul>
+    <li>
+      Pelan ini panduan umum, <strong>bukan nasihat perubatan</strong>. Rujuk
+      doktor jika ada masalah jantung, tekanan darah, sendi atau baru sembuh
+      dari kecederaan. Berhenti jika sakit (bukan sekadar penat).
+    </li>
+    <li>
+      Bertangga: 10K perlukan masa 5K (boleh lari 5 km tanpa henti), 21K
+      perlukan masa 10K. Belum sampai? Mula dengan
+      <a class="link" href="/account/pelan-5k">Pelan 5K</a> atau pelan 10K dulu.
+    </li>
+    <li>
+      Anggaran masa guna formula Riegel dari masa anda sekarang - <strong
+        >anggaran kasar</strong
+      >. Jarak jauh biasanya lebih perlahan dari ramalan bagi pelari yang belum
+      biasa.
+    </li>
+    <li>
+      Larian panjang naik sedikit demi sedikit, setiap minggu ke-4 lebih ringan,
+      dan minggu terakhir sebelum lumba diturunkan (tirus) supaya kaki segar.
+      Cuaca Malaysia panas - lari awal pagi, bawa air.
+    </li>
+  </ul>
+</Section>
+
+<script>
+  import { buatIcs, waktuMalaysia } from "../lib/ics";
+  import { kiraMaf, type Kategori } from "../lib/maf";
+  import { NOTA_AWAN } from "../data/site";
+  import { isninMula, tarikhSesi } from "../lib/pelan-5k";
+  import {
+    JARAK,
+    analisisJarak,
+    buatPelanJarak,
+    jam,
+    type Jarak,
+  } from "../lib/pelan-jarak";
+  import { htmlMinggu, papakAnalisis } from "../lib/pelan-papar";
+  import {
+    KUNCI_DIBUAT,
+    baca,
+    kunciJarak,
+    padamPelan,
+    simpan,
+  } from "../lib/pelan-tersimpan";
+  import { sahkan } from "../lib/sahkan";
+
+  const borang = document.getElementById("borang") as HTMLFormElement;
+  const el = (n: string) => borang.elements.namedItem(n);
+  const masaMedan = document.getElementById("masa-medan")!;
+  const masaInput = el("masa") as HTMLInputElement;
+  const sasaranInput = el("sasaran") as HTMLInputElement;
+  const mafBox = document.getElementById("maf") as HTMLInputElement;
+  const mafMedan = document.getElementById("maf-medan") as HTMLFieldSetElement;
+  const hasil = document.getElementById("hasil")!;
+  const pelanEl = document.getElementById("pelan")!;
+
+  const q = new URLSearchParams(location.search);
+  const ikutJarak = () => {
+    const j = ((el("jarak") as RadioNodeList).value || "10k") as Jarak;
+    const c = JARAK[j];
+    borang
+      .querySelectorAll<HTMLFieldSetElement>("[data-untuk]")
+      .forEach((f) => (f.hidden = f.disabled = f.dataset.untuk !== j));
+    masaMedan.querySelector(".field-label")!.textContent =
+      `Masa ${c.prasyarat.nama} sekarang (minit)`;
+    masaInput.min = String(c.prasyarat.min);
+    masaInput.max = String(c.prasyarat.max);
+    masaInput.placeholder = j === "10k" ? "cth. 32" : "cth. 65";
+    sasaranInput.min = String(c.sasaran.min);
+    sasaranInput.max = String(c.sasaran.max);
+    sasaranInput.placeholder = j === "10k" ? "cth. 60" : "cth. 140";
+    mafMedan.hidden = mafMedan.disabled = !mafBox.checked;
+  };
+  // Pilih jarak dulu (tempoh bergantung padanya), kemudian isi medan lain dari URL.
+  if (q.get("jarak") === "21k") (el("jarak") as RadioNodeList).value = "21k";
+  ikutJarak();
+  for (const [k, v] of q) {
+    const e = el(k);
+    // "minggu": nilai 12 wujud dalam kedua-dua kumpulan - tanda dalam kumpulan jarak aktif.
+    if (k === "minggu")
+      borang
+        .querySelectorAll<HTMLInputElement>(
+          `fieldset:not([disabled]) input[name="minggu"]`,
+        )
+        .forEach((r) => (r.checked = r.value === v));
+    else if (e instanceof RadioNodeList) e.value = v;
+    else if (e instanceof HTMLInputElement && e.type === "checkbox")
+      e.checked = v === e.value;
+    else if (e instanceof HTMLInputElement) {
+      e.value = v;
+      e.dispatchEvent(new Event("change")); // DatePicker
+    }
+  }
+  borang.addEventListener("change", ikutJarak);
+  ikutJarak();
+  if (q.has("jarak")) papar();
+
+  function papar() {
+    const jarak = (q.get("jarak") === "21k" ? "21k" : "10k") as Jarak;
+    const c = JARAK[jarak];
+    const minggu = Number(q.get("minggu"));
+    const hari = Number(q.get("hari"));
+    const masa = Number(q.get("masa"));
+    const sasaran = q.get("sasaran") ? Number(q.get("sasaran")) : undefined;
+    hasil.hidden = false;
+    const amaran = (t: string) => {
+      pelanEl.innerHTML = `<div class="alert alert-warning"><p>${t}</p></div>`;
+      hasil.scrollIntoView({ behavior: "smooth" });
+    };
+    let nadi: { maf: number; bawah: number } | undefined;
+    if (q.get("maf") === "1") {
+      const m = kiraMaf(Number(q.get("umur")), q.get("keadaan") as Kategori);
+      if (!m.ok) return amaran(`Ikut nadi: ${m.sebab}`);
+      nadi = { maf: m.maf, bawah: m.bawah };
+    }
+    const input = { jarak, minggu, hari, masa, sasaran, nadi };
+    const h = buatPelanJarak(input);
+    if (!h.ok) return amaran(h.sebab);
+    const a = analisisJarak(input);
+
+    const kunci = kunciJarak(jarak, minggu, masa, sasaran, hari);
+    const dibuat = baca(KUNCI_DIBUAT);
+    if (!dibuat.includes(kunci)) simpan(KUNCI_DIBUAT, [...dibuat, kunci]);
+    const siap = new Set<string>(baca(kunci));
+    const isnin = /^\d{4}-\d{2}-\d{2}$/.test(q.get("mula") ?? "")
+      ? isninMula(new Date(`${q.get("mula")}T00:00:00`))
+      : null;
+    const hariIni = new Date().toDateString();
+    const jumlah = h.minggu.reduce((n, w) => n + w.sesi.length, 0);
+    const tajuk = `${c.nama} · ${minggu} minggu · ${hari} hari seminggu`;
+
+    pelanEl.innerHTML = `
+      <div class="ringkas">
+        <div>
+          <p class="eyebrow">Pelan anda</p>
+          <h2 class="display section-title">${tajuk}</h2>
+          <p class="lead">${c.prasyarat.nama} ${masa} minit → ${c.nama} ${sasaran ? `bawah ${jam(sasaran)}` : `habis (anggaran ~${jam(h.ramalan)})`}.
+            ${nadi ? `Ikut nadi: had MAF <strong>${nadi.maf}</strong>, julat ${nadi.bawah}-${nadi.maf} denyut/min.` : ""}
+            ${isnin ? `Bermula Isnin, ${isnin.toLocaleDateString("ms-MY", { day: "numeric", month: "long", year: "numeric" })}.` : ""}
+            <span id="kemajuan"></span></p>
+        </div>
+        <div class="actions no-print">
+          <button class="btn btn-outline" type="button" onclick="print()">Cetak</button>
+          <button class="btn btn-outline" type="button" data-padam>Padam pelan</button>
+        </div>
+      </div>
+      <div class="alert alert-warning no-print"><p>Pelan dan tanda siap disimpan dalam pelayar ini sahaja (localStorage) - hilang jika data pelayar dikosongkan atau anda tukar peranti. ${NOTA_AWAN}</p></div>
+      ${h.amaran.map((t) => `<div class="alert alert-info"><p>${t}</p></div>`).join("")}
+      ${a ? papakAnalisis(a) : ""}
+      <div class="kalendar no-print">
+        <h3 class="display">Simpan ke kalendar</h3>
+        ${
+          isnin
+            ? `<div class="actions">
+                <label class="field"><span class="field-label">Masa lari</span>
+                  <input class="input" type="time" id="masa-lari" value="06:30" /></label>
+                <button class="btn btn-primary" type="button" data-ics>Muat turun fail kalendar (.ics)</button>
+              </div>`
+            : `<p class="muted">Isi "Tarikh mula" di atas dan tekan "Buat pelan" - kalendar perlukan tarikh sebenar.</p>`
+        }
+      </div>
+      <ol class="minggu">${h.minggu.map((w) => htmlMinggu(w, isnin, hariIni)).join("")}</ol>`;
+
+    const kemajuan = document.getElementById("kemajuan")!;
+    const kira = () =>
+      (kemajuan.textContent = `${siap.size} / ${jumlah} sesi siap.`);
+    kira();
+    pelanEl
+      .querySelectorAll<HTMLInputElement>("input[data-sesi]")
+      .forEach((cb) => {
+        cb.checked = siap.has(cb.dataset.sesi!);
+        cb.addEventListener("change", () => {
+          cb.checked
+            ? siap.add(cb.dataset.sesi!)
+            : siap.delete(cb.dataset.sesi!);
+          simpan(kunci, [...siap]);
+          kira();
+        });
+      });
+    pelanEl
+      .querySelector("[data-padam]")!
+      .addEventListener("click", async () => {
+        const ya = await sahkan({
+          tajuk: "Padam pelan ini?",
+          mesej: `Pelan ${tajuk} dan ${siap.size} tanda siap akan dibuang dari pelayar ini. Tindakan ini tak boleh diundur.`,
+          ya: "Padam",
+          bahaya: true,
+        });
+        if (!ya) return;
+        padamPelan(kunci);
+        location.href = "/account";
+      });
+    pelanEl
+      .querySelector<HTMLButtonElement>("[data-ics]")
+      ?.addEventListener("click", () => {
+        const pukul =
+          (document.getElementById("masa-lari") as HTMLInputElement).value ||
+          "06:30";
+        const ics = buatIcs(
+          h.minggu.flatMap((w) =>
+            w.sesi.map((s, i) => ({
+              uid: `${kunci.replace(":", "-")}-m${w.no}s${i}`,
+              mula: waktuMalaysia(tarikhSesi(isnin!, w.no, hari, i), pukul),
+              minit: s.minit,
+              tajuk: `Nubi ${c.nama} · Minggu ${w.no}: ${s.tajuk} (${s.minit} min)`,
+              keterangan: `${s.arahan}\n${s.usaha}`,
+            })),
+          ),
+          { nama: `Nubi ${c.nama} · ${minggu} minggu` },
+        );
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(
+          new Blob([ics], { type: "text/calendar" }),
+        );
+        link.download = `pelan-${jarak}-${minggu}mgg-${hari}hari.ics`;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(link.href), 60e3);
+      });
+    (pelanEl.querySelector(".kad.kini") ?? hasil).scrollIntoView({
+      behavior: "smooth",
+    });
+  }
+</script>

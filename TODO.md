@@ -66,8 +66,8 @@ Item yang dah siap dibuang (lihat git history).
   Storan pelan = `lib/pelan-tersimpan.ts` (`baca`/`simpan`/`padamPelan`); dashboard baca `pelan-5k:dibuat` - pelan per pelayar, bukan per akaun (simpan di D1 = kemudian).
   Padam pelan: dashboard + pelan penuh sahaja (di awam ia membuka semula slot had 3 pelan).
 - **Akaun lain**: `/account/maf` (`components/Maf.astro penuh`: simpan `maf:terakhir` untuk dashboard + butang
-  Pelan 5K ikut nadi; `/maf` lencong ke situ bila log masuk), `/account/profil` (nama `PATCH /me`, kata laluan
-  `PUT /me/password` - tamatkan semua sesi). Sidebar: X tutup laci (telefon) / lipat (desktop, `akaun:sidebar`).
+  Pelan 5K ikut nadi; `/maf` lencong ke situ bila log masuk), `/account/profil` (Maklumat: nama `PATCH /me`) +
+  `/account/profil/kata-laluan` (`PUT /me/password` - tamatkan semua sesi); sub-nav = `components/ProfilShell.astro`. Sidebar: X tutup laci (telefon) / lipat (desktop, `akaun:sidebar`).
 - **Simpan awan (langganan)**: rancangan di `docs/plans/simpan-awan.md`; penafian `NOTA_AWAN` hingga siap.
 - **Dialog sahkan**: `await sahkan({ tajuk, mesej, ya, bahaya })` (`lib/sahkan.ts`) atas `ConfirmDialog.astro`
   (dipasang sekali dalam `Layout` + `AccountLayout`). Untuk padam pelan dan log keluar; jangan guna `confirm()`.
@@ -185,3 +185,11 @@ Disusun ikut nilai untuk pemula, yang paling murah dulu. ✅ = dah dibina.
 - Nama: "Nubi Sport" kekal larian sahaja, atau nanti sukan lain (badminton, kayuh)?
 - Yuran / jersi kumpulan? Jika ya, jangan kendalikan bayaran di laman - pautan ke pihak ketiga.
 - Bahasa: Melayu sahaja, atau tambah English?
+
+## Pelan 10K / 21K (akaun sahaja) - siap
+
+- `/account/pelan-jarak` (`components/PelanJarak.astro`, enjin `lib/pelan-jarak.ts`, semak
+  `bun scripts/check-pelan-jarak.ts`). Bertangga: 10K dari masa 5K, 21K dari masa 10K; 10K 8/10/12
+  minggu, 21K 12/16/20; sasaran lalai habis, masa sasaran pilihan (sesi laju + "Realistik ke?",
+  anggaran Riegel - kasar). Kad minggu + analisis dikongsi dengan 5K (`lib/pelan-papar.ts`,
+  `styles/pelan.css`). Kunci storan `pelan-10k|21k:<minggu>-<masa>-<sasaran>-<hari>`.

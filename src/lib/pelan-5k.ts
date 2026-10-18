@@ -2,7 +2,7 @@
 // Semak: bun scripts/check-pelan-5k.ts
 
 export type Tahap = "sifar" | "jalan" | "5k";
-export type Fasa = "Asas" | "Daya tahan" | "Kelajuan" | "Ujian";
+export type Fasa = "Asas" | "Daya tahan" | "Kelajuan" | "Tirus" | "Ujian";
 export type Jenis = "jalan-lari" | "mudah" | "panjang" | "interval" | "tempo" | "ujian";
 
 export interface Sesi {

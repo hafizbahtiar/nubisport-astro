@@ -25,6 +25,11 @@ const NAV = [
     label: "Pelan 5K",
     ikon: "M4 20V10m6 10V4m6 16v-8m4 8H2",
   },
+  {
+    href: "/account/pelan-jarak",
+    label: "Pelan 10K / 21K",
+    ikon: "M4 21V4m0 0h11l-2 4 2 4H4",
+  },
   { href: "/account/maf", label: "Kira MAF", ikon: "M3 12h4l3-8 4 16 3-8h4" },
   {
     href: "/account/profil",
@@ -76,7 +81,12 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
           NAV.map((n) => (
             <a
               href={n.href}
-              aria-current={laluan === n.href ? "page" : undefined}
+              aria-current={
+                laluan === n.href ||
+                (n.href !== "/account" && laluan.startsWith(`${n.href}/`))
+                  ? "page"
+                  : undefined
+              }
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d={n.ikon} />
