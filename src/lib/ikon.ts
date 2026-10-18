@@ -4,6 +4,7 @@
 // pengecualian = jenama (public/brand) dan tanda semak `.check` (path Lucide `check` dalam CSS).
 // Hanya ikon yang diimport masuk ke bundle (skrip pelayar guna ini untuk innerHTML).
 import {
+  BookOpen,
   Calendar,
   Check,
   ChevronDown,
@@ -12,6 +13,7 @@ import {
   CircleCheck,
   Cloud,
   Flag,
+  Gauge,
   HeartPulse,
   House,
   LockKeyhole,
@@ -29,6 +31,8 @@ const IKON = {
   awan: Cloud,
   bawah: ChevronDown,
   bendera: Flag,
+  buku: BookOpen,
+  laju: Gauge,
   kalendar: Calendar,
   kanan: ChevronRight,
   jeda: Pause,

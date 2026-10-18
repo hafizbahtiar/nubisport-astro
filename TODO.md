@@ -115,6 +115,17 @@ Item yang dah siap dibuang (lihat git history).
   `not_found_handling: "404-page"` - dulu laluan tiada jatuh ke worker -> "hono-workers not found"); footer di bawah
   skrin pada page pendek; bar `<progress>` dashboard bertrek (dulu nampak penuh pada 0%); 3 kad statistik sebaris di
   telefon; jarak bawah kepala pelan; julat pace `~8:27-8:57/km` tidak dipatahkan.
+- **Menu header** (2026-10-18): butang "Alat" buka panel 4 kad (MAF, Pace, Lumba, Panduan - `ALAT` dalam
+  `Header.astro`). Telefon: logo + Log masuk + butang menu; panel tambah Pelan 5K + Tentang / Cara sertai (dulu
+  telefon hanya boleh capai Pelan 5K). Esc / klik luar / klik pautan menutup. Alat baru = satu entri `ALAT`.
+- **Risiko kos Cloudflare (pelan percuma, semakan 2026-10-18)** - Nubi sendiri murah: page + `.ics` + 404 = aset
+  statik (tiada invocation worker); pemasa, pelan, MAF, pace, peluh = dalam pelayar; `/api/*` dicache sessionStorage
+  (IPU 15 min, cuaca/waktu 60 min), tanda siap dikumpul 1.5 s. Risiko sebenar di backend dikongsi (hono-workers):
+  (1) **bcrypt cost 12** = ~270 ms CPU setiap login/daftar/tukar kata laluan vs had 10 ms CPU percuma - semak
+  dashboard Workers (CPU time / "exceeded CPU"); pilihan: kos 10 (~70 ms) atau PBKDF2 WebCrypto, perlu keputusan owner.
+  (2) `?noCache=1` / `Cache-Control: no-cache` sesiapa boleh pintas memo endpoint awam -> panggil JAS/MET/JAKIM
+  setiap kali; hadkan kepada owner. (3) Had 100k permintaan/hari dikongsi seluruh akaun - portfolio SSR guna paling
+  banyak. Bila had dilepasi, worker gagal (tiada bil), aset statik Nubi tetap hidup.
 - Palet: navy `#0A1A33`, oren `#FF5A1F`, oren teks atas putih `#C2410C`. Font paparan Barlow Condensed.
 - **Pelan 5K** (`/pelan-5k`): logik tulen dalam `src/lib/pelan-5k.ts` (dikira dalam browser - laman statik,
   jadi `?bulan=&tahap=&masa=&hari=&mula=` dibaca oleh skrip page). Tukar logik = jalankan
