@@ -55,6 +55,15 @@ Item yang dah siap dibuang (lihat git history).
 - **Had pelan tanpa akaun**: 3 pelan berbeza (`HAD_TANPA_AKAUN`, localStorage `pelan-5k:dibuat`; buka
   semula tidak dikira; `session_active=1` = tiada had). Had LEMBUT sahaja (incognito memintas) - had
   keras perlu pelan dijana di server.
+- **Akaun (`/account/*`)**: `AccountLayout.astro` - sidebar (laci bawah 64rem: Esc / scrim tutup), navbar,
+  kandungan lebar penuh. Layout = satu-satunya pengawal sesi (tiada sesi -> `/login?next=`); page ambil
+  pengguna dengan `sesiSaya()` (`lib/api.ts`, satu /me dikongsi). `/login` lencong ke `?next=` (laluan
+  dalaman sahaja) atau `/account`. Header awam: "Akaun" -> `/account`. `<head>` dikongsi = `Head.astro`.
+  Item yang dijana skrip perlu `:global(...)` dalam `<style>` page (tiada atribut skop Astro).
+- **Pelan 5K awam vs penuh**: `components/Pelan5k.astro` (kandungan sahaja; page pilih layout).
+  `/pelan-5k` = pelan + label "Realistik ke?" + kotak promosi; log masuk -> lencong ke `/account/pelan-5k`
+  (`penuh`: pecahan analisis, ikut nadi MAF, .ics, tiada had 3 pelan). Sekatan di pelayar sahaja.
+  Dashboard baca kunci `pelan-5k:dibuat` - pelan per pelayar, bukan per akaun (simpan di D1 = kemudian).
 - **Pelan 5K dinamik**: dengan masa 5K (wajib tahap "5k", pilihan "jalan"), pace interval/tempo
   turun setiap sesi laju dari pace sekarang ke 6:00/km; sesi mudah seminggu berbeza panjang; Daya
   tahan ada langkah laju; fasa Asas ulang langkah lama di sesi pertama. "Realistik ke?" = `analisis()`

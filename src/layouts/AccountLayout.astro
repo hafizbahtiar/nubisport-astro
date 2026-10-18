@@ -1,0 +1,414 @@
+---
+// Layout selepas log masuk: sidebar (laci di bawah 64rem), navbar atas, kandungan lebar penuh.
+// Satu-satunya pengawal sesi bagi /account/*: tiada sesi -> /login?next=<page ini>.
+// Page di dalamnya ambil pengguna dengan sesiSaya() (src/lib/api.ts) - promise yang sama, satu /me.
+import "../styles/global.css";
+import Head from "../components/layout/Head.astro";
+import { ACCOUNT, SITE } from "../data/site";
+
+interface Props {
+  title: string; // tajuk navbar + <title>
+  description?: string;
+}
+const { title, description = `Akaun ${SITE.name}.` } = Astro.props;
+
+// ikon: laluan SVG 24x24 (stroke)
+const NAV = [
+  {
+    href: "/account",
+    label: "Dashboard",
+    ikon: "M3 12l9-8 9 8M5 10v10h5v-6h4v6h5V10",
+  },
+  {
+    href: "/account/pelan-5k",
+    label: "Pelan 5K",
+    ikon: "M4 20V10m6 10V4m6 16v-8m4 8H2",
+  },
+  { href: "/maf", label: "Kira MAF", ikon: "M3 12h4l3-8 4 16 3-8h4" },
+];
+const PAUTAN = [
+  { href: "/", label: "Laman utama", ikon: "M10 19l-7-7 7-7M3 12h18" },
+  {
+    href: ACCOUNT.manage,
+    label: "Urus profil",
+    ikon: "M12 12a4 4 0 100-8 4 4 0 000 8zm-8 9a8 8 0 0116 0",
+    luar: true,
+  },
+];
+const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
+---
+
+<!doctype html>
+<html lang="ms">
+  <head>
+    <Head title={`${title} - ${SITE.name}`} description={description} noindex />
+  </head>
+  <body class="app">
+    <a class="langkau" href="#kandungan">Langkau ke kandungan</a>
+
+    <aside class="app-sidebar" id="sidebar" aria-label="Navigasi akaun">
+      <a
+        class="app-logo"
+        href="/account"
+        aria-label={`${SITE.name} - dashboard`}
+      >
+        <img src="/brand/logo-on-dark.svg" alt="" width="142" height="40" />
+      </a>
+      <nav class="app-nav">
+        {
+          NAV.map((n) => (
+            <a
+              href={n.href}
+              aria-current={laluan === n.href ? "page" : undefined}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d={n.ikon} />
+              </svg>
+              {n.label}
+            </a>
+          ))
+        }
+        <hr />
+        {
+          PAUTAN.map((n) => (
+            <a href={n.href} rel={n.luar ? "noopener" : undefined}>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d={n.ikon} />
+              </svg>
+              {n.label}
+            </a>
+          ))
+        }
+      </nav>
+      <div class="app-pengguna">
+        <span class="avatar" data-saya-awal aria-hidden="true"></span>
+        <span class="app-pengguna-teks">
+          <strong data-saya-nama>…</strong>
+          <small data-saya-emel></small>
+        </span>
+        <button class="btn btn-outline btn-sm" type="button" data-keluar
+          >Log keluar</button
+        >
+      </div>
+    </aside>
+    <div class="app-scrim" data-tutup hidden></div>
+
+    <div class="app-utama">
+      <header class="app-navbar">
+        <button
+          class="app-menu"
+          type="button"
+          aria-controls="sidebar"
+          aria-expanded="false"
+          aria-label="Buka menu"
+          data-menu
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true"
+            ><path d="M4 7h16M4 12h16M4 17h16"></path></svg
+          >
+        </button>
+        <h1 class="display app-tajuk">{title}</h1>
+        <span class="app-navbar-pengguna">
+          <span class="avatar" data-saya-awal aria-hidden="true"></span>
+          <span data-saya-nama></span>
+        </span>
+      </header>
+      <main class="app-kandungan" id="kandungan">
+        <slot />
+      </main>
+    </div>
+  </body>
+</html>
+
+<script>
+  import { api, sesiSaya } from "../lib/api";
+
+  const s = await sesiSaya();
+  if (!s) {
+    location.replace(
+      `/login?next=${encodeURIComponent(location.pathname + location.search + location.hash)}`,
+    );
+  } else {
+    document
+      .querySelectorAll("[data-saya-nama]")
+      .forEach((e) => (e.textContent = s.name));
+    document
+      .querySelectorAll("[data-saya-emel]")
+      .forEach((e) => (e.textContent = s.email));
+    const awal = s.name.trim().charAt(0).toUpperCase() || "?";
+    document
+      .querySelectorAll("[data-saya-awal]")
+      .forEach((e) => (e.textContent = awal));
+  }
+
+  // Laci (bawah 64rem). Atas 64rem sidebar sentiasa terbuka - kelas ini tiada kesan di sana.
+  const menu = document.querySelector<HTMLButtonElement>("[data-menu]")!;
+  const scrim = document.querySelector<HTMLElement>("[data-tutup]")!;
+  const set = (buka: boolean) => {
+    document.body.classList.toggle("menu-buka", buka);
+    menu.setAttribute("aria-expanded", String(buka));
+    menu.setAttribute("aria-label", buka ? "Tutup menu" : "Buka menu");
+    scrim.hidden = !buka;
+    if (buka) document.querySelector<HTMLElement>(".app-nav a")?.focus();
+  };
+  menu.addEventListener("click", () =>
+    set(!document.body.classList.contains("menu-buka")),
+  );
+  scrim.addEventListener("click", () => set(false));
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && document.body.classList.contains("menu-buka")) {
+      set(false);
+      menu.focus();
+    }
+  });
+
+  document
+    .querySelector("[data-keluar]")!
+    .addEventListener("click", async () => {
+      await api("/auth/logout", { method: "POST" }).catch(() => {});
+      // Cookie httpOnly dipadam oleh backend; session_active juga, tapi pastikan UI ikut.
+      document.cookie = "session_active=; Max-Age=0; path=/";
+      location.replace("/");
+    });
+</script>
+
+<style>
+  .app {
+    --sidebar-w: 16rem;
+    --navbar-h: 4rem;
+    min-height: 100vh;
+    background: var(--paper-2);
+  }
+
+  .langkau {
+    position: absolute;
+    left: -999px;
+  }
+  .langkau:focus {
+    left: 1rem;
+    top: 1rem;
+    z-index: 50;
+    padding: 0.5rem 1rem;
+    background: var(--paper);
+  }
+
+  /* ---------- Sidebar ---------- */
+  .app-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 30;
+    width: var(--sidebar-w);
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 1.25rem 1rem;
+    background: var(--navy);
+    color: var(--on-dark);
+    overflow-y: auto;
+  }
+  .app-logo img {
+    height: 2.25rem;
+    width: auto;
+    display: block;
+  }
+  .app-nav {
+    display: grid;
+    gap: 0.25rem;
+  }
+  .app-nav a {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 0.75rem;
+    border-radius: var(--radius);
+    color: var(--on-dark);
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .app-nav a:hover {
+    background: var(--navy-2);
+    color: #fff;
+  }
+  .app-nav a[aria-current="page"] {
+    background: var(--orange);
+    color: var(--navy);
+  }
+  .app-nav a:focus-visible {
+    outline: 2px solid var(--orange);
+    outline-offset: 2px;
+  }
+  .app-nav hr {
+    border: 0;
+    border-top: 1px solid var(--on-dark-line);
+    margin: 0.75rem 0;
+  }
+  svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex: none;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .app-pengguna {
+    margin-top: auto;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 0.75rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--on-dark-line);
+  }
+  .app-pengguna-teks {
+    display: grid;
+    min-width: 0;
+  }
+  .app-pengguna-teks strong {
+    color: #fff;
+  }
+  .app-pengguna-teks small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .app-pengguna .btn {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+    color: #fff;
+    border-color: var(--on-dark-line);
+  }
+  .avatar {
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    background: var(--orange);
+    color: var(--navy);
+    font-weight: 800;
+  }
+
+  /* ---------- Navbar + kandungan ---------- */
+  .app-utama {
+    margin-left: var(--sidebar-w);
+    min-width: 0;
+  }
+  .app-navbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    height: var(--navbar-h);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0 1.5rem;
+    background: rgb(255 255 255 / 0.92);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  .app-tajuk {
+    margin: 0;
+    font-size: 1.6rem;
+    color: var(--navy);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .app-navbar-pengguna {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .app-menu {
+    display: none;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--paper);
+    color: var(--navy);
+    cursor: pointer;
+  }
+  .app-kandungan {
+    padding: 1.5rem;
+    display: grid;
+    gap: 1.5rem;
+    align-content: start;
+  }
+  /* Sasaran skrol (contoh #pelan) tidak terlindung di bawah navbar melekat. */
+  .app-kandungan :global([id]) {
+    scroll-margin-top: calc(var(--navbar-h) + 1rem);
+  }
+  /* Komponen laman awam (PageHero, Section) di dalam kandungan: lebar penuh, berbucu. */
+  .app-kandungan :global(.container) {
+    max-width: none;
+    padding-inline: 0;
+  }
+  .app-kandungan :global(.page-hero) {
+    border-radius: var(--radius-lg);
+    padding: 1.75rem;
+  }
+  /* section awam ada padding besar (global.css) - di sini jarak datang dari gap .app-kandungan. */
+  .app-kandungan :global(.band),
+  .app-kandungan :global(.hasil) {
+    background: none;
+    border: 0;
+    padding-block: 0;
+  }
+
+  /* ---------- Bawah 64rem: sidebar jadi laci ---------- */
+  @media (max-width: 63.99rem) {
+    .app-utama {
+      margin-left: 0;
+    }
+    .app-menu {
+      display: grid;
+    }
+    .app-sidebar {
+      transform: translateX(-100%);
+      visibility: hidden; /* tak boleh difokus bila tertutup */
+      transition:
+        transform 0.2s ease,
+        visibility 0s 0.2s;
+      box-shadow: 0 0 2rem rgb(0 0 0 / 0.3);
+    }
+    :global(body.menu-buka) .app-sidebar {
+      transform: none;
+      visibility: visible;
+      transition: transform 0.2s ease;
+    }
+    .app-scrim {
+      position: fixed;
+      inset: 0;
+      z-index: 25;
+      background: rgb(10 26 51 / 0.5);
+    }
+    :global(body.menu-buka) {
+      overflow: hidden;
+    }
+  }
+  @media (max-width: 40rem) {
+    .app-kandungan {
+      padding: 1rem;
+    }
+    .app-navbar {
+      padding: 0 1rem;
+    }
+    .app-navbar-pengguna [data-saya-nama] {
+      display: none;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .app-sidebar {
+      transition: none !important;
+    }
+  }
+</style>

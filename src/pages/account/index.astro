@@ -1,0 +1,242 @@
+---
+import AccountLayout from "../../layouts/AccountLayout.astro";
+import { ACCOUNT } from "../../data/site";
+---
+
+<AccountLayout title="Dashboard">
+  <section class="salam">
+    <p class="eyebrow">Akaun</p>
+    <h2 class="display">Hai, <span data-saya-nama>…</span>.</h2>
+    <p class="muted">Pelan dan tanda siap disimpan di pelayar ini sahaja.</p>
+  </section>
+
+  <ul class="stat" aria-label="Ringkasan">
+    <li><span>Pelan</span><strong id="bil-pelan">0</strong></li>
+    <li><span>Sesi siap</span><strong id="bil-siap">0</strong></li>
+    <li><span>Keahlian</span><strong id="keahlian">…</strong></li>
+  </ul>
+
+  <div class="grid">
+    <section class="panel">
+      <div class="panel-kepala">
+        <h3 class="display">Pelan 5K saya</h3>
+        <a class="btn btn-primary btn-sm" href="/account/pelan-5k"
+          >Buat pelan baru</a
+        >
+      </div>
+      <ol class="senarai" id="pelan"></ol>
+      <p class="muted" id="tiada-pelan" hidden>
+        Belum ada pelan di pelayar ini. Buat satu - ia muncul di sini dengan
+        kemajuannya.
+      </p>
+    </section>
+
+    <div class="sisi">
+      <section class="panel">
+        <h3 class="display">Profil</h3>
+        <p>
+          <strong data-saya-nama></strong><br /><span
+            class="muted"
+            data-saya-emel></span>
+        </p>
+        <p class="muted" id="peranan"></p>
+        <a class="btn btn-outline btn-sm" href={ACCOUNT.manage} rel="noopener"
+          >Urus profil</a
+        >
+      </section>
+      <section class="panel">
+        <h3 class="display">Lari ikut nadi</h3>
+        <p class="muted">
+          Kira had kadar nadi MAF, kemudian tanda "Ikut nadi" dalam pelan.
+        </p>
+        <a class="btn btn-outline btn-sm" href="/maf">Kira MAF</a>
+      </section>
+    </div>
+  </div>
+</AccountLayout>
+
+<script>
+  import { sesiSaya } from "../../lib/api";
+  import { TAHAP, buatPelan, type Tahap } from "../../lib/pelan-5k";
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const baca = (k: string): string[] => {
+    try {
+      return JSON.parse(localStorage.getItem(k) ?? "[]");
+    } catch {
+      return [];
+    }
+  };
+
+  // Pengawal sesi + nama/e-mel = AccountLayout. Di sini hanya peranan.
+  const s = await sesiSaya();
+  if (s) {
+    const nubi = s.apps?.nubi;
+    $("keahlian").textContent =
+      s.role === "owner"
+        ? "Owner"
+        : nubi === "admin"
+          ? "Admin"
+          : nubi === "ahli"
+            ? "Ahli"
+            : "Belum ahli";
+    $("peranan").textContent =
+      nubi === "ahli" || nubi === "admin" || s.role === "owner"
+        ? "Ahli Nubi Sport."
+        : "Pengguna berdaftar - keahlian Nubi Sport diluluskan oleh admin.";
+  }
+
+  // Kunci pelan (Pelan5k.astro): "pelan-5k:<bulan>-<tahap>-<masa>-<hari>"; tanda siap di bawah kunci itu.
+  const senarai = $("pelan");
+  let jumlahSiap = 0;
+  for (const kunci of new Set(baca("pelan-5k:dibuat"))) {
+    const [bulan, tahap, masa, hari] = kunci
+      .slice("pelan-5k:".length)
+      .split("-");
+    const h = buatPelan({
+      bulan: +bulan,
+      tahap: tahap as Tahap,
+      hari: +hari,
+      masa5k: masa ? +masa : undefined,
+    });
+    if (!h.ok) continue;
+    const jumlah = h.minggu.reduce((a, w) => a + w.sesi.length, 0);
+    const siap = new Set(baca(kunci)).size;
+    jumlahSiap += siap;
+    const q = new URLSearchParams({
+      bulan,
+      tahap,
+      hari,
+      ...(masa ? { masa } : {}),
+    });
+    const li = document.createElement("li");
+    li.innerHTML = `<a href="/account/pelan-5k?${q}">
+        <strong>${bulan} bulan · ${hari} hari seminggu</strong>
+        <span>${TAHAP[tahap as Tahap]}${masa ? ` (${masa} min)` : ""}</span>
+        <progress max="${jumlah}" value="${siap}"></progress>
+        <small>${siap} / ${jumlah} sesi siap · ${Math.round((siap / jumlah) * 100)}%</small>
+      </a>`;
+    senarai.append(li);
+  }
+  $("tiada-pelan").hidden = senarai.children.length > 0;
+  $("bil-pelan").textContent = String(senarai.children.length);
+  $("bil-siap").textContent = String(jumlahSiap);
+</script>
+
+<style>
+  .salam h2 {
+    margin: 0.25rem 0;
+    font-size: clamp(2rem, 5vw, 3rem);
+    color: var(--navy);
+  }
+  .salam p {
+    margin: 0;
+  }
+  .salam {
+    padding: 0; /* bukan section awam (global.css beri padding besar) */
+  }
+
+  .stat {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+    gap: 1rem;
+  }
+  .stat li,
+  .panel {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+  }
+  .stat li {
+    display: grid;
+    gap: 0.25rem;
+    padding: 1rem 1.25rem;
+  }
+  .stat span {
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .stat strong {
+    font-family: var(--display);
+    font-style: italic;
+    font-size: 2rem;
+    color: var(--navy);
+  }
+
+  /* Pelan lebar di kiri, profil/alat di kanan; satu lajur bila sempit. */
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr);
+    gap: 1rem;
+    align-items: start;
+  }
+  @media (max-width: 56rem) {
+    .grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  .sisi {
+    display: grid;
+    gap: 1rem;
+  }
+  .panel {
+    display: grid;
+    gap: 0.75rem;
+    justify-items: start;
+    padding: 1.25rem 1.5rem;
+  }
+  .panel h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--navy);
+  }
+  .panel p {
+    margin: 0;
+  }
+  .panel-kepala {
+    justify-self: stretch;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .senarai {
+    justify-self: stretch;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.75rem;
+  }
+  /* Item dijana skrip - tiada atribut skop Astro, jadi :global. */
+  .senarai :global(a) {
+    display: grid;
+    gap: 0.3rem;
+    padding: 1rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .senarai :global(a:hover) {
+    border-color: var(--orange);
+  }
+  .senarai :global(span),
+  .senarai :global(small) {
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .senarai :global(progress) {
+    width: 100%;
+    height: 0.5rem;
+    accent-color: var(--orange);
+  }
+</style>

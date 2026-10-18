@@ -54,20 +54,6 @@ import { ACCOUNT, TURNSTILE_SITE_KEY } from "../data/site";
       </p>
     </form>
 
-    <div class="form" id="akaun" hidden>
-      <p class="lead">
-        Anda log masuk sebagai <strong id="nama"></strong> (<span id="emel"
-        ></span>).
-      </p>
-      <p class="lead" id="peranan"></p>
-      <div class="actions">
-        <a class="btn btn-primary" href="/pelan-5k">Pelan 5K</a>
-        <button class="btn btn-ghost" type="button" id="keluar"
-          >Log keluar</button
-        >
-      </div>
-    </div>
-
     <p class="lead" id="memuat">Menyemak sesi...</p>
   </PageHero>
 
@@ -96,7 +82,6 @@ import { ACCOUNT, TURNSTILE_SITE_KEY } from "../data/site";
   import { api, json, saya, type Saya } from "../lib/api";
 
   const borang = document.getElementById("borang") as HTMLFormElement;
-  const akaun = document.getElementById("akaun")!;
   const memuat = document.getElementById("memuat")!;
   const mesej = document.getElementById("mesej")!;
   const belumSah = document.getElementById("belum-sah")!;
@@ -106,24 +91,14 @@ import { ACCOUNT, TURNSTILE_SITE_KEY } from "../data/site";
   const turnstile = () =>
     (window as any).turnstile as { reset(): void } | undefined;
 
+  // ?next= hanya laluan dalam laman ini ("/..." tapi bukan "//host" atau "/\host").
+  const next = new URLSearchParams(location.search).get("next") ?? "";
+  const tuju = /^\/(?![/\\])/.test(next) ? next : "/account";
+
   const papar = (s: Saya | null) => {
+    if (s) return location.replace(tuju);
     memuat.hidden = true;
-    borang.hidden = !!s;
-    akaun.hidden = !s;
-    if (!s) return;
-    document.getElementById("nama")!.textContent = s.name;
-    document.getElementById("emel")!.textContent = s.email;
-    const nubi = s.apps?.nubi;
-    document.getElementById("peranan")!.textContent =
-      s.role === "owner"
-        ? "Peranan: owner (akses penuh)."
-        : nubi === "admin"
-          ? "Peranan: Admin Nubi Sport."
-          : nubi === "ahli"
-            ? "Peranan: Ahli Nubi Sport."
-            : "Pengguna berdaftar - belum ahli Nubi Sport. Keahlian diluluskan oleh admin.";
-    const a = document.querySelector("[data-akaun]");
-    if (a) a.textContent = "Akaun";
+    borang.hidden = false;
   };
 
   const ralat = (teks: string) => {
@@ -181,13 +156,6 @@ import { ACCOUNT, TURNSTILE_SITE_KEY } from "../data/site";
       butang.disabled = false;
       turnstile()?.reset(); // token sekali guna
     }
-  });
-
-  document.getElementById("keluar")!.addEventListener("click", async () => {
-    await api("/auth/logout", { method: "POST" }).catch(() => {});
-    // Cookie httpOnly dipadam oleh backend; session_active juga, tapi pastikan UI ikut.
-    document.cookie = "session_active=; Max-Age=0; path=/";
-    location.reload();
   });
 
   saya()

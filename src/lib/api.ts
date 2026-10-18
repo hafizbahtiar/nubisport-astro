@@ -41,6 +41,11 @@ export async function saya(): Promise<Saya | null> {
   return res.ok ? ((await json(res)).data as Saya) : null;
 }
 
+// Satu /me bagi setiap page: AccountLayout dan page di dalamnya kongsi promise yang sama
+// (modul dibundel sekali) - dua panggilan selari boleh mencetuskan dua refresh.
+let sesi: Promise<Saya | null> | null = null;
+export const sesiSaya = () => (sesi ??= saya().catch(() => null));
+
 // Turnstile (skrip dimuat oleh page). Token sekali guna - reset() selepas setiap hantaran.
 const ts = () =>
   (window as any).turnstile as { getResponse(): string | undefined; reset(): void } | undefined;
