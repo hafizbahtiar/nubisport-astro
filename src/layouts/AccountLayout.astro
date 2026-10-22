@@ -1,13 +1,13 @@
 ---
 // Layout selepas log masuk: sidebar (laci di bawah 64rem), navbar atas, kandungan lebar penuh.
 // Satu-satunya pengawal sesi bagi /account/*: tiada sesi -> /login?next=<page ini>.
-// Page di dalamnya ambil pengguna dengan sesiSaya() (src/lib/api.ts) - promise yang sama, satu /me.
+// Page di dalamnya ambil pengguna dengan currentUser() (src/lib/api.ts) - promise yang sama, satu /me.
 import "../styles/global.css";
 import Head from "../components/layout/Head.astro";
 import ConfirmDialog from "../components/ui/ConfirmDialog.astro";
-import Ikon from "../components/ui/Ikon.astro";
-import type { NamaIkon } from "../lib/ikon";
-import Sambungan from "../components/ui/Sambungan.astro";
+import Icon from "../components/ui/Icon.astro";
+import type { IconName } from "../lib/icon";
+import ConnectionNotice from "../components/ui/ConnectionNotice.astro";
 import { SITE } from "../data/site";
 
 interface Props {
@@ -16,27 +16,27 @@ interface Props {
 }
 const { title, description = `Akaun ${SITE.name}.` } = Astro.props;
 
-// ikon: nama Lucide (src/lib/ikon.ts)
-const NAV: { href: string; label: string; ikon: NamaIkon }[] = [
+// ikon: nama Lucide (src/lib/icon.ts)
+const NAV: { href: string; label: string; ikon: IconName }[] = [
   {
     href: "/account",
     label: "Dashboard",
     ikon: "rumah",
   },
   {
-    href: "/account/pelan-5k",
+    href: "/account/plan-5k",
     label: "Pelan 5K",
     ikon: "pemasa",
   },
   {
-    href: "/account/pelan-jarak",
+    href: "/account/distance-plan",
     label: "Pelan 10K / 21K",
     ikon: "bendera",
   },
   { href: "/account/maf", label: "Kira MAF", ikon: "nadi" },
-  { href: "/account/aktiviti", label: "Aktiviti", ikon: "aktiviti" },
+  { href: "/account/activities", label: "Aktiviti", ikon: "aktiviti" },
   {
-    href: "/account/profil",
+    href: "/account/profile",
     label: "Profil",
     ikon: "pengguna",
   },
@@ -64,7 +64,7 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
         <a
           class="app-logo"
           href="/account"
-          aria-label={`${SITE.name} - dashboard`}
+          aria-label={`${SITE.name} - Dashboard`}
         >
           <img src="/brand/logo-on-dark.svg" alt="" width="142" height="40" />
         </a>
@@ -75,7 +75,7 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
           aria-label="Tutup menu"
           data-tutup-sidebar
         >
-          <Ikon nama="tutup" />
+          <Icon name="tutup" />
         </button>
       </div>
       <nav class="app-nav">
@@ -90,7 +90,7 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
                   : undefined
               }
             >
-              <Ikon nama={n.ikon} />
+              <Icon name={n.ikon} />
               {n.label}
             </a>
           ))
@@ -119,7 +119,7 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
           aria-label="Buka menu"
           data-menu
         >
-          <Ikon nama="menu" />
+          <Icon name="menu" />
         </button>
         <h1 class="display app-tajuk">{title}</h1>
         <span class="app-navbar-pengguna">
@@ -128,7 +128,7 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
         </span>
       </header>
       <script is:inline>
-        // Lukis nama/e-mel dari salinan /me (lib/api.ts KUNCI_SAYA) sebelum lukisan pertama.
+        // Lukis nama/e-mel dari salinan /me (lib/api.ts ME_CACHE_KEY) sebelum lukisan pertama.
         try {
           const s = JSON.parse(
             sessionStorage.getItem("nubi:saya") || "null",
@@ -150,15 +150,15 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
       </main>
     </div>
     <ConfirmDialog />
-    <Sambungan />
+    <ConnectionNotice />
   </body>
 </html>
 
 <script>
-  import { api, ingatSaya, sesiSaya } from "../lib/api";
-  import { sahkan } from "../lib/sahkan";
+  import { api, cacheMe, currentUser } from "../lib/api";
+  import { confirmDialog } from "../lib/confirm";
 
-  const s = await sesiSaya();
+  const s = await currentUser();
   if (!s) {
     location.replace(
       `/login?next=${encodeURIComponent(location.pathname + location.search + location.hash)}`,
@@ -216,7 +216,7 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
     if (e.key === "Escape" && !desktop.matches && terbuka()) set(false);
   });
   desktop.addEventListener("change", () => {
-    body.classList.remove("menu-buka"); // laci tak terbawa ke desktop
+    body.classList.remove("menu-buka"); // laci tidak terbawa ke desktop
     segerak();
   });
   segerak();
@@ -224,16 +224,16 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
   document
     .querySelector("[data-keluar]")!
     .addEventListener("click", async () => {
-      const ya = await sahkan({
-        tajuk: "Log keluar?",
-        mesej:
-          "Anda perlu log masuk semula untuk buka dashboard dan pelan versi penuh.",
-        ya: "Log keluar",
+      const ya = await confirmDialog({
+        title: "Log keluar?",
+        message:
+          "Lepas ini, log masuk semula untuk buka Dashboard dan pelan versi penuh.",
+        confirmLabel: "Log keluar",
       });
       if (!ya) return;
       await api("/auth/logout", { method: "POST" }).catch(() => {});
-      ingatSaya(null);
-      // Cookie httpOnly dipadam oleh backend; session_active juga, tapi pastikan UI ikut.
+      cacheMe(null);
+      // Cookie httpOnly dipadam oleh backend; session_active juga, tetapi pastikan UI ikut.
       document.cookie = "session_active=; Max-Age=0; path=/";
       location.replace("/");
     });
@@ -483,7 +483,7 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
     }
     .app-sidebar {
       transform: translateX(-100%);
-      visibility: hidden; /* tak boleh difokus bila tertutup */
+      visibility: hidden; /* tidak boleh difokus bila tertutup */
       transition:
         transform 0.2s ease,
         visibility 0s 0.2s;

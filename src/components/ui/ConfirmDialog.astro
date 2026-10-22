@@ -1,17 +1,17 @@
 ---
-// Dialog sahkan dikongsi - dipasang sekali dalam setiap layout, dibuka dengan sahkan() dari
-// src/lib/sahkan.ts. <dialog> asli: fokus terperangkap, Esc = batal, latar belakang modal.
+// Dialog pengesahan dikongsi - dipasang sekali dalam setiap layout, dibuka dengan confirmDialog() dari
+// src/lib/confirm.ts. <dialog> asli: fokus terperangkap, Esc = batal, latar belakang modal.
 ---
 
 <dialog
-  class="sahkan"
-  id="sahkan"
-  aria-labelledby="sahkan-tajuk"
-  aria-describedby="sahkan-mesej"
+  class="confirm-dialog"
+  id="confirm-dialog"
+  aria-labelledby="confirm-title"
+  aria-describedby="confirm-message"
 >
   <div>
-    <h2 class="display sahkan-tajuk" id="sahkan-tajuk"></h2>
-    <p class="sahkan-mesej" id="sahkan-mesej"></p>
+    <h2 class="display confirm-title" id="confirm-title"></h2>
+    <p class="confirm-message" id="confirm-message"></p>
     <div class="actions">
       <button class="btn btn-outline" type="button" data-batal>Batal</button>
       <button class="btn btn-primary" type="button" data-ya>Ya</button>

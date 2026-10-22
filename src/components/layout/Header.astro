@@ -1,11 +1,11 @@
 ---
 import { SITE } from "../../data/site";
-import Ikon from "../ui/Ikon.astro";
-import type { NamaIkon } from "../../lib/ikon";
+import Icon from "../ui/Icon.astro";
+import type { IconName } from "../../lib/icon";
 
 // Panel "Alat": desktop = butang "Alat" + panel 4 kad; telefon = logo + log masuk + butang menu, dan
 // panel yang sama ditambah Pelan 5K + Tentang / Cara sertai supaya semua page boleh dicapai.
-const ALAT: { href: string; tajuk: string; nota: string; ikon: NamaIkon }[] = [
+const ALAT: { href: string; tajuk: string; nota: string; ikon: IconName }[] = [
   {
     href: "/maf",
     tajuk: "Kira MAF",
@@ -19,13 +19,13 @@ const ALAT: { href: string; tajuk: string; nota: string; ikon: NamaIkon }[] = [
     ikon: "laju",
   },
   {
-    href: "/lumba",
+    href: "/races",
     tajuk: "Kalendar lumba",
     nota: "Larian di Malaysia + simpan ke kalendar",
     ikon: "kalendar",
   },
   {
-    href: "/panduan",
+    href: "/guide",
     tajuk: "Panduan pemula",
     nota: "Kasut, cuaca panas, hidrasi, hari lumba",
     ikon: "buku",
@@ -50,8 +50,8 @@ const kini = Astro.url.pathname.replace(/\/$/, "") || "/";
       <a class="desktop" href="/#cara">Cara sertai</a>
       <a
         class="desktop"
-        href="/pelan-5k"
-        aria-current={kini === "/pelan-5k" ? "page" : undefined}>Pelan 5K</a
+        href="/plan-5k"
+        aria-current={kini === "/plan-5k" ? "page" : undefined}>Pelan 5K</a
       >
       <button
         class="alat-butang"
@@ -61,9 +61,9 @@ const kini = Astro.url.pathname.replace(/\/$/, "") || "/";
         id="butang-alat"
       >
         <span class="desktop">Alat</span><span class="desktop"
-          ><Ikon nama="bawah" /></span
+          ><Icon name="bawah" /></span
         >
-        <span class="telefon" aria-hidden="true"><Ikon nama="menu" /></span>
+        <span class="telefon" aria-hidden="true"><Icon name="menu" /></span>
         <span class="sr-telefon">Menu</span>
       </button>
       <a class="btn btn-ghost btn-sm" href="/login" data-akaun>Log masuk</a>
@@ -75,10 +75,10 @@ const kini = Astro.url.pathname.replace(/\/$/, "") || "/";
       <ul class="alat">
         <li class="telefon">
           <a
-            href="/pelan-5k"
-            aria-current={kini === "/pelan-5k" ? "page" : undefined}
+            href="/plan-5k"
+            aria-current={kini === "/plan-5k" ? "page" : undefined}
           >
-            <span class="alat-ikon"><Ikon nama="pemasa" /></span>
+            <span class="alat-ikon"><Icon name="pemasa" /></span>
             <span>
               <strong>Pelan 5K</strong>
               <small>5K bawah 30 minit, ikut tahap anda</small>
@@ -93,7 +93,7 @@ const kini = Astro.url.pathname.replace(/\/$/, "") || "/";
                 aria-current={kini === a.href ? "page" : undefined}
               >
                 <span class="alat-ikon">
-                  <Ikon nama={a.ikon} />
+                  <Icon name={a.ikon} />
                 </span>
                 <span>
                   <strong>{a.tajuk}</strong>

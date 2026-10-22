@@ -1,13 +1,13 @@
 // MAF (Maximum Aerobic Function) - formula "180" Dr. Phil Maffetone, dikira dalam browser.
 // Sumber: philmaffetone.com/180-formula. Semak: bun scripts/check-maf.ts
 
-export type Kategori = "sakit" | "terganggu" | "konsisten" | "maju";
+export type Condition = "sakit" | "terganggu" | "konsisten" | "maju";
 
 /** Pelarasan (denyut/min) ikut keadaan sekarang - pilih SATU yang paling tepat. */
-export const KATEGORI: Record<Kategori, { label: string; ubah: number }> = {
+export const CONDITIONS: Record<Condition, { label: string; ubah: number }> = {
   sakit: {
     label:
-      "Sedang/baru pulih dari sakit besar (jantung, pembedahan, masuk wad), dalam rehabilitasi, makan ubat secara tetap, atau burnout akibat latihan berlebihan",
+      "Sedang/baru pulih daripada sakit teruk (jantung, pembedahan, masuk wad), dalam pemulihan, makan ubat secara tetap, atau letih melampau akibat latihan berlebihan",
     ubah: -10,
   },
   terganggu: {
@@ -25,34 +25,34 @@ export const KATEGORI: Record<Kategori, { label: string; ubah: number }> = {
   },
 };
 
-export const UMUR_MIN = 10;
-export const UMUR_MAX = 90;
+export const AGE_MIN = 10;
+export const AGE_MAX = 90;
 /** 16 tahun ke bawah: formula 180 tidak digunakan; Maffetone guna 165 tetap. */
-export const UMUR_REMAJA = 16;
-export const MAF_REMAJA = 165;
+export const TEEN_AGE = 16;
+export const TEEN_MAF = 165;
 /** MAF = had atas (sumber). Julat MAF-10 hingga MAF = amalan biasa, dilabel begitu di page. */
-export const LEBAR_ZON = 10;
+export const ZONE_WIDTH = 10;
 
-export type HasilMaf =
+export type MafResult =
   | { ok: false; sebab: string }
   | { ok: true; maf: number; bawah: number; nota: string[] };
 
-export function kiraMaf(umur: number, kategori: Kategori): HasilMaf {
-  if (!Number.isInteger(umur) || umur < UMUR_MIN || umur > UMUR_MAX)
-    return { ok: false, sebab: `Masukkan umur dalam tahun (${UMUR_MIN}-${UMUR_MAX}).` };
-  if (!(kategori in KATEGORI)) return { ok: false, sebab: "Pilih keadaan anda sekarang." };
+export function calcMaf(umur: number, kategori: Condition): MafResult {
+  if (!Number.isInteger(umur) || umur < AGE_MIN || umur > AGE_MAX)
+    return { ok: false, sebab: `Masukkan umur dalam tahun (${AGE_MIN}-${AGE_MAX}).` };
+  if (!(kategori in CONDITIONS)) return { ok: false, sebab: "Pilih keadaan anda sekarang." };
 
   const nota: string[] = [];
   let maf: number;
-  if (umur <= UMUR_REMAJA) {
-    maf = MAF_REMAJA;
-    nota.push(`${UMUR_REMAJA} tahun ke bawah: formula 180 tidak digunakan - ${MAF_REMAJA} sebagai had atas.`);
+  if (umur <= TEEN_AGE) {
+    maf = TEEN_MAF;
+    nota.push(`${TEEN_AGE} tahun ke bawah: formula 180 tak digunakan - ${TEEN_MAF} sebagai had atas.`);
   } else {
-    maf = 180 - umur + KATEGORI[kategori].ubah;
+    maf = 180 - umur + CONDITIONS[kategori].ubah;
     if (umur > 65 && kategori === "maju")
       nota.push("Lebih 65 tahun dalam kategori ini: had boleh dinaikkan sehingga 10 - bukan automatik, nilai diri dengan jujur (atau tanya jurulatih).");
   }
   if (kategori === "sakit")
-    nota.push("Ada ubat (contoh beta-blocker) yang mengubah kadar nadi - tanya doktor sama ada latihan ikut nadi sesuai untuk anda.");
-  return { ok: true, maf, bawah: maf - LEBAR_ZON, nota };
+    nota.push("Ada ubat (contoh penyekat beta) yang mengubah kadar nadi - tanya doktor sama ada latihan ikut nadi sesuai untuk anda.");
+  return { ok: true, maf, bawah: maf - ZONE_WIDTH, nota };
 }

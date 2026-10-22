@@ -14,14 +14,27 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
     <li><span>Keahlian</span><strong id="keahlian">…</strong></li>
   </ul>
 
+  <section class="panel" id="aktif" hidden>
+    <div class="panel-kepala">
+      <h3 class="display">Pelan aktif</h3>
+      <a class="btn btn-outline btn-sm" id="aktif-buka" href="#" hidden
+        >Buka pelan</a
+      >
+    </div>
+    <p class="muted" id="aktif-nota">Menyemak pelan aktif…</p>
+    <p id="aktif-seterusnya" hidden></p>
+    <p id="aktif-minggu" hidden></p>
+    <p id="aktif-minit" hidden></p>
+  </section>
+
   <div class="grid">
     <section class="panel">
       <div class="panel-kepala">
         <h3 class="display">Pelan saya</h3>
         <div class="actions">
-          <a class="btn btn-primary btn-sm" href="/account/pelan-5k">Pelan 5K</a
+          <a class="btn btn-primary btn-sm" href="/account/plan-5k">Pelan 5K</a
           >
-          <a class="btn btn-outline btn-sm" href="/account/pelan-jarak"
+          <a class="btn btn-outline btn-sm" href="/account/distance-plan"
             >Pelan 10K / 21K</a
           >
         </div>
@@ -32,7 +45,7 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
       </div>
       <p class="muted awan-nota">
         Pelan <strong>Awan</strong> ikut akaun anda ke peranti lain. Pelan{" "}
-        <strong>Peranti ini</strong> hanya dalam pelayar ini - hilang jika data pelayar
+        <strong>Peranti ini</strong> hanya dalam pelayar ini - hilang kalau data pelayar
         dikosongkan.
       </p>
       <div class="alert alert-info tukar" id="tukar" hidden>
@@ -47,8 +60,7 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
       </div>
       <ol class="senarai" id="pelan"></ol>
       <p class="muted" id="tiada-pelan" hidden>
-        Belum ada pelan di pelayar ini. Buat satu - ia muncul di sini dengan
-        kemajuannya.
+        Belum ada pelan di pelayar ini. Buat satu - nanti ia muncul di sini dengan kemajuannya.
       </p>
     </section>
 
@@ -61,7 +73,7 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
             data-saya-emel></span>
         </p>
         <p class="muted" id="peranan"></p>
-        <a class="btn btn-outline btn-sm" href="/account/profil">Urus profil</a>
+        <a class="btn btn-outline btn-sm" href="/account/profile">Urus profil</a>
       </section>
       <section class="panel">
         <h3 class="display">Lari ikut nadi</h3>
@@ -75,60 +87,67 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
 </AccountLayout>
 
 <script>
-  import { sesiSaya } from "../../lib/api";
-  import { TAHAP, buatPelan, type Tahap } from "../../lib/pelan-5k";
+  import { currentUser } from "../../lib/api";
+  import { LEVELS, buildPlan, type Level } from "../../lib/plan-5k";
   import {
-    JARAK,
-    buatPelanJarak,
-    jam,
-    type Jarak,
-  } from "../../lib/pelan-jarak";
+    DISTANCES,
+    buildDistancePlan,
+    formatTime,
+    type Distance,
+  } from "../../lib/distance-plan";
   import {
-    KUNCI_DIBUAT,
-    baca,
-    bacaParam,
-    padamPelan,
-  } from "../../lib/pelan-tersimpan";
+    CREATED_KEY,
+    readList,
+    readParams,
+    deletePlan,
+  } from "../../lib/saved-plans";
   import {
-    VERSI_ENJIN,
-    keluarAwan,
-    lencana,
-    senaraiAwan,
-    simpanAwan,
-    tarikAwan,
-    type Awan,
-  } from "../../lib/awan";
-  import { sahkan } from "../../lib/sahkan";
+    ENGINE_VERSION,
+    removeFromCloud,
+    storageBadge,
+    listCloud,
+    saveToCloud,
+    pullCloud,
+    type CloudList,
+  } from "../../lib/cloud-sync";
+  import { confirmDialog } from "../../lib/confirm";
+  import { todayMY, addDays } from "../../lib/date";
+  import {
+    isMember,
+    activitiesBetween,
+    sessionLabel,
+    activePlan,
+  } from "../../lib/plan-sync";
 
   const $ = (id: string) => document.getElementById(id)!;
 
   // Pengawal sesi + nama/e-mel = AccountLayout. Di sini hanya peranan.
-  const s = await sesiSaya();
+  const s = await currentUser();
   if (s) {
     const nubi = s.apps?.nubi;
     $("keahlian").textContent =
       s.role === "owner"
-        ? "Owner"
+        ? "Pemilik"
         : nubi === "admin"
-          ? "Admin"
+          ? "Pentadbir"
           : nubi === "ahli"
             ? "Ahli"
             : "Belum ahli";
     $("peranan").textContent =
       nubi === "ahli" || nubi === "admin" || s.role === "owner"
         ? "Ahli Nubi Sport."
-        : "Pengguna berdaftar - keahlian Nubi Sport diluluskan oleh admin.";
+        : "Pengguna berdaftar - keahlian Nubi Sport diluluskan pentadbir.";
   }
 
-  // Pelan tersimpan (lib/pelan-tersimpan.ts): "pelan-5k:<bulan>-<tahap>-<masa>-<hari>" atau
+  // Pelan tersimpan (lib/saved-plans.ts): "pelan-5k:<bulan>-<tahap>-<masa>-<hari>" atau
   // "pelan-10k|21k:<minggu>-<masa>-<sasaran>-<hari>".
   function butiran(kunci: string) {
     const [jenis, isi] = kunci.split(":");
     const [a, b, c, hari] = isi.split("-");
     if (jenis === "pelan-5k") {
-      const h = buatPelan({
+      const h = buildPlan({
         bulan: +a,
-        tahap: b as Tahap,
+        tahap: b as Level,
         hari: +hari,
         masa5k: c ? +c : undefined,
       });
@@ -136,37 +155,37 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
         h.ok && {
           h,
           nama: `5K · ${a} bulan · ${hari} hari seminggu`,
-          sub: `${TAHAP[b as Tahap]}${c ? ` (${c} min)` : ""}`,
-          href: `/account/pelan-5k?${new URLSearchParams(bacaParam(kunci) ?? { bulan: a, tahap: b, hari, ...(c ? { masa: c } : {}) })}`,
+          sub: `${LEVELS[b as Level]}${c ? ` (${c} min)` : ""}`,
+          href: `/account/plan-5k?${new URLSearchParams(readParams(kunci) ?? { bulan: a, tahap: b, hari, ...(c ? { masa: c } : {}) })}`,
         }
       );
     }
-    const jarak = jenis.slice("pelan-".length) as Jarak;
-    if (!(jarak in JARAK)) return false;
-    const h = buatPelanJarak({
+    const jarak = jenis.slice("pelan-".length) as Distance;
+    if (!(jarak in DISTANCES)) return false;
+    const h = buildDistancePlan({
       jarak,
       minggu: +a,
       masa: +b,
       sasaran: c ? +c : undefined,
       hari: +hari,
     });
-    const k = JARAK[jarak];
+    const k = DISTANCES[jarak];
     return (
       h.ok && {
         h,
         nama: `${k.nama} · ${a} minggu · ${hari} hari seminggu`,
-        sub: `${k.prasyarat.nama} ${b} min → ${c ? `bawah ${jam(+c)}` : "habis"}`,
-        href: `/account/pelan-jarak?${new URLSearchParams(bacaParam(kunci) ?? { jarak, minggu: a, masa: b, hari, ...(c ? { sasaran: c } : {}) })}`,
+        sub: `${k.prasyarat.nama} ${b} min → ${c ? `bawah ${formatTime(+c)}` : "habis"}`,
+        href: `/account/distance-plan?${new URLSearchParams(readParams(kunci) ?? { jarak, minggu: a, masa: b, hari, ...(c ? { sasaran: c } : {}) })}`,
       }
     );
   }
 
   const senarai = $("pelan");
-  // awan: null = belum tahu / tak dapat dicapai. menukar = pelan peranti yang menunggu slot awan.
-  let awan: Awan | null = null;
+  // awan: null = belum tahu / tidak dapat dicapai. menukar = pelan peranti yang menunggu slot awan.
+  let awan: CloudList | null = null;
   let menukar: string | null = null;
   const segar = async () => {
-    awan = await senaraiAwan();
+    awan = await listCloud();
     papar();
   };
   // Butang dalam item: [teks, tindakan, kelas]
@@ -195,10 +214,10 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
     let jumlahSiap = 0;
     const diAwan = new Set(awan?.items.map((i) => i.key));
     const versiLama = new Set(
-      awan?.items.filter((i) => i.engine < VERSI_ENJIN).map((i) => i.key),
+      awan?.items.filter((i) => i.engine < ENGINE_VERSION).map((i) => i.key),
     );
-    // Awan dulu, kemudian peranti ini (susunan dibuat).
-    const kunci = [...new Set(baca(KUNCI_DIBUAT))].sort(
+    // Awan dahulu, kemudian peranti ini (susunan dibuat).
+    const kunci = [...new Set(readList(CREATED_KEY))].sort(
       (x, y) => +diAwan.has(y) - +diAwan.has(x),
     );
     for (const k of kunci) {
@@ -206,7 +225,7 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
       if (!p) continue;
       const { h, nama } = p;
       const jumlah = h.minggu.reduce((n, w) => n + w.sesi.length, 0);
-      const siap = new Set(baca(k)).size;
+      const siap = new Set(readList(k)).size;
       jumlahSiap += siap;
       const awanIni = diAwan.has(k);
       const li = document.createElement("li");
@@ -217,7 +236,7 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
           <progress max="${jumlah}" value="${siap}"></progress>
           <small>${siap} / ${jumlah} sesi siap · ${Math.round((siap / jumlah) * 100)}%</small>
         </a>
-        <div class="item-bawah">${awan ? lencana(awanIni) : ""}${
+        <div class="item-bawah">${awan ? storageBadge(awanIni) : ""}${
           versiLama.has(k)
             ? `<span class="muted kecil">Pelan dikemas kini sejak disimpan</span>`
             : ""
@@ -229,7 +248,7 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
           butang(
             "Ganti dengan pelan ini",
             async () => {
-              const r = await simpanAwan(menukar!, k);
+              const r = await saveToCloud(menukar!, k);
               if (r !== "ok") return gagal();
               menukar = null;
               await segar();
@@ -240,7 +259,7 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
       else if (awan && !menukar && awanIni)
         kotak.append(
           butang("Keluarkan dari awan", async () => {
-            if (!(await keluarAwan(k))) return gagal();
+            if (!(await removeFromCloud(k))) return gagal();
             await segar();
           }),
         );
@@ -251,7 +270,7 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
               menukar = k;
               return papar();
             }
-            const r = await simpanAwan(k);
+            const r = await saveToCloud(k);
             if (r === "penuh") menukar = k;
             else if (r === "ralat") return gagal();
             await segar();
@@ -260,15 +279,15 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
       if (!menukar)
         kotak.append(
           butang("Padam", async () => {
-            const ya = await sahkan({
-              tajuk: "Padam pelan ini?",
-              mesej: `Pelan ${nama} dan ${siap} tanda siap akan dibuang dari pelayar ini${awanIni ? " dan dari awan" : ""}. Tindakan ini tak boleh diundur.`,
-              ya: "Padam",
-              bahaya: true,
+            const ya = await confirmDialog({
+              title: "Padam pelan ini?",
+              message: `Pelan ${nama} dan ${siap} tanda siap akan dibuang dari pelayar ini${awanIni ? " dan dari awan" : ""}. Tindakan ini tak boleh dibatalkan.`,
+              confirmLabel: "Padam",
+              danger: true,
             });
             if (!ya) return;
-            padamPelan(k);
-            if (awanIni) await keluarAwan(k);
+            deletePlan(k);
+            if (awanIni) await removeFromCloud(k);
             await segar();
           }),
         );
@@ -301,10 +320,62 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
 
   papar();
   // Gabung awan (pelan dari peranti lain + tanda siap terkini), kemudian lukis dengan lencana.
-  awan = await tarikAwan();
+  awan = await pullCloud();
   if (!awan) gagal();
   papar();
   if (location.hash === "#awan") $("awan").scrollIntoView();
+
+  // Pelan aktif (ahli sahaja, lib/plan-sync.ts): sesi seterusnya + minggu ini (Isnin-Ahad, waktu Malaysia).
+  if (isMember(s)) {
+    $("aktif").hidden = false;
+    const p = await activePlan();
+    if (!p)
+      $("aktif-nota").textContent =
+        'Tiada pelan aktif. Buka pelan awan yang ada tarikh mula dan tekan "Jadikan pelan aktif" - aktiviti Strava yang dimuat naik akan tanda sesinya siap.';
+    else {
+      const baris = (id: string, teks: string) => {
+        $(id).textContent = teks;
+        $(id).hidden = false;
+      };
+      const hariIni = todayMY();
+      const isnin = addDays(
+        hariIni,
+        -((new Date(`${hariIni}T00:00:00Z`).getUTCDay() + 6) % 7),
+      );
+      const ahad = addDays(isnin, 6);
+      const siap = new Set(readList(p.kunci));
+      const lagi = p.sesi.find((x) => x.tarikh >= hariIni && !siap.has(x.id));
+      const minggu = p.sesi.filter((x) => x.tarikh >= isnin && x.tarikh <= ahad);
+      const akt = (await activitiesBetween(isnin, addDays(isnin, 7))) ?? [];
+      const sebenar = akt
+        .filter(
+          (a) =>
+            (a.sport === "run" || a.sport === "walk") &&
+            todayMY(new Date(a.startedAt)) >= isnin,
+        )
+        .reduce((n, a) => n + a.movingS / 60, 0);
+      const href = butiran(p.kunci);
+      if (href) {
+        ($("aktif-buka") as HTMLAnchorElement).href = href.href;
+        $("aktif-buka").hidden = false;
+        $("aktif-nota").textContent = href.nama;
+      }
+      baris(
+        "aktif-seterusnya",
+        lagi
+          ? `Sesi seterusnya: ${new Date(`${lagi.tarikh}T00:00:00`).toLocaleDateString("ms-MY", { weekday: "long", day: "numeric", month: "long" })} - ${sessionLabel(lagi)} (${lagi.minit} min)`
+          : "Tiada lagi sesi akan datang.",
+      );
+      baris(
+        "aktif-minggu",
+        `Minggu ini: ${minggu.filter((x) => siap.has(x.id)).length} / ${minggu.length} sesi siap`,
+      );
+      baris(
+        "aktif-minit",
+        `Minit minggu ini: ${minggu.reduce((n, x) => n + x.minit, 0)} dirancang, ${Math.round(sebenar)} sebenar`,
+      );
+    }
+  }
 
   // Had MAF terakhir (Maf.astro versi akaun).
   try {

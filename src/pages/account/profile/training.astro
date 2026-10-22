@@ -1,0 +1,134 @@
+---
+// Profil Nubi - Maklumat latihan: tarikh lahir, keadaan MAF, hari, masa 5K/10K (lib/profile.ts,
+// app_items `profil`). Mengisi borang MAF dan pelan; URL pelan tetap menang.
+import ProfileShell from "../../../components/ProfileShell.astro";
+import Field from "../../../components/ui/Field.astro";
+import Alert from "../../../components/ui/Alert.astro";
+import ChipGroup from "../../../components/ui/ChipGroup.astro";
+import DatePicker from "../../../components/ui/DatePicker.astro";
+import { CONDITIONS } from "../../../lib/maf";
+import { DAYS_PER_WEEK, TIME_MAX, TIME_MIN } from "../../../lib/plan-5k";
+import { DISTANCES } from "../../../lib/distance-plan";
+
+const p10 = DISTANCES["21k"].prasyarat;
+const hariIni = new Date().toISOString().slice(0, 10);
+---
+
+<ProfileShell title="Latihan">
+  <section class="panel" aria-labelledby="t-latihan">
+    <h2 class="display" id="t-latihan">Maklumat latihan</h2>
+    <p class="muted">
+      Isi sekali, dan borang MAF serta pelan akan terisi sendiri (pautan pelan tetap diutamakan). Semua medan pilihan - medan kosong tak disimpan. Hanya anda yang boleh lihat.
+    </p>
+    <form class="form" id="latihan" novalidate>
+      <Field
+        label="Tarikh lahir"
+        for="lahir-text"
+        hint="Untuk kira umur (had nadi MAF)."
+      >
+        <DatePicker id="lahir" name="lahir" min="1930-01-01" max={hariIni} />
+      </Field>
+      <ChipGroup
+        legend="Keadaan anda sekarang (MAF)"
+        name="keadaan"
+        required={false}
+        stacked
+        options={Object.entries(CONDITIONS).map(([value, k]) => ({
+          value,
+          label: k.label,
+        }))}
+      />
+      <ChipGroup
+        legend="Hari lari seminggu"
+        name="hari"
+        required={false}
+        options={DAYS_PER_WEEK.map((h) => ({ value: h, label: `${h} hari` }))}
+      />
+      <Field label="Masa 5K terkini (minit)">
+        <input
+          class="input"
+          type="number"
+          name="masa5k"
+          min={TIME_MIN}
+          max={TIME_MAX}
+          step="1"
+          inputmode="numeric"
+        />
+      </Field>
+      <Field label="Masa 10K terkini (minit)">
+        <input
+          class="input"
+          type="number"
+          name="masa10k"
+          min={p10.min}
+          max={p10.max}
+          step="1"
+          inputmode="numeric"
+        />
+      </Field>
+      <Alert variant="danger" id="mesej-latihan" hidden />
+      <Alert variant="success" id="ok-latihan" hidden />
+      <button class="btn btn-primary" type="submit">Simpan</button>
+    </form>
+  </section>
+</ProfileShell>
+
+<script>
+  import {
+    readProfile,
+    saveProfile,
+    ageOn,
+    type TrainingProfile,
+  } from "../../../lib/profile";
+
+  const papar = (id: string, teks: string | null) => {
+    const el = document.getElementById(id)!;
+    el.textContent = teks ?? "";
+    el.hidden = !teks;
+  };
+
+  const latihan = document.getElementById("latihan") as HTMLFormElement;
+  const MEDAN = ["lahir", "keadaan", "hari", "masa5k", "masa10k"] as const;
+  const medan = (k: string) =>
+    latihan.elements.namedItem(k) as HTMLInputElement | RadioNodeList;
+  void readProfile().then((p) => {
+    for (const k of MEDAN) {
+      const v = p[k];
+      if (!v) continue;
+      medan(k).value = v;
+      if (k === "lahir")
+        (medan(k) as HTMLInputElement).dispatchEvent(new Event("change")); // DatePicker
+    }
+  });
+  latihan.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    papar("ok-latihan", null);
+    const p: TrainingProfile = Object.fromEntries(
+      MEDAN.map((k) => [k, String(medan(k).value).trim()]),
+    );
+    const salah =
+      p.lahir && ageOn(p.lahir) === null
+        ? "Tarikh lahir tak sah."
+        : [
+              ...latihan.querySelectorAll<HTMLInputElement>(
+                "input[type=number]",
+              ),
+            ].some((i) => !i.checkValidity())
+          ? "Semak masa 5K / 10K - di luar julat."
+          : null;
+    papar("mesej-latihan", salah);
+    if (salah) return;
+    const butang = latihan.querySelector<HTMLButtonElement>(
+      "button[type=submit]",
+    )!;
+    butang.disabled = true;
+    const ok = await saveProfile(p);
+    butang.disabled = false;
+    if (ok) papar("ok-latihan", "Maklumat latihan disimpan.");
+    else
+      papar(
+        "mesej-latihan",
+        "Tak dapat simpan sekarang. Semak internet anda dan cuba lagi.",
+      );
+  });
+</script>

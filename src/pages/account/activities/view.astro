@@ -1,0 +1,297 @@
+---
+// Detail satu aktiviti: peta laluan (MapLibre GL + OpenFreeMap) dan ringkasan. /account/activities/view?id=<id>.
+// Laluan dilukis di pelayar dari fail .fit asal (GET /me/apps/nubi/activities/:id/file - milik
+// sendiri sahaja); Worker tidak menghurai apa-apa. Peta hanya untuk ahli itu - tiada perkongsian.
+// Peta: maplibre-gl dimuat malas (JS + CSS hanya di page ini), gaya vektor OpenFreeMap (GAYA).
+// Atribusi datang dari gaya dan wajib kelihatan. Tiada WebGL = mesej gagal.
+import AccountLayout from "../../../layouts/AccountLayout.astro";
+import Alert from "../../../components/ui/Alert.astro";
+import Icon from "../../../components/ui/Icon.astro";
+---
+
+<AccountLayout title="Aktiviti">
+  <a class="balik" href="/account/activities"><Icon name="kiri" />Semua aktiviti</a>
+
+  <Alert variant="info" title="Ciri untuk ahli" id="bukan-ahli" hidden>
+    <p>Import aktiviti Strava terbuka untuk ahli Nubi Sport.</p>
+  </Alert>
+  <Alert variant="danger" id="tiada" hidden>
+    <p>Aktiviti ini tiada, atau bukan milik anda.</p>
+  </Alert>
+
+  <div id="isi" hidden>
+    <section class="panel">
+      <div class="panel-kepala">
+        <div class="tajuk">
+          <h3 class="display" id="nama"></h3>
+          <p class="muted" id="bila"></p>
+          <p id="sesi-pelan" hidden></p>
+        </div>
+        <button class="btn btn-outline btn-sm" type="button" id="padam">Padam</button>
+      </div>
+
+      <div class="peta" id="peta" aria-label="Peta laluan"></div>
+      <p class="muted" id="peta-status">Memuatkan laluan…</p>
+      <p class="muted kecil">Laluan ini hanya kelihatan kepada anda.</p>
+    </section>
+
+    <ul class="stat" aria-label="Ringkasan">
+      <li><span>Jarak</span><strong id="s-jarak"></strong></li>
+      <li><span>Masa</span><strong id="s-masa"></strong></li>
+      <li><span>Pace</span><strong id="s-pace"></strong></li>
+      <li><span>Ketinggian naik</span><strong id="s-tinggi"></strong></li>
+      <li><span>Nadi purata</span><strong id="s-nadi"></strong></li>
+      <li><span>Nadi maks</span><strong id="s-nadi-maks"></strong></li>
+    </ul>
+  </div>
+</AccountLayout>
+
+<script>
+  import { api, json, currentUser } from "../../../lib/api";
+  import { confirmDialog } from "../../../lib/confirm";
+  import { SPORT_LABELS, formatKm, fitRoute, paceFromDistance, formatDuration, type Sport } from "../../../lib/activity-file";
+  import { sessionLabel, sessionFor } from "../../../lib/plan-sync";
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const BASE = "/me/apps/nubi/activities";
+  // OpenFreeMap (openfreemap.org): percuma, tiada kunci API/had paparan, guna komersial dibenarkan.
+  // Positron = asas kelabu supaya laluan oren menonjol. Tukar penyedia / hos sendiri = tukar URL ini.
+  const GAYA = "https://tiles.openfreemap.org/styles/positron";
+
+  interface Aktiviti {
+    id: number;
+    startedAt: string;
+    sport: Sport;
+    name: string | null;
+    distanceM: number;
+    movingS: number;
+    elapsedS: number;
+    elevationGainM: number | null;
+    avgHr: number | null;
+    maxHr: number | null;
+  }
+
+  async function mula() {
+    const s = await currentUser();
+    const nubi = s?.apps?.nubi;
+    if (!(s?.role === "owner" || nubi === "ahli" || nubi === "admin")) {
+      $("bukan-ahli").hidden = false;
+      return;
+    }
+    const id = Number(new URLSearchParams(location.search).get("id"));
+    const r = Number.isSafeInteger(id) && id > 0 ? await api(`${BASE}/${id}`) : null;
+    if (!r?.ok) {
+      $("tiada").hidden = false;
+      return;
+    }
+    const a = (await json(r)).data as Aktiviti;
+    $("isi").hidden = false;
+
+    const nama = a.name || SPORT_LABELS[a.sport];
+    $("nama").textContent = nama; // teks pengguna - textContent sahaja
+    document.title = `${nama} - ${document.title}`;
+    $("bila").textContent = `${SPORT_LABELS[a.sport]}, ${new Date(a.startedAt).toLocaleString("ms-MY", {
+      timeZone: "Asia/Kuala_Lumpur", weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
+    })}`;
+    void sessionFor(a).then((sesi) => {
+      if (!sesi) return;
+      $("sesi-pelan").textContent = `Sesi pelan: ${sessionLabel(sesi)}`;
+      $("sesi-pelan").hidden = false;
+    });
+    $("s-jarak").textContent = formatKm(a.distanceM);
+    $("s-masa").textContent = formatDuration(a.movingS);
+    $("s-pace").textContent = paceFromDistance(a.distanceM, a.movingS) ?? "-";
+    $("s-tinggi").textContent = a.elevationGainM == null ? "-" : `${Math.round(a.elevationGainM)} m`;
+    $("s-nadi").textContent = a.avgHr ? `${Math.round(a.avgHr)} bpm` : "-";
+    $("s-nadi-maks").textContent = a.maxHr ? `${Math.round(a.maxHr)} bpm` : "-";
+
+    $("padam").addEventListener("click", async () => {
+      const ya = await confirmDialog({
+        title: "Padam aktiviti ini?",
+        message: `${nama} dan fail asalnya akan dibuang. Tindakan ini tak boleh dibatalkan.`,
+        confirmLabel: "Padam",
+        danger: true,
+      });
+      if (!ya) return;
+      const d = await api(`${BASE}/${a.id}`, { method: "DELETE" });
+      if (d.ok || d.status === 404) location.href = "/account/activities";
+      else $("peta-status").textContent = "Aktiviti tak dapat dipadam. Semak sambungan dan cuba lagi.";
+    });
+
+    await peta(a.id);
+  }
+
+  async function peta(id: number) {
+    const status = $("peta-status");
+    try {
+      const f = await api(`${BASE}/${id}/file`);
+      if (!f.ok) throw new Error();
+      const titik = await fitRoute(await f.arrayBuffer());
+      if (titik.length < 2) {
+        $("peta").hidden = true;
+        status.textContent = "Tiada laluan GPS dalam fail ini (contoh larian treadmill).";
+        return;
+      }
+      const [ml, pekerja] = await Promise.all([
+        import("maplibre-gl"),
+        // Vite tidak nampak URL worker maplibre (dikira masa jalan) -> emit sendiri dan beritahu.
+        import("maplibre-gl/dist/maplibre-gl-worker.mjs?url"),
+        import("maplibre-gl/dist/maplibre-gl.css"),
+      ]);
+      ml.setWorkerUrl(pekerja.default);
+      const warna = getComputedStyle(document.documentElement);
+      const oren = warna.getPropertyValue("--orange").trim() || "#ff5a1f";
+      const navy = warna.getPropertyValue("--navy").trim() || "#0a1a33";
+      const lonLat = titik.map(([lat, lon]) => [lon, lat] as [number, number]);
+      const lon = lonLat.map((t) => t[0]), lat = lonLat.map((t) => t[1]);
+      // Tiada WebGL = konstruktor melontar -> catch di bawah.
+      const map = new ml.Map({
+        container: "peta",
+        style: GAYA,
+        bounds: [Math.min(...lon), Math.min(...lat), Math.max(...lon), Math.max(...lat)],
+        fitBoundsOptions: { padding: 24 },
+        scrollZoom: false, // page tetap boleh skrol; zum guna butang / cubit
+      });
+      map.addControl(new ml.NavigationControl({ showCompass: false }));
+      await new Promise((ok, gagal) => {
+        map.once("load", ok);
+        map.once("error", (e) => gagal(e.error));
+      });
+      map.addSource("laluan", {
+        type: "geojson",
+        data: { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: lonLat } },
+      });
+      const garis = { "line-join": "round", "line-cap": "round" } as const;
+      map.addLayer({ id: "laluan-tepi", type: "line", source: "laluan", layout: garis, paint: { "line-color": "#fff", "line-width": 7 } });
+      map.addLayer({ id: "laluan", type: "line", source: "laluan", layout: garis, paint: { "line-color": oren, "line-width": 4 } });
+      for (const [label, isi, titikNya] of [["Mula", navy, lonLat[0]], ["Tamat", oren, lonLat.at(-1)!]] as const) {
+        const el = document.createElement("div");
+        el.className = "penanda";
+        el.style.background = isi;
+        el.title = label;
+        el.setAttribute("role", "img");
+        el.setAttribute("aria-label", label);
+        new ml.Marker({ element: el }).setLngLat(titikNya).addTo(map);
+      }
+      status.hidden = true;
+    } catch {
+      $("peta").hidden = true;
+      status.textContent = "Laluan tak dapat dimuatkan. Muat semula halaman untuk cuba lagi.";
+    }
+  }
+
+  await mula();
+</script>
+
+<style>
+  .balik {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    color: var(--navy);
+    text-decoration: none;
+  }
+  .balik:hover {
+    text-decoration: underline;
+  }
+
+  /* .stat dan .panel = gaya dashboard (src/pages/account/index.astro). */
+  .stat {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1rem;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+  }
+  .stat li,
+  .panel {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+  }
+  .stat li {
+    display: grid;
+    gap: 0.25rem;
+    padding: 1rem 1.25rem;
+  }
+  .stat span {
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .stat strong {
+    font-family: var(--display);
+    font-style: italic;
+    font-size: 2rem;
+    color: var(--navy);
+  }
+  @media (max-width: 36rem) {
+    .stat {
+      gap: 0.5rem;
+    }
+    .stat li {
+      padding: 0.75rem;
+    }
+    .stat span {
+      font-size: 0.68rem;
+      letter-spacing: 0.06em;
+    }
+    .stat strong {
+      font-size: 1.35rem;
+      line-height: 1.1;
+    }
+  }
+
+  .panel {
+    display: grid;
+    gap: 0.75rem;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+  }
+  .panel h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--navy);
+    overflow-wrap: anywhere;
+  }
+  .panel p {
+    margin: 0;
+  }
+  .panel-kepala {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+  .tajuk {
+    display: grid;
+    gap: 0.2rem;
+    min-width: 0;
+  }
+  .kecil {
+    font-size: 0.8rem;
+  }
+
+  .peta {
+    height: clamp(16rem, 55vh, 30rem);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    z-index: 0; /* kawalan peta (z-index 2) jangan atasi laci sidebar */
+    isolation: isolate;
+  }
+  /* Penanda dicipta dalam skrip -> perlu :global */
+  .peta :global(.penanda) {
+    width: 14px;
+    height: 14px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px rgb(0 0 0 / 0.25);
+  }
+</style>

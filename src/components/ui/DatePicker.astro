@@ -7,12 +7,12 @@
  *   `?mula=2027-02-08` dan `form.elements[name].value = "..."` kekal berfungsi: set nilai,
  *   hantar event `change`, kotak teks ikut sendiri.
  * - Label: <Field label="..." for={`${id}-text`}>.
- * - Kalendar: dropdown bulan/tahun, grid Isnin dulu, anak panah/PageUp/PageDown/Home/End/
+ * - Kalendar: dropdown bulan/tahun, grid Isnin dahulu, anak panah/PageUp/PageDown/Home/End/
  *   Enter/Esc, "Hari ini" dan "Kosongkan". Gaya dalam global.css (bahagian Tarikh).
- * Logik: src/lib/tarikh.ts (semak: bun scripts/check-tarikh.ts).
+ * Logik: src/lib/date.ts (semak: bun scripts/check-date.ts).
  */
-import Ikon from "./Ikon.astro";
-import { BULAN, HARI_PENDEK, isoKeDmy } from "../../lib/tarikh";
+import Icon from "./Icon.astro";
+import { MONTH_NAMES, SHORT_DAYS, isoToDmy } from "../../lib/date";
 
 interface Props {
   id: string;
@@ -52,7 +52,7 @@ const tahun = Array.from(
       autocomplete="off"
       placeholder="dd/mm/yyyy"
       maxlength="10"
-      value={isoKeDmy(value)}
+      value={isoToDmy(value)}
       required={required}
     />
     <button
@@ -64,7 +64,7 @@ const tahun = Array.from(
       aria-expanded="false"
       aria-controls={`${id}-panel`}
     >
-      <Ikon nama="kalendar" />
+      <Icon name="kalendar" />
     </button>
   </div>
   <p class="dp-ralat" data-error aria-live="polite"></p>
@@ -79,11 +79,11 @@ const tahun = Array.from(
   >
     <div class="dp-kepala">
       <button class="dp-nav" type="button" data-prev aria-label="Bulan sebelum">
-        <Ikon nama="kiri" />
+        <Icon name="kiri" />
       </button>
       <div class="dp-tajuk">
         <select class="dp-pilih" data-month aria-label="Bulan">
-          {BULAN.map((b, i) => <option value={i + 1}>{b}</option>)}
+          {MONTH_NAMES.map((b, i) => <option value={i + 1}>{b}</option>)}
         </select>
         <select class="dp-pilih" data-year aria-label="Tahun">
           {tahun.map((y) => <option value={y}>{y}</option>)}
@@ -95,12 +95,12 @@ const tahun = Array.from(
         data-next
         aria-label="Bulan seterusnya"
       >
-        <Ikon nama="kanan" />
+        <Icon name="kanan" />
       </button>
     </div>
     <table class="dp-grid" role="grid">
       <thead>
-        <tr>{HARI_PENDEK.map((h) => <th scope="col">{h}</th>)}</tr>
+        <tr>{SHORT_DAYS.map((h) => <th scope="col">{h}</th>)}</tr>
       </thead>
       <tbody data-days></tbody>
     </table>
@@ -113,13 +113,13 @@ const tahun = Array.from(
 
 <script>
   import {
-    dmyKeIso,
-    gridBulan,
-    hariIniMY,
-    isoKeDmy,
-    tambahBulan,
-    tambahHari,
-  } from "../../lib/tarikh";
+    dmyToIso,
+    monthGrid,
+    todayMY,
+    isoToDmy,
+    addMonths,
+    addDays,
+  } from "../../lib/date";
 
   function pasang(root: HTMLElement) {
     if (root.dataset.bound === "1") return;
@@ -136,7 +136,7 @@ const tahun = Array.from(
     const min = root.dataset.min!;
     const max = root.dataset.max!;
     const clamp = (iso: string) => (iso < min ? min : iso > max ? max : iso);
-    let focusIso = clamp(hidden.value || hariIniMY());
+    let focusIso = clamp(hidden.value || todayMY());
 
     const showError = (msg: string) => {
       error.textContent = msg;
@@ -145,7 +145,7 @@ const tahun = Array.from(
     };
     const setValue = (iso: string) => {
       showError("");
-      text.value = isoKeDmy(iso);
+      text.value = isoToDmy(iso);
       if (hidden.value === iso) return;
       hidden.value = iso;
       hidden.dispatchEvent(new Event("input", { bubbles: true }));
@@ -156,8 +156,8 @@ const tahun = Array.from(
       const [y, m] = focusIso.split("-").map(Number);
       monthSel.value = String(m);
       yearSel.value = String(y);
-      const today = hariIniMY();
-      const cells = gridBulan(y, m);
+      const today = todayMY();
+      const cells = monthGrid(y, m);
       days.replaceChildren(
         ...Array.from({ length: 6 }, (_, w) => {
           const tr = document.createElement("tr");
@@ -173,7 +173,7 @@ const tahun = Array.from(
             b.toggleAttribute("data-outside", !c.dalamBulan);
             b.toggleAttribute("data-today", c.iso === today);
             b.setAttribute("aria-selected", String(c.iso === hidden.value));
-            b.setAttribute("aria-label", isoKeDmy(c.iso));
+            b.setAttribute("aria-label", isoToDmy(c.iso));
             td.append(b);
             tr.append(td);
           }
@@ -191,7 +191,7 @@ const tahun = Array.from(
 
     const isOpen = () => !panel.hidden;
     const open = () => {
-      focusIso = clamp(hidden.value || hariIniMY());
+      focusIso = clamp(hidden.value || todayMY());
       render();
       panel.hidden = false;
       openBtn.setAttribute("aria-expanded", "true");
@@ -220,11 +220,11 @@ const tahun = Array.from(
     const commit = () => {
       const raw = text.value.trim();
       if (!raw) return setValue("");
-      const iso = dmyKeIso(raw);
-      if (!iso) return showError("Tarikh tidak sah. Guna format dd/mm/yyyy.");
+      const iso = dmyToIso(raw);
+      if (!iso) return showError("Tarikh tak sah. Guna format dd/mm/yyyy.");
       if (iso < min || iso > max)
         return showError(
-          `Tarikh mesti antara ${isoKeDmy(min)} dan ${isoKeDmy(max)}.`,
+          `Tarikh mesti antara ${isoToDmy(min)} dan ${isoToDmy(max)}.`,
         );
       setValue(iso);
     };
@@ -237,17 +237,17 @@ const tahun = Array.from(
     openBtn.addEventListener("click", () => (isOpen() ? close() : open()));
     $<HTMLButtonElement>("[data-prev]").addEventListener(
       "click",
-      () => ((focusIso = clamp(tambahBulan(focusIso, -1))), render()),
+      () => ((focusIso = clamp(addMonths(focusIso, -1))), render()),
     );
     $<HTMLButtonElement>("[data-next]").addEventListener(
       "click",
-      () => ((focusIso = clamp(tambahBulan(focusIso, 1))), render()),
+      () => ((focusIso = clamp(addMonths(focusIso, 1))), render()),
     );
     // Dropdown bulan/tahun: hari yang sama di bulan dipilih (31 -> 30/28).
     const jump = () => {
       const [y, m] = focusIso.split("-").map(Number);
       focusIso = clamp(
-        tambahBulan(
+        addMonths(
           focusIso,
           (Number(yearSel.value) - y) * 12 + Number(monthSel.value) - m,
         ),
@@ -257,7 +257,7 @@ const tahun = Array.from(
     monthSel.addEventListener("change", jump);
     yearSel.addEventListener("change", jump);
     $<HTMLButtonElement>("[data-today]").addEventListener("click", () =>
-      pick(clamp(hariIniMY())),
+      pick(clamp(todayMY())),
     );
     $<HTMLButtonElement>("[data-clear]").addEventListener("click", () =>
       pick(""),
@@ -272,14 +272,14 @@ const tahun = Array.from(
     days.addEventListener("keydown", (e) => {
       const dow = (new Date(`${focusIso}T00:00:00Z`).getUTCDay() + 6) % 7;
       const steps: Record<string, () => string> = {
-        ArrowLeft: () => tambahHari(focusIso, -1),
-        ArrowRight: () => tambahHari(focusIso, 1),
-        ArrowUp: () => tambahHari(focusIso, -7),
-        ArrowDown: () => tambahHari(focusIso, 7),
-        Home: () => tambahHari(focusIso, -dow),
-        End: () => tambahHari(focusIso, 6 - dow),
-        PageUp: () => tambahBulan(focusIso, e.shiftKey ? -12 : -1),
-        PageDown: () => tambahBulan(focusIso, e.shiftKey ? 12 : 1),
+        ArrowLeft: () => addDays(focusIso, -1),
+        ArrowRight: () => addDays(focusIso, 1),
+        ArrowUp: () => addDays(focusIso, -7),
+        ArrowDown: () => addDays(focusIso, 7),
+        Home: () => addDays(focusIso, -dow),
+        End: () => addDays(focusIso, 6 - dow),
+        PageUp: () => addMonths(focusIso, e.shiftKey ? -12 : -1),
+        PageDown: () => addMonths(focusIso, e.shiftKey ? 12 : 1),
       };
       if (steps[e.key]) {
         e.preventDefault();
@@ -299,10 +299,10 @@ const tahun = Array.from(
     // Kod yang set input tersembunyi (contoh isi dari URL) hantar `change`.
     hidden.addEventListener("change", () => {
       showError("");
-      text.value = isoKeDmy(hidden.value);
+      text.value = isoToDmy(hidden.value);
     });
-    // Skrip page mungkin dah isi nilai (dari URL) sebelum komponen ini dipasang.
-    if (hidden.value) text.value = isoKeDmy(hidden.value);
+    // Skrip page mungkin sudah isi nilai (dari URL) sebelum komponen ini dipasang.
+    if (hidden.value) text.value = isoToDmy(hidden.value);
   }
 
   document.querySelectorAll<HTMLElement>("[data-datepicker]").forEach(pasang);

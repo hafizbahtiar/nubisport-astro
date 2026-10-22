@@ -3,7 +3,7 @@
 // 401 -> satu /auth/refresh (dikongsi) + satu cubaan semula. Jangan panggil refresh selari:
 // refresh token berputar, panggilan kedua akan gagal.
 
-export interface Saya {
+export interface CurrentUser {
   id: number;
   name: string;
   email: string;
@@ -36,45 +36,45 @@ export async function api(path: string, init: RequestInit = {}): Promise<Respons
 export const json = (res: Response): Promise<Record<string, any>> => res.json().catch(() => ({}));
 
 // Salinan /me dalam sessionStorage (per tab): AccountLayout lukis nama/e-mel serta-merta pada setiap
-// page (tiada kelip "…"), dan /me dipanggil semula hanya bila salinan lebih tua dari SEGAR_MS.
+// page (tiada kelip "…"), dan /me dipanggil semula hanya bila salinan lebih tua daripada SEGAR_MS.
 // ponytail: peranan/nama yang berubah di tempat lain lambat sampai 5 min; data pelan memang setempat
 // dan setiap tulis ke API tetap disemak backend (401 -> refresh/login).
-export const KUNCI_SAYA = "nubi:saya";
+export const ME_CACHE_KEY = "nubi:saya";
 const SEGAR_MS = 5 * 60_000;
 const adaSesi = () => /(?:^|; )session_active=1/.test(document.cookie);
 
-export function ingatSaya(s: Saya | null) {
+export function cacheMe(s: CurrentUser | null) {
   try {
-    if (s) sessionStorage.setItem(KUNCI_SAYA, JSON.stringify({ t: Date.now(), s }));
-    else sessionStorage.removeItem(KUNCI_SAYA);
+    if (s) sessionStorage.setItem(ME_CACHE_KEY, JSON.stringify({ t: Date.now(), s }));
+    else sessionStorage.removeItem(ME_CACHE_KEY);
   } catch {
     /* mod peribadi */
   }
 }
 
-function salinanSaya(): Saya | null {
+function salinanSaya(): CurrentUser | null {
   try {
-    const v = JSON.parse(sessionStorage.getItem(KUNCI_SAYA) ?? "null");
-    return v && Date.now() - v.t < SEGAR_MS ? (v.s as Saya) : null;
+    const v = JSON.parse(sessionStorage.getItem(ME_CACHE_KEY) ?? "null");
+    return v && Date.now() - v.t < SEGAR_MS ? (v.s as CurrentUser) : null;
   } catch {
     return null;
   }
 }
 
 /** Pengguna semasa dari /me (salinan dikemas kini), atau null jika tidak log masuk. */
-export async function saya(): Promise<Saya | null> {
-  if (!adaSesi()) return ingatSaya(null), null;
+export async function fetchMe(): Promise<CurrentUser | null> {
+  if (!adaSesi()) return cacheMe(null), null;
   const res = await api("/me");
-  const s = res.ok ? ((await json(res)).data as Saya) : null;
-  ingatSaya(s);
+  const s = res.ok ? ((await json(res)).data as CurrentUser) : null;
+  cacheMe(s);
   return s;
 }
 
 // Satu /me bagi setiap page (atau tiada, jika salinan masih segar): AccountLayout dan page di
 // dalamnya kongsi promise yang sama - dua panggilan selari boleh mencetuskan dua refresh.
-let sesi: Promise<Saya | null> | null = null;
-export const sesiSaya = () =>
-  (sesi ??= adaSesi() && salinanSaya() ? Promise.resolve(salinanSaya()) : saya().catch(() => null));
+let sesi: Promise<CurrentUser | null> | null = null;
+export const currentUser = () =>
+  (sesi ??= adaSesi() && salinanSaya() ? Promise.resolve(salinanSaya()) : fetchMe().catch(() => null));
 
 // Turnstile (skrip dimuat oleh page). Token sekali guna - reset() selepas setiap hantaran.
 const ts = () =>
@@ -83,15 +83,15 @@ export const captcha = () => ts()?.getResponse() || undefined;
 export const resetCaptcha = () => ts()?.reset();
 
 /** Ralat biasa dalam Bahasa Melayu - jangan papar teks backend. null = tiada padanan. */
-export const ralatAm = (status: number, body: Record<string, any>): string | null => {
+export const commonError = (status: number, body: Record<string, any>): string | null => {
   if (String(body.error ?? "").toLowerCase().includes("captcha"))
-    return "Semakan spam gagal. Muat semula page dan cuba lagi.";
-  if (status === 429) return "Terlalu banyak cubaan. Tunggu sebentar dan cuba lagi.";
+    return "Semakan spam gagal. Muat semula halaman dan cuba lagi.";
+  if (status === 429) return "Terlalu banyak cubaan. Tunggu sekejap dan cuba lagi.";
   return null;
 };
 
 /** Hantar semula pautan pengesahan (pautan ke /verify Nubi). Pulang mesej ralat, atau null jika berjaya. */
-export async function hantarSemula(email: string): Promise<string | null> {
+export async function resendVerification(email: string): Promise<string | null> {
   try {
     const res = await api("/auth/resend-verification", {
       method: "POST",
@@ -99,7 +99,7 @@ export async function hantarSemula(email: string): Promise<string | null> {
     });
     if (res.ok) return null;
     const body = await json(res);
-    return ralatAm(res.status, body) ?? (res.status === 400 ? "E-mel tidak sah." : "Tak dapat hantar sekarang. Cuba sebentar lagi.");
+    return commonError(res.status, body) ?? (res.status === 400 ? "E-mel tak sah." : "Tak dapat hantar sekarang. Cuba lagi sekejap.");
   } catch {
     return "Tiada sambungan. Semak internet anda dan cuba lagi.";
   } finally {

@@ -1,0 +1,263 @@
+---
+/**
+ * Jadual data. variant:
+ *   compact  - baris padat, tiada cari/penapis/kaki; papar `limit` baris pertama (lalai 5). Panel kecil.
+ *   standard - (lalai) cari + halaman sebelum/seterus, 10 sebaris halaman.
+ *   full     - cari, slot "filters", papar 10/20/50, halaman.
+ * Isi dari skrip page dengan
+ * createTable() dari lib/table.ts (sel ikut susunan `columns`). Bawah 40rem setiap baris jadi kad
+ * (label lajur di kiri) - telefon tidak perlu skrol mendatar.
+ *
+ *   <Table id="aktiviti" variant="full" columns={[{ label: "Nama" }, { label: "Jarak", numeric: true },
+ *     { label: "Tindakan", srOnly: true }]} empty="Belum ada aktiviti.">
+ *     <ChipGroup slot="filters" ... />
+ *   </Table>
+ */
+import Dropdown from "./Dropdown.astro";
+import Icon from "./Icon.astro";
+
+interface Props {
+  id: string;
+  /** numeric = rata kanan; srOnly = label untuk pembaca skrin sahaja (contoh lajur butang). */
+  columns: { label: string; numeric?: boolean; srOnly?: boolean }[];
+  searchPlaceholder?: string;
+  empty?: string;
+  variant?: "compact" | "standard" | "full";
+  /** Bilangan baris untuk compact. */
+  limit?: number;
+}
+const { id, columns, searchPlaceholder = "Cari…", empty = "Tiada rekod.", variant = "standard", limit = 5 } = Astro.props;
+const full = variant === "full";
+---
+
+<div class="jadual" id={id} data-variant={variant} data-limit={variant === "compact" ? limit : 10}>
+  {
+    variant !== "compact" && (
+      <div class="jadual-alat">
+        <label class="jadual-cari">
+          <Icon name="cari" />
+          <span class="sr-only">Cari</span>
+          <input class="input" type="search" placeholder={searchPlaceholder} data-cari />
+        </label>
+        {full && <slot name="filters" />}
+      </div>
+    )
+  }
+
+  <div class="jadual-bungkus">
+    <table>
+      <thead>
+        <tr>
+          {
+            columns.map((l) => (
+              <th scope="col" class:list={[l.numeric && "angka"]}>
+                {l.srOnly ? <span class="sr-only">{l.label}</span> : l.label}
+              </th>
+            ))
+          }
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <p class="muted" data-kosong hidden>{empty}</p>
+
+  {
+    variant !== "compact" && (
+      <div class="jadual-kaki" data-kaki hidden>
+        {full && (
+          <div class="jadual-had" data-had>
+            <label for={`${id}-had-butang`}>Papar</label>
+            <Dropdown
+              id={`${id}-had`}
+              value="10"
+              options={[
+                { value: "10", label: "10" },
+                { value: "20", label: "20" },
+                { value: "50", label: "50" },
+              ]}
+            />
+          </div>
+        )}
+        <p class="muted" data-julat aria-live="polite"></p>
+        <div class="jadual-halaman">
+          <button class="btn btn-outline btn-sm" type="button" data-sebelum aria-label="Halaman sebelum">
+            <Icon name="kiri" />
+          </button>
+          <span data-muka></span>
+          <button class="btn btn-outline btn-sm" type="button" data-seterus aria-label="Halaman seterusnya">
+            <Icon name="kanan" />
+          </button>
+        </div>
+      </div>
+    )
+  }
+</div>
+
+<style>
+  .jadual {
+    display: grid;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+  .jadual-alat,
+  .jadual-kaki {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .jadual-kaki {
+    justify-content: space-between;
+  }
+  .jadual-kaki p {
+    margin: 0;
+  }
+  .jadual-cari {
+    position: relative;
+    flex: 1 1 14rem;
+    max-width: 22rem;
+  }
+  .jadual-cari .input {
+    width: 100%;
+    padding-left: 2.4rem;
+  }
+  .jadual-cari :global(.lucide) {
+    position: absolute;
+    left: 0.8rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1.1rem;
+    height: 1.1rem;
+    color: var(--muted);
+    pointer-events: none;
+  }
+  .jadual-had {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+  }
+  .jadual-had :global(.dd) {
+    width: 5.5rem;
+  }
+  .jadual-had :global(.dd-butang) {
+    padding-block: 0.4rem;
+  }
+  .jadual-halaman {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .jadual-halaman .btn {
+    padding-inline: 0.55rem;
+  }
+  .jadual-halaman .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .jadual-bungkus {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow-x: auto;
+  }
+  .jadual-bungkus:has(tbody:empty) {
+    display: none;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  th,
+  .jadual :global(td) {
+    padding: 0.7rem 0.9rem;
+    text-align: left;
+    vertical-align: middle;
+  }
+  th {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--paper-2);
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  .jadual :global(tbody tr + tr td) {
+    border-top: 1px solid var(--line);
+  }
+  .jadual :global(tbody tr:hover) {
+    background: var(--paper-2);
+  }
+  .angka,
+  .jadual :global(td.angka) {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  /* compact: baris padat untuk panel kecil. */
+  .jadual[data-variant="compact"] th,
+  .jadual[data-variant="compact"] :global(td) {
+    padding: 0.4rem 0.65rem;
+    font-size: 0.875rem;
+  }
+
+  /* Telefon: setiap baris = kad, label lajur di kiri setiap nilai. */
+  @media (max-width: 40rem) {
+    .jadual-bungkus {
+      border: 0;
+      overflow: visible;
+    }
+    thead {
+      display: none;
+    }
+    table,
+    tbody,
+    .jadual :global(tr),
+    .jadual :global(td) {
+      display: block;
+    }
+    .jadual :global(tbody) {
+      display: grid;
+      gap: 0.6rem;
+    }
+    .jadual :global(tbody tr) {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 0.4rem 0;
+    }
+    .jadual :global(tbody tr + tr td) {
+      border-top: 0;
+    }
+    .jadual :global(td) {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.35rem 0.9rem;
+      text-align: right;
+    }
+    .jadual[data-variant="compact"] :global(tbody) {
+      gap: 0.4rem;
+    }
+    .jadual[data-variant="compact"] :global(td) {
+      padding: 0.2rem 0.65rem;
+    }
+    .jadual :global(td::before) {
+      content: attr(data-label);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-align: left;
+    }
+    .jadual :global(td:empty) {
+      display: none;
+    }
+  }
+</style>

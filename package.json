@@ -1,7 +1,12 @@
 {
   "name": "nubisport-astro",
-  "type": "module",
   "version": "0.0.1",
+  "dependencies": {
+    "@garmin/fitsdk": "^21.218.0",
+    "astro": "^7.4.0",
+    "lucide-static": "^1.59.0",
+    "maplibre-gl": "^6.15.0"
+  },
   "engines": {
     "node": ">=22.22.0"
   },
@@ -11,9 +16,5 @@
     "preview": "astro preview",
     "astro": "astro"
   },
-  "dependencies": {
-    "@garmin/fitsdk": "^21.218.0",
-    "astro": "^7.4.0",
-    "lucide-static": "^1.59.0"
-  }
+  "type": "module"
 }

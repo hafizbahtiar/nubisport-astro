@@ -19,6 +19,6 @@ export const CONTACT = {
 // dan pada TURNSTILE_HOSTNAMES backend - jika tidak, login production gagal "captcha".
 export const TURNSTILE_SITE_KEY = "0x4AAAAAAFD-PSk_u7NHAF-5";
 
-// Pelan awam (/pelan-5k): storan pelayar + manfaat akaun. Akaun = lib/awan.ts (3 slot dari backend);
-// tukar teks ini bila had berubah (docs/plans/simpan-awan.md).
-export const NOTA_AWAN = "Akaun percuma boleh simpan sehingga 3 pelan ke awan supaya ikut ke peranti lain.";
+// Pelan awam (/plan-5k): storan pelayar + manfaat akaun. Akaun = lib/cloud-sync.ts (3 slot dari backend);
+// tukar teks ini bila had berubah (docs/plans/cloud-sync.md).
+export const CLOUD_NOTE = "Akaun percuma boleh simpan sehingga 3 pelan ke awan supaya ikut ke peranti lain.";

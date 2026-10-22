@@ -22,50 +22,50 @@ oleh owner, **sebelum** Nubi bila Nubi bergantung pada endpoint baru.
 
 | Laluan | Siapa | Isi |
 |---|---|---|
-| `/` | awam | Page utama: tentang, cara sertai, soalan lazim |
-| `/pelan-5k` | awam | Pelan "5K bawah 30 minit" + label "Realistik ke?" + pemasa jalan-lari + kad "Sesuai lari tak?" (IPU + cuaca + waktu lari terbaik); had lembut 3 pelan dalam pelayar |
+| `/` | awam | Halaman utama: tentang, cara sertai, soalan lazim |
+| `/plan-5k` | awam | Pelan "5K bawah 30 minit" + label "Realistik tak?" + pemasa jalan-lari + kad "Sesuai lari hari ini?" (IPU + cuaca + waktu lari terbaik); had lembut 3 pelan dalam pelayar |
 | `/maf` | awam | Kira had nadi MAF (formula 180 Maffetone) |
 | `/pace` | awam | Kalkulator pace: masa ↔ pace, km/j, anggaran 5K-maraton (Riegel) |
-| `/panduan` | awam | Panduan pemula (NHS, KKM) + kalkulator peluh (ACSM) + senarai semak hari lumba boleh cetak |
-| `/lumba` | awam | Kalendar lumba Malaysia (susun tangan dari laman rasmi penganjur) + `.ics` per acara |
+| `/guide` | awam | Panduan pemula (NHS, KKM) + kalkulator peluh (ACSM) + senarai semak hari lumba boleh cetak |
+| `/races` | awam | Kalendar lumba Malaysia (susun tangan dari laman rasmi penganjur) + `.ics` per acara |
 | `/login`, `/register`, `/verify` | awam | Akaun dikongsi dengan hafizbahtiar.com (Turnstile) |
 | `/account` | akaun | Dashboard: pelan saya (lencana **Awan** / **Peranti ini**, meter slot, Ganti), profil, MAF |
-| `/account/pelan-5k` | akaun | Pelan 5K penuh: pecahan analisis, ikut nadi, kalendar `.ics`, simpan ke awan |
-| `/account/pelan-jarak` | akaun | Pelan 10K / 21K (bertangga dari masa 5K / 10K, masa sasaran pilihan) + kad "Sesuai lari tak?" |
+| `/account/plan-5k` | akaun | Pelan 5K penuh: pecahan analisis, ikut nadi, kalendar `.ics`, simpan ke awan |
+| `/account/distance-plan` | akaun | Pelan 10K / 21K (bertangga dari masa 5K / 10K, masa sasaran pilihan) + kad "Sesuai lari hari ini?" |
 | `/account/maf` | akaun | MAF + butang buat Pelan 5K ikut nadi |
-| `/account/profil`, `/account/profil/latihan`, `/account/profil/kata-laluan` | akaun | Maklumat (nama), Latihan (tarikh lahir, keadaan MAF, hari, masa 5K/10K - isi borang MAF/pelan) dan tukar kata laluan - card navigasi `ProfilShell` |
+| `/account/profile`, `/account/profile/training`, `/account/profile/password` | akaun | Maklumat (nama), Latihan (tarikh lahir, keadaan MAF, hari, masa 5K/10K - isi borang MAF/pelan) dan tukar kata laluan - card navigasi `ProfileShell` |
 
 ## Storan pelan
 
-- Pelan dikira dalam pelayar (`src/lib/pelan-5k.ts`, `pelan-jarak.ts`). Pelayar = salinan kerja
-  (`lib/pelan-tersimpan.ts`), jadi pelan berfungsi tanpa internet.
-- **Awan**: akaun percuma simpan sehingga **3 pelan** (`lib/awan.ts` → `/api/v1/me/apps/nubi/plan`,
-  migration 029 backend). Tanda siap disegerak (dikumpul 1.5 s), pelan muncul di peranti lain selepas
+- Pelan dikira dalam pelayar (`src/lib/plan-5k.ts`, `distance-plan.ts`). Pelayar = salinan kerja
+  (`lib/saved-plans.ts`), jadi pelan berfungsi tanpa internet.
+- **Awan**: akaun percuma simpan sehingga **3 pelan** (`lib/cloud-sync.ts` → `/api/v1/me/apps/nubi/plan`,
+  migration 029 backend). Tanda siap disegerak (dikumpul 1.5 s), pelan muncul di peranti lain lepas
   log masuk. Had datang dari backend (`QUOTA`) - langganan nanti hanya menaikkannya
-  (`docs/plans/simpan-awan.md`). Naikkan `VERSI_ENJIN` bila enjin pelan berubah.
-- Had MAF terakhir (`maf:terakhir`) kekal dalam pelayar sahaja.
+  (`docs/plans/cloud-sync.md`). Naikkan `ENGINE_VERSION` bila enjin pelan berubah.
+- Had MAF terakhir (`maf:terakhir`) kekal dalam pelayar saja.
 
 ## Kandungan latihan
 
 Pelan ialah panduan umum, bukan nasihat perubatan, dan **belum disemak jurulatih bertauliah** - setiap
-page pelan menyatakannya. Semakan dalaman terhadap sumber awam (NHS Couch to 5K, Hal Higdon, Buist 2008,
-Nielsen 2014, Riegel, Maffetone) + senarai semak untuk jurulatih: `docs/semakan-latihan.md`.
+halaman pelan menyatakannya. Semakan dalaman terhadap sumber awam (NHS Couch to 5K, Hal Higdon, Buist 2008,
+Nielsen 2014, Riegel, Maffetone) + senarai semak untuk jurulatih: `docs/training-review.md`.
 
 ## Semakan
 
 ```sh
 bunx tsc --noEmit -p .
-bun scripts/check-pelan-5k.ts      # setiap gabungan input pelan 5K
-bun scripts/check-pelan-jarak.ts   # pelan 10K / 21K (lonjakan larian panjang, tirus, analisis)
-bun scripts/check-pemasa.ts        # segmen pemasa setiap sesi + kedudukan masa
+bun scripts/check-plan-5k.ts      # setiap gabungan input pelan 5K
+bun scripts/check-distance-plan.ts   # pelan 10K / 21K (lonjakan larian panjang, tirus, analisis)
+bun scripts/check-timer.ts        # segmen pemasa setiap sesi + kedudukan masa
 bun scripts/check-pace.ts          # kalkulator pace + pautan pelan seterusnya
 bun scripts/check-maf.ts
 bun scripts/check-ics.ts           # fail kalendar RFC 5545
-bun scripts/check-tarikh.ts        # DatePicker dd/mm/yyyy
-bun scripts/check-sesuai.ts         # band IPU (JAS) + nasihat cuaca (MET) + waktu lari terbaik (JAKIM)
-bun scripts/check-peluh.ts          # kalkulator peluh
-bun scripts/check-lumba.ts          # data kalendar lumba (disemak <= 3 bulan)
-bun scripts/check-profil.ts         # umur dari tarikh lahir
+bun scripts/check-date.ts        # DatePicker dd/mm/yyyy
+bun scripts/check-run-check.ts         # band IPU (JAS) + nasihat cuaca (MET) + waktu lari terbaik (JAKIM)
+bun scripts/check-sweat.ts          # kalkulator peluh
+bun scripts/check-races.ts          # data kalendar lumba (disemak <= 3 bulan)
+bun scripts/check-profile.ts         # umur dari tarikh lahir
 bun scripts/check-ramadan.ts        # bulan Hijri + tag/banner Ramadan
 bun run build
 ```
@@ -74,14 +74,14 @@ bun run build
 
 - `src/layouts/` - `Layout` (awam: Header + Footer), `AccountLayout` (sidebar akaun, satu-satunya pengawal
   sesi; nama/e-mel dilukis dari salinan `/me` sebelum lukisan pertama).
-- `src/components/` - `Pelan5k`, `PelanJarak`, `Pemasa` (pemasa jalan-lari skrin penuh), `Sesuai` (kad "Sesuai lari tak?" - IPU + cuaca), `Maf`, `ProfilShell`; `ui/` = atom (`PageHero`, `Section`,
-  `ChipGroup`, `Field`, `Checkbox`, `DatePicker`, `Dropdown` (pilihan tunggal; `<select>` asli tersembunyi pegang nilai), `Alert`, `ConfirmDialog` + `lib/sahkan.ts`, `Sambungan` =
-  notis luar talian, `Ikon` = ikon Lucide).
-- `src/lib/` - `ikon.ts` (semua ikon UI = Lucide, `lucide-static`; tiada path SVG tulisan tangan), logik tulen (pelan, MAF, tarikh, ics, IPU/cuaca/waktu lari, Ramadan, peluh), `api.ts` (fetch `/api/v1`, satu refresh dikongsi,
-  salinan `/me` 5 min), `awan.ts`, `pelan-papar.ts` (HTML kad minggu dikongsi).
-- `src/styles/` - `global.css` (token + atom), `pelan.css` (pelan dirender melalui `innerHTML`).
+- `src/components/` - `Plan5k`, `DistancePlan`, `Timer` (pemasa jalan-lari skrin penuh), `RunCheck` (kad "Sesuai lari hari ini?" - IPU + cuaca), `Maf`, `ProfileShell`; `ui/` = atom (`PageHero`, `Section`,
+  `ChipGroup`, `Field`, `Checkbox`, `DatePicker`, `Dropdown` (pilihan tunggal; `<select>` asli tersembunyi pegang nilai), `Alert`, `ConfirmDialog` + `lib/confirm.ts`, `ConnectionNotice` =
+  notis luar talian, `Icon` = ikon Lucide).
+- `src/lib/` - `icon.ts` (semua ikon UI = Lucide, `lucide-static`; tiada path SVG tulisan tangan), logik tulen (pelan, MAF, tarikh, ics, IPU/cuaca/waktu lari, Ramadan, peluh), `api.ts` (fetch `/api/v1`, satu refresh dikongsi,
+  salinan `/me` 5 min), `cloud-sync.ts`, `plan-render.ts` (HTML kad minggu dikongsi).
+- `src/styles/` - `global.css` (token + atom), `plan.css` (pelan dirender melalui `innerHTML`).
 - `src/data/site.ts` - nama, pautan hubungan (**kosong hingga pautan sebenar wujud**), kunci tapak
-  Turnstile, `NOTA_AWAN`.
+  Turnstile, `CLOUD_NOTE`.
 - `worker.ts` + `wrangler.jsonc` - hanya `/api/*` menjalankan Worker; selainnya aset statik (percuma).
   `public/_headers` simpan `/_astro/*` setahun.
 - `astro.config.mjs` - `site` (domain sebenar; `canonical` / `og:*` dibina darinya) dan prefetch hover.

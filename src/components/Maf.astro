@@ -1,18 +1,18 @@
 ---
-// Kalkulator MAF + panduan. Kandungan sahaja - page pilih layout (seperti Pelan5k.astro).
-// `penuh` (/account/maf): had disimpan untuk dashboard + butang terus ke Pelan 5K ikut nadi.
+// Kalkulator MAF + panduan. Kandungan sahaja - page pilih layout (seperti Plan5k.astro).
+// `full` (/account/maf): had disimpan untuk dashboard + butang terus ke Pelan 5K ikut nadi.
 import PageHero from "./ui/PageHero.astro";
 import Section from "./ui/Section.astro";
 import ChipGroup from "./ui/ChipGroup.astro";
 import Field from "./ui/Field.astro";
 import Alert from "./ui/Alert.astro";
-import { KATEGORI, UMUR_MAX, UMUR_MIN } from "../lib/maf";
+import { CONDITIONS, AGE_MAX, AGE_MIN } from "../lib/maf";
 
 interface Props {
-  penuh?: boolean;
+  full?: boolean;
 }
-const { penuh = false } = Astro.props;
-const pelan = penuh ? "/account/pelan-5k" : "/pelan-5k";
+const { full = false } = Astro.props;
+const pelan = full ? "/account/plan-5k" : "/plan-5k";
 ---
 
 <PageHero
@@ -25,15 +25,15 @@ const pelan = penuh ? "/account/pelan-5k" : "/pelan-5k";
     class="form"
     method="get"
     id="borang"
-    data-penuh={penuh ? "1" : undefined}
+    data-full={full ? "1" : undefined}
   >
     <Field label="Umur (tahun)">
       <input
         class="input"
         type="number"
         name="umur"
-        min={UMUR_MIN}
-        max={UMUR_MAX}
+        min={AGE_MIN}
+        max={AGE_MAX}
         step="1"
         inputmode="numeric"
         required
@@ -45,7 +45,7 @@ const pelan = penuh ? "/account/pelan-5k" : "/pelan-5k";
       name="keadaan"
       checked="terganggu"
       stacked
-      options={Object.entries(KATEGORI).map(([value, k]) => ({
+      options={Object.entries(CONDITIONS).map(([value, k]) => ({
         value,
         label: k.label,
       }))}
@@ -68,12 +68,12 @@ const pelan = penuh ? "/account/pelan-5k" : "/pelan-5k";
     </p>
     <p>
       Bawah had ini, badan belajar membakar lemak sebagai tenaga dan jantung
-      jadi lebih cekap. Lama-kelamaan,{" "}
-      <strong>pace anda pada nadi yang sama menjadi semakin laju</strong> - itulah
+      menjadi lebih cekap. Lama-kelamaan,{" "}
+      <strong>pace anda pada nadi yang sama makin laju</strong> - itulah
       tanda kemajuan.
     </p>
     <p>
-      Mula-mula ia terasa terlalu perlahan. Ramai pemula terpaksa jalan-lari
+      Mula-mula memang rasa terlalu perlahan. Ramai pemula terpaksa jalan-lari
       untuk kekal di bawah had - itu normal, bukan gagal.
     </p>
   </div>
@@ -94,15 +94,14 @@ const pelan = penuh ? "/account/pelan-5k" : "/pelan-5k";
       </li>
       <li>
         <strong>Nadi melebihi had? Perlahankan.</strong> Masih tinggi? Jalan sehingga
-        turun, kemudian sambung. Ego tinggal di rumah.
+        turun, kemudian sambung. Tinggalkan ego di rumah.
       </li>
       <li>
         <strong>Bukit:</strong> jalan laju semasa mendaki. Nadi naik cepat walaupun
         pace perlahan.
       </li>
       <li>
-        <strong>Set amaran di jam</strong> pada had atas - jam berbunyi bila anda
-        terlebih, jadi tak perlu asyik tengok.
+        <strong>Tetapkan amaran pada jam</strong> di had atas - jam berbunyi bila nadi terlebih, jadi tak perlu asyik tengok jam.
       </li>
       <li>
         <strong>Tali dada lebih tepat</strong> daripada sensor jam di pergelangan,
@@ -118,7 +117,7 @@ const pelan = penuh ? "/account/pelan-5k" : "/pelan-5k";
         menaikkan nadi. Hari itu, ikut nadi - bukan pace semalam.
       </li>
       <li>
-        <strong>Sabar.</strong> Kemajuan aerobik diukur dalam bulan, bukan minggu.
+        <strong>Sabar.</strong> Kemajuan aerobik dikira dalam bulan, bukan minggu.
       </li>
     </ul>
   </div>
@@ -151,9 +150,7 @@ const pelan = penuh ? "/account/pelan-5k" : "/pelan-5k";
       </li>
     </ol>
     <p class="muted">
-      Masa tak turun beberapa bulan berturut-turut? Itu petanda latihan, rehat
-      atau tidur perlu dinilai semula - Maffetone menganggapnya isyarat, bukan
-      kegagalan. Jangan uji terlalu kerap.
+      Masa tak turun beberapa bulan berturut-turut? Itu tanda latihan, rehat atau tidur perlu dinilai semula - bagi Maffetone, itu isyarat, bukan kegagalan. Jangan uji terlalu kerap.
     </p>
   </div>
 </Section>
@@ -168,9 +165,8 @@ const pelan = penuh ? "/account/pelan-5k" : "/pelan-5k";
       tempo memang melebihi had itu - itu tujuannya.
     </p>
     <p>
-      Maffetone sendiri mencadangkan beberapa bulan asas aerobik tanpa latihan
-      laju. Jika anda baru bermula, MAF dulu kemudian pelan 5K ialah pendekatan
-      yang perlahan tetapi selamat.
+      Maffetone sendiri cadangkan beberapa bulan asas aerobik tanpa latihan
+      laju. Kalau anda baru bermula, MAF dulu, kemudian pelan 5K - memang perlahan, tapi selamat.
     </p>
   </div>
 </Section>
@@ -185,7 +181,7 @@ const pelan = penuh ? "/account/pelan-5k" : "/pelan-5k";
           rel="noopener"
           target="_blank">philmaffetone.com</a
         >). Ada penyakit jantung, tekanan darah, makan ubat yang menjejaskan
-        nadi, atau mengandung? Rujuk doktor dulu. Berhenti serta-merta jika
+        nadi, atau mengandung? Rujuk doktor dulu. Berhenti serta-merta kalau
         sakit dada, pening atau sesak nafas luar biasa.
       </p>
     </Alert>
@@ -193,12 +189,12 @@ const pelan = penuh ? "/account/pelan-5k" : "/pelan-5k";
 </section>
 
 <script>
-  import { KATEGORI, kiraMaf, type Kategori } from "../lib/maf";
-  import { isiBorang } from "../lib/profil";
+  import { CONDITIONS, calcMaf, type Condition } from "../lib/maf";
+  import { prefillForm } from "../lib/profile";
 
-  const penuh = document.getElementById("borang")!.dataset.penuh === "1";
+  const full = document.getElementById("borang")!.dataset.full === "1";
   // Log masuk -> versi akaun (pengawal sesi = AccountLayout).
-  if (!penuh && /(?:^|; )session_active=1/.test(document.cookie))
+  if (!full && /(?:^|; )session_active=1/.test(document.cookie))
     location.replace(`/account/maf${location.search}${location.hash}`);
 
   const borang = document.getElementById("borang") as HTMLFormElement;
@@ -211,13 +207,13 @@ const pelan = penuh ? "/account/pelan-5k" : "/pelan-5k";
     if (el instanceof RadioNodeList || el instanceof HTMLInputElement)
       el.value = v;
   }
-  if (penuh) void isiBorang(borang, q, () => undefined);
+  if (full) void prefillForm(borang, q, () => undefined);
 
   if (q.has("umur")) {
-    const kategori = q.get("keadaan") as Kategori;
-    const h = kiraMaf(Number(q.get("umur")), kategori);
+    const kategori = q.get("keadaan") as Condition;
+    const h = calcMaf(Number(q.get("umur")), kategori);
     hasil.hidden = false;
-    if (penuh && h.ok)
+    if (full && h.ok)
       try {
         // Dashboard papar had terakhir. Pelayar ini sahaja, seperti pelan.
         localStorage.setItem(
@@ -236,10 +232,10 @@ const pelan = penuh ? "/account/pelan-5k" : "/pelan-5k";
     keputusan.innerHTML = h.ok
       ? `<p class="eyebrow">Had MAF anda</p>
         <p class="display maf-angka">${h.maf} <small>denyut/min</small></p>
-        <p class="lead">Jangan melebihi <strong>${h.maf}</strong>. Julat latihan biasa: <strong>${h.bawah}-${h.maf}</strong> denyut/min.</p>
-        <p class="muted">Keadaan: ${KATEGORI[kategori].label.toLowerCase()} (${KATEGORI[kategori].ubah >= 0 ? "+" : ""}${KATEGORI[kategori].ubah}).</p>
+        <p class="lead">Jangan lebih <strong>${h.maf}</strong>. Julat latihan biasa: <strong>${h.bawah}-${h.maf}</strong> denyut/min.</p>
+        <p class="muted">Keadaan: ${CONDITIONS[kategori].label.toLowerCase()} (${CONDITIONS[kategori].ubah >= 0 ? "+" : ""}${CONDITIONS[kategori].ubah}).</p>
         ${h.nota.map((n) => `<div class="alert alert-info maf-nota"><p>${n}</p></div>`).join("")}
-        ${penuh ? `<a class="btn btn-primary maf-nota" href="/account/pelan-5k?${new URLSearchParams({ maf: "1", umur: String(Number(q.get("umur"))), keadaan: kategori })}#borang">Buat Pelan 5K ikut nadi ini</a>` : ""}`
+        ${full ? `<a class="btn btn-primary maf-nota" href="/account/plan-5k?${new URLSearchParams({ maf: "1", umur: String(Number(q.get("umur"))), keadaan: kategori })}#borang">Buat Pelan 5K ikut nadi ini</a>` : ""}`
       : `<div class="alert alert-warning"><p>${h.sebab}</p></div>`;
     hasil.scrollIntoView({ behavior: "smooth" });
   }

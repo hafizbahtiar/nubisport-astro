@@ -1,0 +1,498 @@
+---
+import PageHero from "./ui/PageHero.astro";
+import Section from "./ui/Section.astro";
+import ChipGroup from "./ui/ChipGroup.astro";
+import Field from "./ui/Field.astro";
+import DatePicker from "./ui/DatePicker.astro";
+import Checkbox from "./ui/Checkbox.astro";
+import Timer from "./Timer.astro";
+import RunCheck from "./RunCheck.astro";
+import { CONDITIONS, AGE_MAX, AGE_MIN } from "../lib/maf";
+import {
+  PLAN_MONTHS,
+  DAYS_PER_WEEK,
+  TIME_MAX,
+  TIME_MIN,
+  MIN_WEEKS,
+  WEEKS_PER_MINUTE,
+  LEVELS,
+} from "../lib/plan-5k";
+import "../styles/plan.css";
+
+// Kandungan sahaja - page memilih layout. Satu borang, dua page: /plan-5k (awam - pelan ringkas) dan /account/plan-5k (log masuk -
+// `full`: pecahan "Realistik tak?", ikut nadi MAF, simpan ke kalendar).
+// ponytail: had dibuat di pelayar (laman statik) - kod versi penuh tetap boleh dibaca. Ini dorongan
+// untuk daftar, bukan kawalan. Kandungan berbayar sebenar = jana di server.
+interface Props {
+  full?: boolean;
+}
+const { full = false } = Astro.props;
+const maf = full ? "/account/maf" : "/maf";
+// Julat tarikh mula: dikira semasa build (laman statik - setiap deploy menyegarkannya).
+const tahun = new Date().getFullYear();
+---
+
+<PageHero
+  eyebrow="Pelan latihan"
+  title="5K bawah"
+  accent="30 minit."
+  lead={full
+    ? "Versi penuh: pecahan kenapa sasaran anda realistik atau tak, latihan ikut nadi, simpan ke kalendar, dan simpan sehingga 3 pelan ke awan."
+    : "Pilih tempoh dan tahap anda sekarang. Pelan dikira dalam pelayar anda - tanpa pendaftaran, tiada data dihantar ke mana-mana."}
+>
+  <form
+    class="form"
+    method="get"
+    id="borang"
+    data-full={full ? "1" : undefined}
+  >
+    <ChipGroup
+      legend="Tempoh"
+      name="bulan"
+      checked={3}
+      options={PLAN_MONTHS.map((b) => ({ value: b, label: `${b} bulan` }))}
+    />
+    <ChipGroup
+      legend="Tahap sekarang"
+      name="tahap"
+      checked="jalan"
+      options={Object.entries(LEVELS).map(([value, label]) => ({
+        value,
+        label,
+      }))}
+    />
+    <Field label="Masa 5K sekarang (minit)" id="masa-medan" hidden>
+      <input
+        class="input"
+        type="number"
+        name="masa"
+        min={TIME_MIN}
+        max={TIME_MAX}
+        step="1"
+        inputmode="numeric"
+        placeholder="cth. 36"
+      />
+    </Field>
+    <ChipGroup
+      legend="Hari seminggu"
+      name="hari"
+      checked={3}
+      options={DAYS_PER_WEEK.map((h) => ({ value: h, label: `${h} hari` }))}
+    />
+    {
+      full && (
+        <Fragment>
+          <Checkbox
+            name="maf"
+            id="maf"
+            label="Ikut nadi (MAF)"
+            hint="Sesi mudah dan larian panjang dikawal had kadar nadi anda. Perlu jam atau tali dada pengukur nadi."
+          />
+          <fieldset class="form-group" id="maf-medan" hidden disabled>
+            <Field label="Umur (tahun)">
+              <input
+                class="input"
+                type="number"
+                name="umur"
+                min={AGE_MIN}
+                max={AGE_MAX}
+                step="1"
+                inputmode="numeric"
+                required
+                placeholder="cth. 32"
+              />
+            </Field>
+            <ChipGroup
+              legend="Keadaan anda sekarang"
+              name="keadaan"
+              checked="terganggu"
+              stacked
+              options={Object.entries(CONDITIONS).map(([value, k]) => ({
+                value,
+                label: k.label,
+              }))}
+            />
+            <p class="field-hint">
+              Apa itu MAF?{" "}
+              <a class="link" href={maf}>
+                Baca panduan lari ikut nadi
+              </a>
+              .
+            </p>
+          </fieldset>
+        </Fragment>
+      )
+    }
+    <Field
+      label="Tarikh mula (pilihan)"
+      for="mula-text"
+      hint="Pelan bermula pada hari Isnin pada atau lepas tarikh ini."
+    >
+      <DatePicker
+        id="mula"
+        name="mula"
+        min={`${tahun - 1}-01-01`}
+        max={`${tahun + 2}-12-31`}
+      />
+    </Field>
+    <button class="btn btn-primary" type="submit">Buat pelan</button>
+  </form>
+</PageHero>
+
+<section class="hasil" id="hasil" hidden aria-live="polite">
+  <div class="container" id="pelan"></div>
+</section>
+
+<RunCheck />
+
+<Section band narrow title="Sebelum mula" class="nota">
+  <ul>
+    <li>
+      Pelan ini panduan umum, <strong>bukan nasihat perubatan</strong>. Kalau ada
+      masalah jantung, tekanan darah, sendi atau baru sembuh daripada kecederaan,
+      rujuk doktor dulu. Berhenti kalau sakit (bukan sekadar penat). Pelan dibina ikut prinsip latihan umum (contoh NHS Couch to 5K) dan <strong
+        >belum disemak jurulatih bertauliah</strong
+      >.
+    </li>
+    <li>
+      Ambang "munasabah" ialah <strong>anggaran kasar</strong>: dari sifar ~{
+        MIN_WEEKS.sifar
+      } minggu, dari jalan-lari ~{MIN_WEEKS.jalan} minggu, dan dari 5K sekarang ~{
+        WEEKS_PER_MINUTE
+      } minggu bagi setiap minit yang nak dipotong. Setiap orang berbeza.
+    </li>
+    <li>
+      Beban naik paling banyak 10% seminggu dan setiap minggu ke-4 lebih ringan
+      - badan jadi kuat masa berehat. Terlepas sesi? Teruskan dengan minggu
+      itu, jangan ganti dua kali ganda.
+    </li>
+    <li>
+      Cuaca Malaysia panas dan lembap: lari awal pagi atau lewat petang, bawa
+      air, perlahankan pace bila panas - ikut rasa usaha, bukan jam. Nak ukuran
+      yang lebih tepat? Cuba <a class="link" href={maf}>lari ikut nadi (MAF)</a> untuk
+      sesi mudah.
+    </li>
+    <li>
+      Baru bermula? Baca <a class="link" href="/guide">panduan pemula</a> - kasut,
+      panas badan, cuaca panas, keselamatan dan senarai semak hari lumba.
+    </li>
+  </ul>
+</Section>
+
+<Timer />
+<script>
+  import { buildIcs, malaysiaTime } from "../lib/ics";
+  import { calcMaf, type Condition } from "../lib/maf";
+  import {
+    CREATED_KEY,
+    readList,
+    planKey,
+    deletePlan,
+    planParams,
+    writeList,
+    writeParams,
+  } from "../lib/saved-plans";
+  import { removeFromCloud, mountCloudBox } from "../lib/cloud-sync";
+  import { mountActivePlanBox } from "../lib/plan-sync";
+  import { confirmDialog } from "../lib/confirm";
+  import { prefillForm } from "../lib/profile";
+  import {
+    weekHtml,
+    ramadanNotice,
+    analysisHtml,
+    mountShare,
+    mountResume,
+    mountTestForm,
+    shareLink,
+  } from "../lib/plan-render";
+  import { CLOUD_NOTE } from "../data/site";
+  import {
+    GUEST_PLAN_LIMIT,
+    analyzePlan,
+    LEVELS,
+    type Analysis,
+    canBuildPlan,
+    buildPlan,
+    startMonday,
+    sessionDate,
+    type Level,
+  } from "../lib/plan-5k";
+
+  const borang = document.getElementById("borang") as HTMLFormElement;
+  const full = borang.dataset.full === "1";
+  const logMasuk = /(?:^|; )session_active=1/.test(document.cookie);
+  const ke = (path: string) => `${path}${location.search}${location.hash}`;
+  const LOGIN = () =>
+    `/login?next=${encodeURIComponent(ke("/account/plan-5k"))}`;
+  // Log masuk -> versi penuh (pengawal sesi versi penuh = AccountLayout).
+  if (!full && logMasuk) location.replace(ke("/account/plan-5k"));
+  const masaMedan = document.getElementById("masa-medan")!;
+  const masaInput = borang.elements.namedItem("masa") as HTMLInputElement;
+  const mafBox = document.getElementById("maf") as HTMLInputElement | null;
+  const mafMedan = document.getElementById(
+    "maf-medan",
+  ) as HTMLFieldSetElement | null;
+  const hasil = document.getElementById("hasil")!;
+  const pelanEl = document.getElementById("pelan")!;
+  mountTestForm(pelanEl);
+
+  const q = new URLSearchParams(location.search);
+  if (full) void prefillForm(borang, q, (p) => p.masa5k);
+  for (const [k, v] of q) {
+    const el = borang.elements.namedItem(k);
+    if (el instanceof RadioNodeList) el.value = v;
+    else if (el instanceof HTMLInputElement && el.type === "checkbox")
+      el.checked = v === el.value;
+    else if (el instanceof HTMLInputElement) {
+      el.value = v;
+      el.dispatchEvent(new Event("change")); // DatePicker: kotak dd/mm/yyyy ikut
+    }
+  }
+
+  const masaLabel = masaMedan.querySelector(".field-label")!;
+  const ikutTahap = () => {
+    const tahap = (borang.elements.namedItem("tahap") as RadioNodeList).value;
+    const is5k = tahap === "5k";
+    const ada = is5k || tahap === "jalan"; // jalan: pilihan, untuk analisis lebih tepat
+    masaMedan.hidden = !ada;
+    masaInput.required = is5k;
+    masaInput.disabled = !ada; // tidak dihantar dalam URL bila "sifar"
+    masaLabel.textContent = is5k
+      ? "Masa 5K sekarang (minit)"
+      : "Masa jalan-lari 5K (minit, pilihan)";
+    // fieldset disabled = umur/keadaan tidak dihantar dan tidak wajib bila MAF tidak ditanda
+    if (mafMedan) mafMedan.hidden = mafMedan.disabled = !mafBox!.checked;
+  };
+  borang.addEventListener("change", ikutTahap);
+  ikutTahap();
+
+  if (q.has("bulan")) papar();
+
+  // Awam: kotak promosi versi penuh (selepas analisis ringkas).
+  function htmlPromosi() {
+    return `<section class="promosi no-print">
+      <h3 class="display">Dapatkan versi penuh - percuma</h3>
+      <p>Daftar atau log masuk untuk:</p>
+      <ul>
+        <li><strong>Pecahan "Realistik tak?"</strong> - jurang pace, kadar yang diperlukan seminggu, minggu yang cukup atau tak, dan sesi laju dalam pelan.</li>
+        <li><strong>Ikut nadi (MAF)</strong> - sesi mudah dengan julat kadar nadi anda.</li>
+        <li><strong>Simpan ke kalendar</strong> - setiap sesi masuk kalendar telefon (iPhone, Android, Google, Outlook).</li>
+        <li><strong>Pelan 10K dan 21K</strong> - langkah seterusnya lepas 5K, dengan masa sasaran pilihan.</li>
+        <li><strong>Simpan ke awan</strong> - sehingga 3 pelan ikut akaun anda ke telefon atau komputer lain.</li>
+        <li><strong>Dashboard</strong> - semua pelan anda dan kemajuan dalam satu tempat.</li>
+      </ul>
+      <div class="actions">
+        <a class="btn btn-primary" href="/register">Daftar percuma</a>
+        <a class="btn btn-outline" href="${LOGIN()}">Log masuk</a>
+      </div>
+    </section>`;
+  }
+
+  // Fungsi (bukan const): papar() dipanggil lebih awal dalam skrip.
+  function htmlAnalisis(a: Analysis) {
+    return analysisHtml(
+      a,
+      full
+        ? undefined
+        : `<p class="muted">Pecahan penuh (jurang pace, kadar seminggu, cukup minggu atau tak) untuk akaun percuma - <a class="link" href="${LOGIN()}">log masuk</a>.</p>`,
+    );
+  }
+
+  function papar() {
+    const tahap = q.get("tahap") as Level;
+    const bulan = Number(q.get("bulan"));
+    const hari = Number(q.get("hari"));
+    const masa5k = q.get("masa") ? Number(q.get("masa")) : undefined;
+    hasil.hidden = false;
+    let nadi: { maf: number; bawah: number } | undefined;
+    if (full && q.get("maf") === "1") {
+      const m = calcMaf(Number(q.get("umur")), q.get("keadaan") as Condition);
+      if (!m.ok) {
+        pelanEl.innerHTML = `<div class="alert alert-warning"><p>Ikut nadi: ${m.sebab}</p></div>`;
+        hasil.scrollIntoView({ behavior: "smooth" });
+        return;
+      }
+      nadi = { maf: m.maf, bawah: m.bawah };
+    }
+    const h = buildPlan({ bulan, tahap, hari, masa5k, nadi });
+    const a = analyzePlan({ bulan, tahap, hari, masa5k, nadi });
+
+    if (!h.ok) {
+      pelanEl.innerHTML = `${a ? htmlAnalisis(a) : ""}<div class="alert alert-warning"><p>${h.sebab}</p>${
+        h.cadanganBulan
+          ? `<a class="btn btn-primary" href="?${new URLSearchParams({ ...Object.fromEntries(q), bulan: String(h.cadanganBulan) })}">Cuba ${h.cadanganBulan} bulan</a>`
+          : ""
+      }</div>`;
+      hasil.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+
+    const kunci = planKey(bulan, tahap, masa5k, hari);
+    const dibuat = readList(CREATED_KEY);
+    // Had tanpa akaun kira pelan 5K sahaja (10K/21K = akaun).
+    if (
+      !canBuildPlan(
+        kunci,
+        dibuat.filter((k) => k.startsWith("pelan-5k:")),
+        full || logMasuk,
+      )
+    ) {
+      pelanEl.innerHTML = `<div class="alert alert-info">
+        <p class="alert-title">${GUEST_PLAN_LIMIT} pelan percuma tanpa akaun</p>
+        <p>Anda dah buat ${GUEST_PLAN_LIMIT} pelan berbeza dalam pelayar ini. Daftar akaun percuma untuk buat lebih banyak pelan.
+          Pelan yang dah dibuat masih boleh dibuka seperti biasa.</p>
+        <div class="actions">
+          <a class="btn btn-primary" href="/register">Daftar percuma</a>
+          <a class="btn btn-outline" href="${LOGIN()}">Log masuk</a>
+        </div>
+      </div>`;
+      hasil.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+    if (!dibuat.includes(kunci)) writeList(CREATED_KEY, [...dibuat, kunci]);
+    if (full) writeParams(kunci, planParams(q));
+    const siap = new Set<string>(readList(kunci));
+    const isnin = /^\d{4}-\d{2}-\d{2}$/.test(q.get("mula") ?? "")
+      ? startMonday(new Date(`${q.get("mula")}T00:00:00`))
+      : null;
+    const hariIni = new Date().toDateString();
+    const jumlah = h.minggu.reduce((a, w) => a + w.sesi.length, 0);
+
+    pelanEl.innerHTML = `
+      <div class="ringkas">
+        <div>
+          <p class="eyebrow">Pelan anda</p>
+          <h2 class="display section-title">${bulan} bulan · ${hari} hari seminggu</h2>
+          <p class="lead">${LEVELS[tahap]}${masa5k ? ` (${masa5k} minit)` : ""} → 5K bawah 30 minit.
+            ${nadi ? `Ikut nadi: had MAF <strong>${nadi.maf}</strong>, julat ${nadi.bawah}-${nadi.maf} denyut/min.` : ""}
+            ${isnin ? `Bermula Isnin, ${isnin.toLocaleDateString("ms-MY", { day: "numeric", month: "long", year: "numeric" })}.` : ""}
+            <span id="kemajuan"></span></p>
+        </div>
+        <div class="actions no-print">
+          <button class="btn btn-outline" type="button" data-kongsi>Kongsi</button>
+          <button class="btn btn-outline" type="button" onclick="print()">Cetak</button>
+          ${full ? `<button class="btn btn-outline" type="button" data-padam>Padam pelan</button>` : ""}
+        </div>
+      </div>
+      ${
+        full
+          ? `<p class="awan-baris no-print" data-awan></p><p class="awan-baris no-print" data-aktif></p>`
+          : `<div class="alert alert-warning no-print"><p>Pelan dan tanda siap disimpan dalam pelayar ini saja (localStorage) - hilang kalau data pelayar dikosongkan atau anda tukar peranti. ${CLOUD_NOTE}</p></div>`
+      }
+      ${a ? htmlAnalisis(a) : ""}
+      ${ramadanNotice(h.minggu, isnin)}
+      ${full ? "" : htmlPromosi()}
+      ${
+        full
+          ? `<div class="kalendar no-print">
+        <h3 class="display">Simpan ke kalendar</h3>
+        ${
+          isnin
+            ? `<div class="actions">
+                <label class="field"><span class="field-label">Masa lari</span>
+                  <input class="input" type="time" id="masa-lari" value="06:30" /></label>
+                <button class="btn btn-primary" type="button" data-ics>Muat turun fail kalendar (.ics)</button>
+              </div>`
+            : `<p class="muted">Isi "Tarikh mula" di atas dan tekan "Buat pelan" - kalendar perlukan tarikh sebenar.</p>`
+        }
+        <ul class="muted">
+          <li><strong>iPhone / iPad:</strong> buka halaman ini dalam Safari, tekan butang dan pilih "Tambah Semua".</li>
+          <li><strong>Android (Samsung Calendar):</strong> buka fail yang dimuat turun dan pilih Kalendar.</li>
+          <li><strong>Google Calendar:</strong> aplikasi Android tak boleh import fail. Guna calendar.google.com dalam pelayar komputer → Tetapan → Import &amp; eksport.</li>
+          <li><strong>Outlook / Mac:</strong> buka fail yang dimuat turun.</li>
+        </ul>
+      </div>`
+          : ""
+      }
+      <div class="no-print" data-sambung-slot></div>
+      <ol class="minggu">${h.minggu.map((w) => weekHtml(w, isnin, hariIni, "5k")).join("")}</ol>`;
+
+    const kemajuan = document.getElementById("kemajuan")!;
+    const sambung = isnin
+      ? mountResume(
+          pelanEl.querySelector("[data-sambung-slot]")!,
+          h.minggu,
+          isnin,
+          siap,
+        )
+      : () => {};
+    const kira = () => {
+      kemajuan.textContent = `${siap.size} / ${jumlah} sesi siap.`;
+      sambung();
+    };
+    kira();
+    const kotak =
+      pelanEl.querySelectorAll<HTMLInputElement>("input[data-sesi]");
+    const kemas = () => {
+      kotak.forEach((c) => (c.checked = siap.has(c.dataset.sesi!)));
+      kira();
+    };
+    // Versi akaun: lencana awan + segerak tanda siap (lib/cloud-sync.ts).
+    const slotAwan = pelanEl.querySelector<HTMLElement>("[data-awan]");
+    const keAwan = slotAwan
+      ? mountCloudBox(slotAwan, kunci, siap, kemas)
+      : () => {};
+    // Pelan aktif + padanan Strava (ahli sahaja, lib/plan-sync.ts).
+    if (slotAwan)
+      void mountActivePlanBox(pelanEl.querySelector("[data-aktif]")!, kunci, !!isnin, siap, kemas);
+    kemas();
+    kotak.forEach((c) =>
+      c.addEventListener("change", () => {
+        c.checked ? siap.add(c.dataset.sesi!) : siap.delete(c.dataset.sesi!);
+        writeList(kunci, [...siap]);
+        kira();
+        keAwan();
+      }),
+    );
+    // Versi penuh sahaja: di versi awam, padam akan membuka semula slot had 3 pelan.
+    pelanEl
+      .querySelector("[data-padam]")
+      ?.addEventListener("click", async () => {
+        const ya = await confirmDialog({
+          title: "Padam pelan ini?",
+          message: `Pelan ${bulan} bulan · ${hari} hari seminggu dan ${siap.size} tanda siap akan dibuang dari pelayar ini dan dari awan. Tindakan ini tak boleh dibatalkan.`,
+          confirmLabel: "Padam",
+          danger: true,
+        });
+        if (!ya) return;
+        deletePlan(kunci);
+        await removeFromCloud(kunci);
+        location.href = "/account";
+      });
+    mountShare(
+      pelanEl.querySelector<HTMLButtonElement>("[data-kongsi]")!,
+      shareLink("/plan-5k", q),
+      `Mari berlari bersama: pelan 5K bawah 30 minit (${bulan} bulan, ${hari} hari seminggu) dari Nubi Sport.`,
+    );
+    pelanEl
+      .querySelector<HTMLButtonElement>("[data-ics]")
+      ?.addEventListener("click", () => {
+        const jam =
+          (document.getElementById("masa-lari") as HTMLInputElement).value ||
+          "06:30";
+        const ics = buildIcs(
+          h.minggu.flatMap((w) =>
+            w.sesi.map((s, i) => ({
+              uid: `${kunci.replace(":", "-")}-m${w.no}s${i}`,
+              mula: malaysiaTime(sessionDate(isnin!, w.no, hari, i), jam),
+              minit: s.minit,
+              tajuk: `Nubi 5K · Minggu ${w.no}: ${s.tajuk} (${s.minit} min)`,
+              keterangan: `${s.arahan}\n${s.usaha}`,
+            })),
+          ),
+          { nama: `Nubi 5K · ${bulan} bulan` },
+        );
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(
+          new Blob([ics], { type: "text/calendar" }),
+        );
+        a.download = `pelan-5k-${bulan}bln-${tahap}-${hari}hari.ics`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 60e3);
+      });
+    // Minggu semasa (bila tarikh mula diisi) lebih berguna daripada atas pelan.
+    (pelanEl.querySelector(".kad.kini") ?? hasil).scrollIntoView({
+      behavior: "smooth",
+    });
+  }
+</script>

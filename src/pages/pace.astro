@@ -7,7 +7,7 @@ import Section from "../components/ui/Section.astro";
 import ChipGroup from "../components/ui/ChipGroup.astro";
 import Field from "../components/ui/Field.astro";
 import Alert from "../components/ui/Alert.astro";
-import { KM_MAX, KM_MIN, LUMBA } from "../lib/pace";
+import { KM_MAX, KM_MIN, RACE_DISTANCES } from "../lib/pace";
 ---
 
 <Layout
@@ -18,7 +18,7 @@ import { KM_MAX, KM_MIN, LUMBA } from "../lib/pace";
     eyebrow="Kalkulator"
     title="Pace berapa"
     accent="untuk sasaran anda?"
-    lead="Masukkan jarak dan masa untuk dapat pace - atau jarak dan pace untuk dapat masa. Anggaran 5K hingga maraton dikira sekali."
+    lead="Masukkan jarak dan masa untuk dapatkan pace - atau jarak dan pace untuk dapatkan masa. Anggaran 5K hingga maraton dikira serentak."
   >
     <form class="form" method="get" id="borang">
       <ChipGroup
@@ -26,7 +26,7 @@ import { KM_MAX, KM_MIN, LUMBA } from "../lib/pace";
         name="jarak"
         checked="5k"
         options={[
-          ...LUMBA.map((l) => ({ value: l.id, label: l.nama })),
+          ...RACE_DISTANCES.map((l) => ({ value: l.id, label: l.nama })),
           { value: "lain", label: "Lain" },
         ]}
       />
@@ -76,21 +76,19 @@ import { KM_MAX, KM_MIN, LUMBA } from "../lib/pace";
     <div class="prose">
       <ul>
         <li>
-          <strong>Pace lumba</strong> ialah apa yang kalkulator ini beri - untuk hari
+          <strong>Pace lumba</strong> ialah pace yang kalkulator ini beri - untuk hari
           lumba atau sesi tempo/interval, bukan setiap hari.
         </li>
         <li>
-          <strong>Lari mudah</strong> kira-kira 1:15-1:45 min/km lebih perlahan dari
-          pace 5K anda - boleh bercakap ayat penuh. Kebanyakan larian minggu anda
-          patut di sini.
+          <strong>Lari mudah</strong> kira-kira 1:15-1:45 min/km lebih perlahan daripada
+          pace 5K anda - boleh bercakap ayat penuh. Kebanyakan larian minggu anda patut pada rentak ini.
         </li>
         <li>
           <strong>Panas dan lembap</strong> memperlahankan semua orang. Pace yang
           sama terasa jauh lebih sukar pada jam 9 pagi berbanding 6 pagi.
         </li>
         <li>
-          Anggaran jarak lain guna <strong>formula Riegel</strong> dan menganggap
-          anda dah berlatih untuk jarak itu. Dari 5K ke maraton, anggaran biasanya
+          Anggaran jarak lain guna <strong>formula Riegel</strong> dan anggap anda dah berlatih untuk jarak itu. Dari 5K ke maraton, anggaran biasanya
           terlalu optimistik.
         </li>
       </ul>
@@ -101,7 +99,7 @@ import { KM_MAX, KM_MIN, LUMBA } from "../lib/pace";
     <div class="container narrow">
       <Alert variant="info" title="Ada sasaran?">
         <p>
-          <a class="link" href="/pelan-5k">Pelan 5K bawah 30 minit</a> untuk pemula,
+          <a class="link" href="/plan-5k">Pelan 5K bawah 30 minit</a> untuk pemula,
           dan pelan 10K / 21K untuk
           <a class="link" href="/register">akaun percuma</a> - pace setiap sesi dikira
           dari masa anda.
@@ -112,9 +110,9 @@ import { KM_MAX, KM_MIN, LUMBA } from "../lib/pace";
 </Layout>
 
 <script>
-  import { bacaMasa, kiraPace, LUMBA } from "../lib/pace";
-  import { pace } from "../lib/pelan-5k";
-  import { jam } from "../lib/pelan-jarak";
+  import { parseTime, calcPace, RACE_DISTANCES } from "../lib/pace";
+  import { formatPace } from "../lib/plan-5k";
+  import { formatTime } from "../lib/distance-plan";
 
   const borang = document.getElementById("borang") as HTMLFormElement;
   const medanKm = document.getElementById("medan-km")!;
@@ -139,9 +137,9 @@ import { KM_MAX, KM_MIN, LUMBA } from "../lib/pace";
     const km =
       j === "lain"
         ? Number(q.get("km"))
-        : (LUMBA.find((l) => l.id === j)?.km ?? NaN);
-    const masa = q.get("masa") ? bacaMasa(q.get("masa")!) : undefined;
-    const p = q.get("pace") ? bacaMasa(q.get("pace")!) : undefined;
+        : (RACE_DISTANCES.find((l) => l.id === j)?.km ?? NaN);
+    const masa = q.get("masa") ? parseTime(q.get("masa")!) : undefined;
+    const p = q.get("pace") ? parseTime(q.get("pace")!) : undefined;
     const h =
       masa === null || p === null
         ? ({
@@ -149,14 +147,14 @@ import { KM_MAX, KM_MIN, LUMBA } from "../lib/pace";
             sebab:
               "Format masa tak dikenali - guna mm:ss (28:45) atau h:mm:ss (1:05:30).",
           } as const)
-        : kiraPace(km, masa, p === undefined ? undefined : p * 60);
+        : calcPace(km, masa, p === undefined ? undefined : p * 60);
     hasil.hidden = false;
     // Semua teks dari lib/nombor, bukan dari URL - selamat untuk innerHTML.
     keputusan.innerHTML = h.ok
       ? `<p class="eyebrow">${+h.km.toFixed(2)} km</p>
         <div class="pace-angka">
-          <div><span class="display">${pace(h.paceSaat)}</span><small>min/km</small></div>
-          <div><span class="display">${jam(h.minit)}</span><small>masa</small></div>
+          <div><span class="display">${formatPace(h.paceSaat)}</span><small>min/km</small></div>
+          <div><span class="display">${formatTime(h.minit)}</span><small>masa</small></div>
           <div><span class="display">${h.kmj.toFixed(1)}</span><small>km/j</small></div>
         </div>
         <h2 class="display pace-tajuk">Anggaran jarak lain</h2>
@@ -164,12 +162,12 @@ import { KM_MAX, KM_MIN, LUMBA } from "../lib/pace";
           <thead><tr><th scope="col">Jarak</th><th scope="col">Masa</th><th scope="col">Pace</th></tr></thead>
           <tbody>${h.ramalan
             .map((r) => {
-              const km = LUMBA.find((l) => l.nama === r.nama)!.km;
-              return `<tr><th scope="row">${r.nama}</th><td>${jam(r.minit)}</td><td>${pace((r.minit * 60) / km)}/km</td></tr>`;
+              const km = RACE_DISTANCES.find((l) => l.nama === r.nama)!.km;
+              return `<tr><th scope="row">${r.nama}</th><td>${formatTime(r.minit)}</td><td>${formatPace((r.minit * 60) / km)}/km</td></tr>`;
             })
             .join("")}</tbody>
         </table>
-        <p class="muted">Anggaran Riegel - kasar, terutama untuk jarak yang jauh beza. Bukan janji.</p>`
+        <p class="muted">Anggaran Riegel - kasar, terutama untuk jarak yang jauh berbeza. Bukan janji.</p>`
       : `<div class="alert alert-warning"><p>${h.sebab}</p></div>`;
     hasil.scrollIntoView({ behavior: "smooth" });
   }

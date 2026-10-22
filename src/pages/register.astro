@@ -45,7 +45,7 @@ import { TURNSTILE_SITE_KEY } from "../data/site";
           required
         />
       </Field>
-      <Field label="Sahkan kata laluan">
+      <Field label="Ulang kata laluan">
         <input
           class="input"
           type="password"
@@ -57,14 +57,14 @@ import { TURNSTILE_SITE_KEY } from "../data/site";
       <Alert variant="danger" id="mesej" hidden />
       <button class="btn btn-primary" type="submit">Daftar</button>
       <p class="lead">
-        Sudah ada akaun? <a class="link" href="/login">Log masuk</a>.
+        Dah ada akaun? <a class="link" href="/login">Log masuk</a>.
       </p>
     </form>
 
     <div class="form daftar" id="siap" hidden>
       <Alert variant="success" title="Semak e-mel anda">
         <p>
-          Jika e-mel ini boleh didaftarkan, pautan pengesahan sedang dihantar.
+          Kalau e-mel ini boleh didaftarkan, pautan pengesahan sedang dihantar.
           Klik pautan itu dalam masa 24 jam, kemudian log masuk.
         </p>
       </Alert>
@@ -99,9 +99,9 @@ import { TURNSTILE_SITE_KEY } from "../data/site";
   import {
     api,
     captcha,
-    hantarSemula,
+    resendVerification,
     json,
-    ralatAm,
+    commonError,
     resetCaptcha,
   } from "../lib/api";
 
@@ -128,19 +128,19 @@ import { TURNSTILE_SITE_KEY } from "../data/site";
       return "Masukkan e-mel yang sah.";
     if (pw.length < 12 || pw.length > 200)
       return "Kata laluan mesti 12 hingga 200 aksara.";
-    if (pw !== pw2) return "Kata laluan tidak sama.";
+    if (pw !== pw2) return "Kata laluan tak sama.";
     return null;
   };
 
   const terangkan = (status: number, body: Record<string, any>) =>
-    ralatAm(status, body) ??
+    commonError(status, body) ??
     (status === 400 && body.field === "email"
       ? "Masukkan e-mel yang sah."
       : status === 400 && body.field === "password"
         ? "Kata laluan mesti 12 hingga 200 aksara."
         : status === 400 && body.field === "name"
           ? "Masukkan nama (maksimum 100 aksara)."
-          : "Tak dapat daftar sekarang. Cuba sebentar lagi.");
+          : "Tak dapat daftar sekarang. Cuba lagi sekejap.");
 
   borang.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -178,10 +178,10 @@ import { TURNSTILE_SITE_KEY } from "../data/site";
 
   semula.addEventListener("click", async () => {
     semula.disabled = true;
-    const salah = await hantarSemula(email);
+    const salah = await resendVerification(email);
     papar(mesejSemula, salah);
     semula.disabled = false;
-    if (!salah) semula.textContent = "Dihantar - semak e-mel";
+    if (!salah) semula.textContent = "Dah dihantar - semak e-mel";
   });
 </script>
 

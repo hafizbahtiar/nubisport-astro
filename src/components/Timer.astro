@@ -1,0 +1,403 @@
+---
+// Pemasa jalan-lari skrin penuh. Dibuka oleh butang `[data-mula]` dalam kad sesi (lib/plan-render.ts),
+// dipasang sekali dalam Plan5k + DistancePlan. Langkah dari `segmen` enjin pelan; masa dari jam
+// dinding (lib/timer.ts). Bunyi + getaran pada setiap tukar langkah, Wake Lock semasa berjalan.
+// Tamat -> "Tanda siap" tanda kotak sesi itu (event change = simpan + segerak awan seperti biasa).
+import Icon from "./ui/Icon.astro";
+---
+
+<dialog
+  class="pemasa"
+  id="pemasa"
+  aria-labelledby="pemasa-tajuk"
+  data-buat="jalan"
+>
+  <div class="pemasa-isi">
+    <header class="pemasa-kepala">
+      <p class="pemasa-tajuk" id="pemasa-tajuk"></p>
+      <button
+        class="pemasa-tutup"
+        type="button"
+        data-tutup
+        aria-label="Tutup pemasa"
+      >
+        <Icon name="tutup" />
+      </button>
+    </header>
+
+    <div class="pemasa-utama" aria-live="polite">
+      <p class="pemasa-buat display" data-buat-teks></p>
+      <p class="pemasa-masa display" data-masa aria-hidden="true"></p>
+      <p class="pemasa-seterusnya" data-seterusnya></p>
+    </div>
+
+    <div class="pemasa-bawah">
+      <div class="pemasa-bar" aria-hidden="true"><span data-bar></span></div>
+      <p class="pemasa-info">
+        <span data-langkah></span><span data-baki></span>
+      </p>
+      <p class="pemasa-usaha" data-usaha></p>
+
+      <div class="pemasa-kawal" data-kawal>
+        <button class="btn btn-primary pemasa-main" type="button" data-main>
+          <Icon name="main" /><span>Mula</span>
+        </button>
+        <button class="btn btn-ghost" type="button" data-langkau>
+          <Icon name="langkau" />Langkau
+        </button>
+      </div>
+      <div class="pemasa-kawal" data-tamat hidden>
+        <button class="btn btn-primary" type="button" data-siap
+          >Tanda siap</button
+        >
+        <button class="btn btn-ghost" type="button" data-tutup>Tutup</button>
+      </div>
+      <p class="pemasa-nota">
+        Biarkan skrin terbuka - bunyi dan getaran tak jalan bila skrin dikunci. Panduan umum, bukan nasihat perubatan: berhenti kalau sakit
+        dada, pening atau sesak nafas.
+      </p>
+    </div>
+  </div>
+</dialog>
+
+<script>
+  import type { Segment } from "../lib/plan-5k";
+  import { icon } from "../lib/icon";
+  import {
+    totalSeconds,
+    positionAt,
+    SEGMENT_LABELS,
+    mmss,
+    segmentStart,
+    durationText,
+  } from "../lib/timer";
+  import { confirmDialog } from "../lib/confirm";
+
+  const d = document.getElementById("pemasa") as HTMLDialogElement;
+  const $ = <T extends HTMLElement>(s: string) => d.querySelector<T>(s)!;
+  const btnMain = $<HTMLButtonElement>("[data-main]");
+
+  let segmen: Segment[] = [];
+  let id = "";
+  let berlalu = 0; // saat sebelum mula/sambung terakhir
+  let sejak: number | null = null; // performance.now() bila berjalan; null = dijeda / belum mula
+  let iLalu = -1;
+  let tikLalu = -1;
+  let jam: number | undefined;
+  let audio: AudioContext | undefined;
+  let kunci: WakeLockSentinel | null = null;
+
+  const saatKini = () =>
+    berlalu + (sejak === null ? 0 : (performance.now() - sejak) / 1000);
+
+  function bunyi(nada: number[], panjang = 0.18) {
+    if (!audio) return;
+    nada.forEach((f, n) => {
+      const o = audio!.createOscillator();
+      const g = audio!.createGain();
+      const t = audio!.currentTime + n * (panjang + 0.08);
+      o.frequency.value = f;
+      g.gain.setValueAtTime(0.25, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + panjang);
+      o.connect(g).connect(audio!.destination);
+      o.start(t);
+      o.stop(t + panjang);
+    });
+  }
+  const getar = (p: number[]) => navigator.vibrate?.(p);
+
+  // Lari/laju = dua bunyi tinggi; jalan/rehat = satu bunyi rendah; tamat = tiga naik.
+  function isyarat(s: Segment | undefined) {
+    if (!s)
+      return (bunyi([660, 880, 1100], 0.25), getar([300, 100, 300, 100, 300]));
+    if (s.buat === "lari" || s.buat === "laju")
+      (bunyi([880, 880]), getar([200, 100, 200]));
+    else (bunyi([440], 0.35), getar([400]));
+  }
+
+  async function jagaSkrin(hidup: boolean) {
+    try {
+      if (hidup && !kunci && "wakeLock" in navigator) {
+        kunci = await navigator.wakeLock.request("screen");
+        kunci.addEventListener("release", () => (kunci = null));
+      } else if (!hidup) await kunci?.release();
+    } catch {
+      // Ditolak (bateri lemah / tab tidak aktif) - pemasa tetap berjalan.
+    }
+  }
+
+  function lukis() {
+    const t = saatKini();
+    const k = positionAt(segmen, t);
+    const s = segmen[k.i];
+    if (sejak !== null && k.i !== iLalu) {
+      if (iLalu >= 0) isyarat(s);
+      iLalu = k.i;
+    }
+    // Kira detik 3-2-1 di hujung langkah yang cukup panjang.
+    const detik = Math.ceil(k.baki);
+    if (sejak !== null && s && s.saat >= 10 && detik <= 3 && detik !== tikLalu)
+      bunyi([1200], 0.06);
+    tikLalu = detik;
+
+    d.dataset.buat = s?.buat ?? "siap";
+    $("[data-buat-teks]").textContent = s ? SEGMENT_LABELS[s.buat] : "Sesi siap!";
+    if (s) $("[data-masa]").textContent = mmss(k.baki);
+    else $("[data-masa]").innerHTML = icon("selesai");
+    const lepas = segmen[k.i + 1];
+    $("[data-seterusnya]").textContent = s
+      ? lepas
+        ? `Seterusnya: ${SEGMENT_LABELS[lepas.buat]} ${durationText(lepas.saat)}`
+        : "Langkah terakhir"
+      : "Bagus. Regang ringan dan minum air.";
+    $("[data-langkah]").textContent = s
+      ? `Langkah ${k.i + 1} / ${segmen.length}`
+      : "";
+    $("[data-baki]").textContent = s ? `Baki ${mmss(k.bakiJumlah)}` : "";
+    $("[data-bar]").style.width =
+      `${Math.min(100, (t / totalSeconds(segmen)) * 100)}%`;
+
+    if (k.selesai) {
+      henti();
+      $("[data-kawal]").hidden = true;
+      $("[data-tamat]").hidden = false;
+      const kotak = document.querySelector<HTMLInputElement>(
+        `input[data-sesi="${id}"]`,
+      );
+      $<HTMLButtonElement>("[data-siap]").hidden = !kotak || kotak.checked;
+    }
+  }
+
+  function henti() {
+    if (sejak !== null) berlalu = saatKini();
+    sejak = null;
+    clearInterval(jam);
+    jagaSkrin(false);
+    btnMain.innerHTML = `${icon("main")}<span>${berlalu > 0 ? "Sambung" : "Mula"}</span>`;
+  }
+
+  function main() {
+    audio ??= new AudioContext(); // perlu dari ketikan pengguna (iOS)
+    void audio.resume();
+    if (iLalu < 0) isyarat(segmen[0]);
+    sejak = performance.now();
+    iLalu = Math.max(iLalu, positionAt(segmen, berlalu).i);
+    jam = window.setInterval(lukis, 250);
+    jagaSkrin(true);
+    btnMain.innerHTML = `${icon("jeda")}<span>Jeda</span>`;
+    lukis();
+  }
+
+  async function tutup() {
+    const tengah = berlalu > 0 || sejak !== null;
+    const habis = positionAt(segmen, saatKini()).selesai;
+    if (tengah && !habis) {
+      const jalan = sejak !== null;
+      if (jalan) henti();
+      const ya = await confirmDialog({
+        title: "Tamatkan sesi?",
+        message: "Pemasa akan berhenti dan sesi ini tak ditanda siap.",
+        confirmLabel: "Tamatkan",
+        danger: true,
+      });
+      if (!ya) return jalan ? main() : undefined;
+    }
+    henti();
+    d.close();
+  }
+
+  document.addEventListener("click", (e) => {
+    const b = (e.target as Element).closest<HTMLElement>("[data-mula]");
+    if (!b) return;
+    segmen = JSON.parse(b.dataset.segmen!);
+    id = b.dataset.mula!;
+    berlalu = 0;
+    sejak = null;
+    iLalu = -1;
+    $("#pemasa-tajuk").textContent =
+      `Minggu ${id.split(".")[0]} · ${b.dataset.tajuk}`;
+    $("[data-usaha]").textContent = b.dataset.usaha ?? "";
+    $("[data-kawal]").hidden = false;
+    $("[data-tamat]").hidden = true;
+    henti();
+    lukis();
+    d.showModal();
+    btnMain.focus();
+  });
+
+  btnMain.addEventListener("click", () =>
+    sejak === null ? main() : (henti(), lukis()),
+  );
+  $("[data-langkau]").addEventListener("click", () => {
+    const k = positionAt(segmen, saatKini());
+    berlalu = segmentStart(segmen, k.i + 1);
+    if (sejak !== null) sejak = performance.now();
+    lukis();
+  });
+  d.querySelectorAll("[data-tutup]").forEach((b) =>
+    b.addEventListener("click", tutup),
+  );
+  d.addEventListener("cancel", (e) => {
+    e.preventDefault(); // Esc melalui jalan yang sama (tanya dahulu jika di tengah sesi)
+    void tutup();
+  });
+  $("[data-siap]").addEventListener("click", () => {
+    const kotak = document.querySelector<HTMLInputElement>(
+      `input[data-sesi="${id}"]`,
+    );
+    if (kotak && !kotak.checked) {
+      kotak.checked = true;
+      kotak.dispatchEvent(new Event("change"));
+    }
+    d.close();
+  });
+  // Wake Lock dilepaskan bila tab tersembunyi - minta semula bila kembali.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && sejak !== null) {
+      jagaSkrin(true);
+      lukis();
+    }
+  });
+</script>
+
+<style>
+  .pemasa {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: var(--navy);
+    color: #fff;
+    transition: background-color 0.3s ease;
+  }
+  .pemasa[data-buat="lari"],
+  .pemasa[data-buat="laju"] {
+    background: var(--orange-ink);
+  }
+  .pemasa[data-buat="siap"] {
+    background: var(--navy-2);
+  }
+  .pemasa::backdrop {
+    background: var(--navy);
+  }
+
+  .pemasa-isi {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    min-height: 100%;
+    max-width: 40rem;
+    margin: 0 auto;
+    padding: max(1rem, env(safe-area-inset-top)) 1.25rem
+      max(1.25rem, env(safe-area-inset-bottom));
+  }
+
+  .pemasa-kepala {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .pemasa-tajuk {
+    margin: 0;
+    font-weight: 600;
+    color: rgb(255 255 255 / 0.85);
+  }
+  .pemasa-tutup {
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    flex: none;
+    border: 0;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.12);
+    color: #fff;
+    cursor: pointer;
+  }
+
+  .pemasa-utama {
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    text-align: center;
+  }
+  .pemasa-buat {
+    margin: 0;
+    font-size: clamp(3rem, 16vw, 6rem);
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .pemasa-masa {
+    margin: 0.25rem 0 0.5rem;
+    font-size: clamp(5rem, 30vw, 11rem);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .pemasa-masa :global(.lucide) {
+    width: 0.6em;
+    height: 0.6em;
+    margin: 0.2em auto;
+  }
+  .pemasa-seterusnya {
+    margin: 0;
+    font-size: 1.15rem;
+    color: rgb(255 255 255 / 0.85);
+  }
+
+  .pemasa-bawah {
+    display: grid;
+    gap: 0.75rem;
+  }
+  .pemasa-bar {
+    height: 0.4rem;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.2);
+    overflow: hidden;
+  }
+  .pemasa-bar span {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: #fff;
+    transition: width 0.25s linear;
+  }
+  .pemasa-info {
+    display: flex;
+    justify-content: space-between;
+    margin: 0;
+    font-size: 0.95rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .pemasa-usaha {
+    margin: 0;
+    font-size: 0.9rem;
+    color: rgb(255 255 255 / 0.8);
+  }
+  .pemasa-kawal {
+    display: flex;
+    gap: 0.75rem;
+  }
+  .pemasa-kawal[hidden] {
+    display: none;
+  }
+  .pemasa-kawal .btn {
+    flex: 1;
+  }
+  .pemasa-main {
+    flex: 2 !important;
+  }
+  /* Atas latar oren, butang oren hilang - jadikan putih. */
+  .pemasa .btn-primary {
+    background: #fff;
+    color: var(--navy);
+  }
+  .pemasa-nota {
+    margin: 0;
+    font-size: 0.8rem;
+    color: rgb(255 255 255 / 0.7);
+  }
+</style>

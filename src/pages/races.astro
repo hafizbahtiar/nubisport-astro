@@ -1,0 +1,153 @@
+---
+// Kalendar lumba Malaysia. Data susun tangan: src/data/races.ts (semak: bun scripts/check-races.ts).
+// Page statik: acara yang sudah lepas disembunyikan dalam pelayar (tarikh Malaysia), bukan hanya masa bina.
+import Layout from "../layouts/Layout.astro";
+import PageHero from "../components/ui/PageHero.astro";
+import Section from "../components/ui/Section.astro";
+import Alert from "../components/ui/Alert.astro";
+import { RACES } from "../data/races";
+
+const senarai = [...RACES].sort((a, b) => a.tarikh.localeCompare(b.tarikh));
+const tarikh = (iso: string) =>
+  new Date(`${iso}T00:00:00+08:00`).toLocaleDateString("ms-MY", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "Asia/Kuala_Lumpur",
+  });
+const ddmm = (iso: string) => iso.split("-").reverse().join("/");
+---
+
+<Layout
+  title="Kalendar lumba Malaysia - Nubi Sport"
+  description="Larian 3K hingga maraton di seluruh Malaysia, dari laman rasmi penganjur. Simpan ke kalendar dengan satu klik."
+>
+  <PageHero
+    eyebrow="Kalendar"
+    title="Lumba"
+    accent="seterusnya."
+    lead="Ada tarikh sasaran, latihan jadi lebih bermakna. Setiap acara disalin dari laman rasmi penganjur - semak di sana sebelum daftar."
+  />
+
+  <Section>
+    <ul class="lumba" id="lumba">
+      {
+        senarai.map((l) => (
+          <li class="card" data-tarikh={l.tarikh} data-tutup={l.tutup}>
+            <p class="eyebrow">
+              {tarikh(l.tarikh)} · {l.mula}
+            </p>
+            <h2 class="lumba-nama">{l.nama}</h2>
+            <p class="lumba-tempat">
+              {l.tempat}, {l.negeri}
+            </p>
+            <p class="lumba-jarak">
+              {l.jarak.map((j) => (
+                <span class="lencana">{j}</span>
+              ))}
+              {l.tutup && (
+                <span class="lencana lumba-tutup" hidden>
+                  Pendaftaran ditutup
+                </span>
+              )}
+            </p>
+            {l.yuran && <p class="lumba-kecil">Yuran: {l.yuran}</p>}
+            {l.tutup && (
+              <p class="lumba-kecil">Daftar sebelum {ddmm(l.tutup)}</p>
+            )}
+            <div class="actions">
+              <a
+                class="btn btn-primary btn-sm"
+                href={l.pautan}
+                target="_blank"
+                rel="noopener"
+              >
+                Laman rasmi
+              </a>
+              <a
+                class="btn btn-outline btn-sm"
+                href={`/races/${l.id}.ics`}
+                download
+              >
+                Simpan ke kalendar
+              </a>
+            </div>
+            <p class="lumba-kecil muted">Disemak {ddmm(l.disemak)}</p>
+          </li>
+        ))
+      }
+    </ul>
+    <p class="lead" id="kosong" hidden>
+      Tiada lumba akan datang dalam senarai ini lagi - kami tengah semak acara baru.
+    </p>
+  </Section>
+
+  <Section band narrow>
+    <Alert variant="info" title="Tarikh boleh berubah">
+      <p>
+        Penganjur kadang-kadang tukar tarikh, laluan atau yuran. Laman rasmi
+        penganjur sentiasa betul - senarai ini hanya rujukan. Pemula? Pilih 5K
+        atau 10K dulu, dan beri diri anda sekurang-kurangnya 8-12 minggu dengan <a
+          class="link"
+          href="/plan-5k">Pelan 5K</a
+        >.
+      </p>
+    </Alert>
+  </Section>
+</Layout>
+
+<script>
+  import { todayMY } from "../lib/date";
+
+  const hari = todayMY();
+  const kad = [...document.querySelectorAll<HTMLElement>("#lumba > li")];
+  for (const li of kad) {
+    li.hidden = li.dataset.tarikh! < hari;
+    const tutup = li.dataset.tutup;
+    if (tutup && tutup < hari)
+      li.querySelector<HTMLElement>(".lumba-tutup")!.hidden = false;
+  }
+  document.getElementById("kosong")!.hidden = kad.some((li) => !li.hidden);
+</script>
+
+<style>
+  .lumba {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+    gap: 1rem;
+  }
+  .lumba li {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .lumba .eyebrow {
+    margin: 0;
+  }
+  .lumba-nama {
+    margin: 0;
+    font-size: 1.2rem;
+    line-height: 1.3;
+  }
+  .lumba-tempat,
+  .lumba-kecil {
+    margin: 0;
+  }
+  .lumba-kecil {
+    font-size: 0.9rem;
+  }
+  .lumba-jarak {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: 0;
+  }
+  .lumba .actions {
+    margin-top: auto;
+    padding-top: 0.5rem;
+  }
+</style>

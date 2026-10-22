@@ -86,7 +86,7 @@ body:not(.app)>main {
   flex: 1 0 auto;
 }
 
-/* Hero sahaja (404, daftar, sahkan): latar gelap terus ke footer. */
+/* Hero sahaja (404, daftar, verify): latar gelap terus ke footer. */
 body:not(.app)>main:has(> .page-hero:only-child) {
   background: var(--navy);
 }
@@ -97,7 +97,7 @@ svg {
   max-width: 100%;
 }
 
-/* Ikon Lucide (src/lib/ikon.ts): saiz lalai ikut teks; konteks boleh tetapkan width/height. */
+/* Ikon Lucide (src/lib/icon.ts): saiz lalai ikut teks; konteks boleh tetapkan width/height. */
 .lucide {
   width: 1.25em;
   height: 1.25em;
@@ -793,8 +793,8 @@ legend,
   color: var(--muted);
 }
 
-/* ---------- Dialog sahkan (ConfirmDialog.astro + lib/sahkan.ts) ---------- */
-.sahkan {
+/* ---------- Dialog pengesahan (ConfirmDialog.astro + lib/confirm.ts) ---------- */
+.confirm-dialog {
   width: min(28rem, calc(100% - 2rem));
   padding: 1.5rem;
   border: 0;
@@ -804,22 +804,22 @@ legend,
   box-shadow: 0 1.5rem 3rem rgb(10 26 51 / 0.3);
 }
 
-.sahkan::backdrop {
+.confirm-dialog::backdrop {
   background: rgb(10 26 51 / 0.55);
 }
 
-.sahkan-tajuk {
+.confirm-title {
   margin: 0;
   font-size: 1.75rem;
   color: var(--navy);
 }
 
-.sahkan-mesej {
+.confirm-message {
   margin: 0.5rem 0 1.5rem;
   color: var(--muted);
 }
 
-.sahkan .actions {
+.confirm-dialog .actions {
   justify-content: flex-end;
 }
 
@@ -946,7 +946,7 @@ legend,
   }
 }
 
-/* Lencana kecil (status storan pelan: Awan / Peranti ini - lib/awan.ts). */
+/* Lencana kecil (status storan pelan: Awan / Peranti ini - lib/cloud-sync.ts). */
 .lencana {
   display: inline-flex;
   align-items: center;

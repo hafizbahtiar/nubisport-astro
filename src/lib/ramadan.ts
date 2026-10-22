@@ -8,7 +8,7 @@ const HIJRI = new Intl.DateTimeFormat("en-u-ca-islamic-umalqura", {
 });
 
 /** Bulan Hijri (1-12) bagi tarikh "YYYY-MM-DD". */
-export function bulanHijri(iso: string): number {
+export function hijriMonth(iso: string): number {
   const p = Object.fromEntries(
     HIJRI.formatToParts(new Date(`${iso}T12:00:00Z`)).map((x) => [
       x.type,
@@ -19,4 +19,4 @@ export function bulanHijri(iso: string): number {
 }
 
 /** Ramadan = Hijri bulan 9. */
-export const dalamRamadan = (iso: string) => bulanHijri(iso) === 9;
+export const inRamadan = (iso: string) => hijriMonth(iso) === 9;

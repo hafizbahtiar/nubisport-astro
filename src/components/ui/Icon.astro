@@ -1,0 +1,10 @@
+---
+// Ikon Lucide (src/lib/icon.ts). Hiasan sahaja - beri label pada butang/pautan induk.
+import { icon, type IconName } from "../../lib/icon";
+
+interface Props {
+  name: IconName;
+}
+---
+
+<Fragment set:html={icon(Astro.props.name)} />

@@ -6,7 +6,7 @@ import { CONTACT, SITE } from "../data/site";
 const values = [
   {
     title: "Mula dari sifar",
-    body: "Tak pernah lari? Tak apa. Jalan-lari, lari perlahan - semua langkah dikira.",
+    body: "Tak pernah berlari? Tak apa. Jalan-lari atau lari perlahan - setiap langkah dikira.",
   },
   {
     title: "Gerak bersama",
@@ -21,10 +21,10 @@ const values = [
 const steps = [
   {
     title: "Hubungi kami",
-    body: "Mesej kami dan perkenalkan diri - tak perlu pengalaman.",
+    body: "Hantar mesej dan perkenalkan diri - pengalaman tak diperlukan.",
   },
   {
-    title: "Datang larian",
+    title: "Hadir ke larian",
     body: "Sertai sesi larian kumpulan. Datang dengan kasut yang selesa.",
   },
   {
@@ -35,12 +35,12 @@ const steps = [
 
 const faqs = [
   {
-    q: "Saya tak pernah lari langsung. Boleh sertai?",
+    q: "Saya tak pernah berlari langsung. Boleh sertai?",
     a: "Boleh - Nubi Sport memang untuk pemula. Ramai bermula dengan jalan-lari.",
   },
   {
     q: "Perlu laju untuk ikut kumpulan?",
-    a: "Tidak. Tiada pace minimum. Anda lari ikut kemampuan sendiri.",
+    a: "Tak. Tiada pace minimum. Anda lari ikut kemampuan sendiri.",
   },
   {
     q: "Apa perlu dibawa?",
@@ -60,7 +60,7 @@ const contacts = [
     <div class="container hero-grid">
       <div>
         <p class="eyebrow">
-          {SITE.tagline} · Est. {SITE.established}
+          {SITE.tagline} · Sejak {SITE.established}
         </p>
         <h1 class="display hero-title">
           Lari pertama anda <span>bermula di sini.</span>
@@ -71,7 +71,7 @@ const contacts = [
         </p>
         <div class="actions hero-cta">
           <a class="btn btn-primary" href="#sertai">Sertai komuniti</a>
-          <a class="btn btn-ghost" href="/pelan-5k">Pelan 5K bawah 30 min</a>
+          <a class="btn btn-ghost" href="/plan-5k">Pelan 5K bawah 30 min</a>
           <a class="btn btn-ghost" href="/maf">Lari ikut nadi (MAF)</a>
         </div>
       </div>
@@ -88,8 +88,8 @@ const contacts = [
   <Section
     id="tentang"
     eyebrow="Tentang kami"
-    title="Nubi = newbie. Dan itu okey."
-    lead="Kami kumpulan pelari baru yang mahu mula dengan cara yang betul - tanpa tekanan, tanpa ego. Setiap orang bermula di tempat yang berbeza."
+    title="Nubi = newbie. Dan itu tak apa."
+    lead="Kami kumpulan pelari baru yang nak mula dengan cara yang betul - tanpa tekanan, tanpa ego. Setiap orang bermula di tempat yang berbeza."
   >
     <ul class="grid-cards">
       {
@@ -108,7 +108,7 @@ const contacts = [
     id="cara"
     band
     eyebrow="Cara sertai"
-    title="Tiga langkah, itu sahaja."
+    title="Tiga langkah, itu saja."
   >
     <ol class="steps">
       {
@@ -136,7 +136,7 @@ const contacts = [
   <section id="sertai" class="join">
     <div class="container join-inner">
       <h2 class="display join-title">
-        Langkah pertama paling susah. <span>Kami teman.</span>
+        Langkah pertama paling sukar. <span>Kami temankan.</span>
       </h2>
       {
         contacts.length ? (
@@ -154,7 +154,7 @@ const contacts = [
           </div>
         ) : (
           <p class="hero-lead">
-            Maklumat untuk menyertai akan dikemas kini tidak lama lagi.
+            Maklumat untuk sertai akan dikongsi tak lama lagi.
           </p>
         )
       }

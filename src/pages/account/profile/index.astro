@@ -1,0 +1,94 @@
+---
+// Profil Nubi - Maklumat: nama (PATCH /me). Backend sama dengan portfolio - akaun satu, jadi
+// perubahan di sini juga nampak di hafizbahtiar.com. E-mel tidak boleh diubah (backend).
+import ProfileShell from "../../../components/ProfileShell.astro";
+import Field from "../../../components/ui/Field.astro";
+import Alert from "../../../components/ui/Alert.astro";
+---
+
+<ProfileShell title="Maklumat">
+  <section class="panel" aria-labelledby="t-profil">
+    <h2 class="display" id="t-profil">Maklumat anda</h2>
+    <form class="form" id="profil" novalidate>
+      <Field label="Nama">
+        <input
+          class="input"
+          type="text"
+          name="nama"
+          autocomplete="name"
+          maxlength="100"
+          required
+        />
+      </Field>
+      <Field label="E-mel" hint="E-mel log masuk tak boleh diubah.">
+        <input class="input" type="email" name="emel" readonly />
+      </Field>
+      <Alert variant="danger" id="mesej-profil" hidden />
+      <Alert variant="success" id="ok-profil" hidden />
+      <button class="btn btn-primary" type="submit">Simpan</button>
+    </form>
+  </section>
+</ProfileShell>
+
+<script>
+  import { api, cacheMe, json, commonError, currentUser } from "../../../lib/api";
+
+  const profil = document.getElementById("profil") as HTMLFormElement;
+  const papar = (id: string, teks: string | null) => {
+    const el = document.getElementById(id)!;
+    el.textContent = teks ?? "";
+    el.hidden = !teks;
+  };
+
+  // Pengawal sesi = AccountLayout; s null bermaksud page sedang dilencong ke /login.
+  const s = await currentUser();
+  if (s) {
+    profil.nama.value = s.name;
+    profil.emel.value = s.email;
+  }
+
+  profil.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    papar("ok-profil", null);
+    const nama = String(profil.nama.value).trim();
+    if (!nama || nama.length > 100)
+      return papar("mesej-profil", "Masukkan nama (maksimum 100 aksara).");
+    papar("mesej-profil", null);
+    const butang = profil.querySelector("button")!;
+    butang.disabled = true;
+    try {
+      const res = await api("/me", {
+        method: "PATCH",
+        body: JSON.stringify({ displayName: nama }),
+      });
+      if (!res.ok)
+        return papar(
+          "mesej-profil",
+          commonError(res.status, await json(res)) ??
+            "Tak dapat simpan sekarang. Cuba lagi sekejap.",
+        );
+      document
+        .querySelectorAll("[data-saya-nama]")
+        .forEach((el) => (el.textContent = nama));
+      document
+        .querySelectorAll("[data-saya-awal]")
+        .forEach((el) => (el.textContent = nama.charAt(0).toUpperCase()));
+      if (s) cacheMe({ ...s, name: nama });
+      papar("ok-profil", "Nama disimpan.");
+    } catch {
+      papar(
+        "mesej-profil",
+        "Tiada sambungan. Semak internet anda dan cuba lagi.",
+      );
+    } finally {
+      butang.disabled = false;
+    }
+  });
+</script>
+
+<style>
+  input[readonly] {
+    background: var(--paper-2);
+    color: var(--muted);
+  }
+</style>

@@ -9,7 +9,7 @@
  *   lompat, Enter pilih, Esc/Tab tutup. Klik di luar tutup.
  * - Label: <Field label="..." for={`${id}-butang`}>.
  */
-import Ikon from "./Ikon.astro";
+import Icon from "./Icon.astro";
 
 interface Props {
   id: string;
@@ -61,7 +61,7 @@ const pilihan = options.find((o) => o.value === value);
     <span data-label class:list={[!pilihan && "dd-kosong"]}
       >{pilihan?.label ?? placeholder}</span
     >
-    <Ikon nama="bawah" />
+    <Icon name="bawah" />
   </button>
   <ul
     class="dd-menu"
@@ -80,7 +80,7 @@ const pilihan = options.find((o) => o.value === value);
           aria-selected={o.value === value ? "true" : "false"}
         >
           <span>{o.label}</span>
-          <Ikon nama="tanda" />
+          <Icon name="tanda" />
         </li>
       ))
     }

@@ -61,8 +61,8 @@ import { TURNSTILE_SITE_KEY } from "../data/site";
     <div class="container narrow">
       <Alert variant="info" title="Data anda">
         <p>
-          Satu akaun untuk Nubi Sport dan hafizbahtiar.com (backend yang sama).
-          Selepas log masuk, ubah nama dan kata laluan di halaman Profil akaun
+          Satu akaun untuk Nubi Sport dan hafizbahtiar.com (pelayan yang sama).
+          Lepas log masuk, ubah nama dan kata laluan di halaman Profil akaun
           anda. Pelan latihan disimpan dalam pelayar; sehingga 3 pelan boleh
           disimpan ke awan supaya ikut akaun anda ke peranti lain.
         </p>
@@ -78,7 +78,7 @@ import { TURNSTILE_SITE_KEY } from "../data/site";
   defer></script>
 
 <script>
-  import { api, json, saya, type Saya } from "../lib/api";
+  import { api, json, fetchMe, type CurrentUser } from "../lib/api";
 
   const borang = document.getElementById("borang") as HTMLFormElement;
   const memuat = document.getElementById("memuat")!;
@@ -90,11 +90,11 @@ import { TURNSTILE_SITE_KEY } from "../data/site";
   const turnstile = () =>
     (window as any).turnstile as { reset(): void } | undefined;
 
-  // ?next= hanya laluan dalam laman ini ("/..." tapi bukan "//host" atau "/\host").
+  // ?next= hanya laluan dalam laman ini ("/..." tetapi bukan "//host" atau "/\host").
   const next = new URLSearchParams(location.search).get("next") ?? "";
   const tuju = /^\/(?![/\\])/.test(next) ? next : "/account";
 
-  const papar = (s: Saya | null) => {
+  const papar = (s: CurrentUser | null) => {
     if (s) return location.replace(tuju);
     memuat.hidden = true;
     borang.hidden = false;
@@ -110,17 +110,17 @@ import { TURNSTILE_SITE_KEY } from "../data/site";
     if (status === 403 && body.code === "email_unverified")
       return "Sahkan e-mel anda dulu - semak peti masuk untuk pautan pengesahan.";
     if (status === 403 && body.code === "account_banned")
-      return "Akaun ini disekat. Hubungi pentadbir.";
+      return "Akaun ini disekat. Hubungi pentadbir Nubi.";
     if (
       String(body.error ?? "")
         .toLowerCase()
         .includes("captcha")
     )
-      return "Semakan spam gagal. Muat semula page dan cuba lagi.";
+      return "Semakan spam gagal. Muat semula halaman dan cuba lagi.";
     if (status === 400 || status === 401)
       return "E-mel atau kata laluan salah.";
     if (status === 429) return "Terlalu banyak cubaan. Tunggu seminit.";
-    return "Tak dapat log masuk sekarang. Cuba sebentar lagi.";
+    return "Tak dapat log masuk sekarang. Cuba lagi sekejap.";
   };
 
   borang.addEventListener("submit", async (e) => {
@@ -148,7 +148,7 @@ import { TURNSTILE_SITE_KEY } from "../data/site";
         belumSah.hidden = body.code !== "email_unverified";
         return ralat(terangkan(res.status, body));
       }
-      papar(await saya());
+      papar(await fetchMe());
     } catch {
       ralat("Tiada sambungan. Semak internet anda dan cuba lagi.");
     } finally {
@@ -157,7 +157,7 @@ import { TURNSTILE_SITE_KEY } from "../data/site";
     }
   });
 
-  saya()
+  fetchMe()
     .then(papar)
     .catch(() => papar(null));
 </script>

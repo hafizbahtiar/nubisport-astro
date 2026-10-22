@@ -1,6 +1,6 @@
 // Fail kalendar iCalendar (RFC 5545), fungsi tulen. Semak: bun scripts/check-ics.ts
 
-export interface Acara {
+export interface CalendarEvent {
   uid: string; // stabil - import semula tidak menduakan acara
   mula: Date; // satu detik masa (instant)
   minit: number;
@@ -8,9 +8,9 @@ export interface Acara {
   keterangan: string;
 }
 
-/** Tarikh kalendar `d` (medan tempatan, seperti dari isninMula/tarikhSesi) + "HH:MM" waktu Malaysia
+/** Tarikh kalendar `d` (medan tempatan, seperti dari startMonday/sessionDate) + "HH:MM" waktu Malaysia
  *  (UTC+8, tiada DST) -> detik UTC. Tidak bergantung pada zon waktu pelayar. */
-export function waktuMalaysia(d: Date, jam: string): Date {
+export function malaysiaTime(d: Date, jam: string): Date {
   const [h, m] = jam.split(":").map(Number);
   return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), h - 8, m));
 }
@@ -35,7 +35,7 @@ function lipat(baris: string): string {
   return out;
 }
 
-export function buatIcs(acara: Acara[], opts: { nama: string }): string {
+export function buildIcs(acara: CalendarEvent[], opts: { nama: string }): string {
   const stamp = utc(new Date());
   const baris = [
     "BEGIN:VCALENDAR",

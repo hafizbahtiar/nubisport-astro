@@ -13,23 +13,23 @@ import { TURNSTILE_SITE_KEY } from "../data/site";
   <PageHero eyebrow="Akaun" title="Sahkan" accent="e-mel.">
     <p class="lead" id="memuat">Mengesahkan...</p>
 
-    <div class="form sahkan" id="berjaya" hidden>
+    <div class="form verify-box" id="berjaya" hidden>
       <Alert variant="success" title="E-mel disahkan">
-        <p>Akaun anda sudah aktif. Anda boleh log masuk sekarang.</p>
+        <p>Akaun anda dah aktif. Anda boleh log masuk sekarang.</p>
       </Alert>
       <a class="btn btn-primary" href="/login">Log masuk</a>
     </div>
 
     <!-- Tanpa token, atau token tamat / tidak sah: borang hantar semula. -->
-    <form class="form sahkan" id="semula" novalidate hidden>
+    <form class="form verify-box" id="semula" novalidate hidden>
       <Alert
         variant="warning"
         id="gagal"
-        title="Pautan tidak sah atau sudah tamat"
+        title="Pautan tak sah atau dah tamat"
       >
         <p>
           Pautan pengesahan hanya sah 24 jam dan sekali guna. Masukkan e-mel
-          anda untuk pautan baharu.
+          anda untuk pautan baru.
         </p>
       </Alert>
       <Field label="E-mel">
@@ -52,11 +52,11 @@ import { TURNSTILE_SITE_KEY } from "../data/site";
       <Alert variant="danger" id="mesej" hidden />
       <Alert variant="success" id="dihantar" hidden>
         <p>
-          Jika akaun ini belum disahkan, pautan baharu sedang dihantar. Semak
+          Kalau akaun ini belum disahkan, pautan baru sedang dihantar. Semak
           e-mel anda.
         </p>
       </Alert>
-      <button class="btn btn-primary" type="submit">Hantar pautan baharu</button
+      <button class="btn btn-primary" type="submit">Hantar pautan baru</button
       >
       <p class="lead">
         Belum ada akaun? <a class="link" href="/register">Daftar</a>.
@@ -72,7 +72,7 @@ import { TURNSTILE_SITE_KEY } from "../data/site";
   defer></script>
 
 <script>
-  import { api, hantarSemula } from "../lib/api";
+  import { api, resendVerification } from "../lib/api";
 
   const memuat = document.getElementById("memuat")!;
   const berjaya = document.getElementById("berjaya")!;
@@ -101,7 +101,7 @@ import { TURNSTILE_SITE_KEY } from "../data/site";
         if (!res.ok && res.status !== 400) {
           // 429 / 5xx: token mungkin masih sah - kekalkan dalam URL untuk muat semula.
           memuat.textContent =
-            "Tak dapat mengesahkan sekarang. Muat semula page ini sebentar lagi.";
+            "E-mel belum dapat disahkan sekarang. Muat semula halaman ini sekejap lagi.";
           return;
         }
         // Token sekali guna - buang dari bar alamat (sejarah / kongsi skrin).
@@ -110,7 +110,7 @@ import { TURNSTILE_SITE_KEY } from "../data/site";
       })
       .catch(() => {
         memuat.textContent =
-          "Tiada sambungan. Semak internet anda dan muat semula page ini.";
+          "Tiada sambungan. Semak internet anda dan muat semula halaman ini.";
       });
 
   borang.addEventListener("submit", async (e) => {
@@ -122,7 +122,7 @@ import { TURNSTILE_SITE_KEY } from "../data/site";
       return;
     }
     butang.disabled = true;
-    const salah = await hantarSemula(borang.email.value.trim());
+    const salah = await resendVerification(borang.email.value.trim());
     butang.disabled = false;
     mesej.textContent = salah ?? "";
     mesej.hidden = !salah;
@@ -131,7 +131,7 @@ import { TURNSTILE_SITE_KEY } from "../data/site";
 </script>
 
 <style>
-  .sahkan {
+  .verify-box {
     max-width: 26rem;
   }
 </style>

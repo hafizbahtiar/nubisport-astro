@@ -1,6 +1,6 @@
 // bun scripts/check-ics.ts - semak src/lib/ics.ts (RFC 5545) dengan pelan 5K sebenar.
-import { buatIcs, waktuMalaysia, type Acara } from "../src/lib/ics";
-import { buatPelan, isninMula, tarikhSesi } from "../src/lib/pelan-5k";
+import { buildIcs, malaysiaTime, type CalendarEvent } from "../src/lib/ics";
+import { buildPlan, startMonday, sessionDate } from "../src/lib/plan-5k";
 
 let gagal = 0;
 const ok = (c: unknown, msg: string) => {
@@ -11,22 +11,22 @@ const ok = (c: unknown, msg: string) => {
 };
 
 // 06:30 Malaysia = 22:30Z hari sebelumnya, walau apa pun TZ proses.
-ok(waktuMalaysia(new Date(2026, 9, 19), "06:30").toISOString() === "2026-10-18T22:30:00.000Z", "06:30 MYT -> 22:30Z");
+ok(malaysiaTime(new Date(2026, 9, 19), "06:30").toISOString() === "2026-10-18T22:30:00.000Z", "06:30 MYT -> 22:30Z");
 
-const h = buatPelan({ bulan: 3, tahap: "jalan", hari: 3 });
+const h = buildPlan({ bulan: 3, tahap: "jalan", hari: 3 });
 if (!h.ok) throw new Error("pelan contoh ditolak");
-const isnin = isninMula(new Date(2026, 9, 18));
+const isnin = startMonday(new Date(2026, 9, 18));
 const panjang = "Lari santai 🏃‍♀️ di Taman Tasik Titiwangsa; bawa air, topi\\ubat\nJangan lupa regangan - ".repeat(4);
-const acara: Acara[] = h.minggu.flatMap((w) =>
+const acara: CalendarEvent[] = h.minggu.flatMap((w) =>
   w.sesi.map((s, i) => ({
     uid: `pelan-5k-3-jalan--3-m${w.no}s${i}`,
-    mula: waktuMalaysia(tarikhSesi(isnin, w.no, 3, i), "06:30"),
+    mula: malaysiaTime(sessionDate(isnin, w.no, 3, i), "06:30"),
     minit: s.minit,
     tajuk: `Nubi 5K · Minggu ${w.no}: ${s.tajuk} (${s.minit} min)`,
     keterangan: w.no === 1 && i === 0 ? panjang : `${s.arahan}\n${s.usaha}`,
   })),
 );
-const ics = buatIcs(acara, { nama: "Nubi 5K, pelan; 3 bulan" });
+const ics = buildIcs(acara, { nama: "Nubi 5K, pelan; 3 bulan" });
 
 ok(ics.endsWith("\r\n") && !/[^\r]\n/.test(ics) && !/\r[^\n]/.test(ics), "CRLF di setiap baris");
 const enc = new TextEncoder();
