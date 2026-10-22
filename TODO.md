@@ -76,6 +76,11 @@ Item yang dah siap dibuang (lihat git history).
 - **Simpan awan**: akaun percuma 3 slot (`lib/awan.ts`, backend `/me/apps/nubi/plan`, migration 029).
   Pelayar = salinan kerja, awan = ikut akaun; dashboard: lencana Awan / Peranti ini, meter slot, "Ganti"
   bila penuh. Naikkan `VERSI_ENJIN` bila enjin pelan berubah. Langganan: `docs/plans/simpan-awan.md`.
+- **Aktiviti** (`/account/aktiviti`, ahli ke atas): fail Strava `.fit` (wajib) + `.gpx` (pilihan) dihurai
+  **di pelayar** (`lib/aktiviti-fail.ts`; SDK `@garmin/fitsdk` dimuat malas, lesen FIT Protocol Garmin),
+  dipadankan ikut masa mula, satu POST multipart setiap aktiviti ke `/me/apps/nubi/activities`.
+  Persetujuan dulu (`nubi/consent/aktiviti`). Nama aktiviti = `textContent` sahaja. Backend + R2:
+  `hono-workers/docs/plans/nubi-activities.md`. Pelan: `docs/plans/aktiviti-strava.md`.
 - **Dialog sahkan**: `await sahkan({ tajuk, mesej, ya, bahaya })` (`lib/sahkan.ts`) atas `ConfirmDialog.astro`
   (dipasang sekali dalam `Layout` + `AccountLayout`). Untuk padam pelan dan log keluar; jangan guna `confirm()`.
 - **Pelan 5K dinamik**: dengan masa 5K (wajib tahap "5k", pilihan "jalan"), pace interval/tempo

@@ -12,6 +12,7 @@
     "astro": "astro"
   },
   "dependencies": {
+    "@garmin/fitsdk": "^21.218.0",
     "astro": "^7.4.0",
     "lucide-static": "^1.59.0"
   }

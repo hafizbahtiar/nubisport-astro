@@ -1,0 +1,444 @@
+---
+// Aktiviti dari fail Strava (FIT wajib + GPX pilihan). Ahli ke atas sahaja - backend menyekat (403),
+// page ini hanya menyembunyikan borang. Pelan: docs/plans/aktiviti-strava.md.
+import AccountLayout from "../../layouts/AccountLayout.astro";
+import Alert from "../../components/ui/Alert.astro";
+import Checkbox from "../../components/ui/Checkbox.astro";
+---
+
+<AccountLayout title="Aktiviti">
+  <Alert variant="info" title="Ciri untuk ahli" id="bukan-ahli" hidden>
+    <p>
+      Import aktiviti Strava terbuka untuk ahli Nubi Sport. Keahlian diluluskan
+      oleh admin - hubungi kami melalui kumpulan larian.
+    </p>
+  </Alert>
+
+  <div id="ahli" hidden>
+    <ul class="stat" aria-label="Ringkasan 7 hari">
+      <li><span>Aktiviti 7 hari</span><strong id="bil-minggu">0</strong></li>
+      <li><span>Jarak</span><strong id="jarak-minggu">0 km</strong></li>
+      <li><span>Masa</span><strong id="masa-minggu">0m</strong></li>
+    </ul>
+
+    <div class="grid">
+      <section class="panel">
+        <div class="panel-kepala">
+          <h3 class="display">Aktiviti saya</h3>
+          <div class="chips" role="radiogroup" aria-label="Tempoh">
+            <label class="chip"><input type="radio" name="tempoh" value="30" /><span>30 hari</span></label>
+            <label class="chip"><input type="radio" name="tempoh" value="90" checked /><span>90 hari</span></label>
+            <label class="chip"><input type="radio" name="tempoh" value="semua" /><span>Semua</span></label>
+          </div>
+        </div>
+        <p class="muted" id="jumlah"></p>
+        <ol class="senarai" id="senarai"></ol>
+        <p class="muted" id="tiada" hidden>Belum ada aktiviti dalam tempoh ini.</p>
+        <button class="btn btn-outline btn-sm" type="button" id="padam-semua" hidden
+          >Padam semua data aktiviti saya</button
+        >
+      </section>
+
+      <div class="sisi">
+        <section class="panel">
+          <h3 class="display">Muat naik</h3>
+          <Alert variant="warning">
+            <p>
+              Hanya fail dari <strong>Strava</strong> disokong. Fail dari app lain
+              (Garmin, Coros dan lain-lain) mungkin tak dapat dipadankan atau nilainya
+              tak tepat.
+            </p>
+          </Alert>
+          <ol class="langkah">
+            <li>Buka aktiviti di Strava (laman web), tekan <strong>⋯</strong>.</li>
+            <li><strong>Export Original</strong> = fail <code>.fit</code> (wajib).</li>
+            <li><strong>Export GPX</strong> = fail <code>.gpx</code> (pilihan).</li>
+            <li>Pilih kedua-dua fail di bawah - boleh banyak aktiviti sekali gus.</li>
+          </ol>
+
+          <div class="setuju" id="setuju" hidden>
+            <Checkbox
+              name="setuju"
+              id="setuju-tanda"
+              label="Saya setuju fail asal disimpan"
+              hint="Fail asal (termasuk laluan GPS) disimpan dan digunakan untuk analitik Nubi secara agregat. Saya boleh padam bila-bila masa."
+            />
+            <button class="btn btn-primary btn-sm" type="button" id="setuju-btn" disabled
+              >Teruskan</button
+            >
+          </div>
+
+          <div class="muat" id="muat" hidden>
+            <label class="btn btn-primary btn-sm" for="fail">Pilih fail .fit / .gpx</label>
+            <input id="fail" type="file" accept=".fit,.gpx" multiple hidden />
+            <ol class="senarai" id="pratonton"></ol>
+            <div class="alert alert-danger" id="ralat-fail" role="alert" hidden></div>
+            <button class="btn btn-primary btn-sm" type="button" id="import" hidden>Import</button>
+            <progress id="kemajuan" hidden></progress>
+            <p class="muted" id="status" aria-live="polite"></p>
+          </div>
+
+          <p class="muted kecil">
+            Kami simpan ringkasan dan fail asal - tiada peta dipaparkan kepada sesiapa.
+            Laluan GPS boleh mendedahkan alamat rumah: tetapkan <em>privacy zones</em>
+            di Strava sebelum eksport. Bukan sambungan terus ke Strava - muat naik setiap
+            aktiviti baru. Had 5,000 aktiviti.
+          </p>
+        </section>
+      </div>
+    </div>
+  </div>
+</AccountLayout>
+
+<script>
+  import { api, json, sesiSaya } from "../../lib/api";
+  import { sahkan } from "../../lib/sahkan";
+  import {
+    LABEL_SUKAN,
+    borang,
+    km,
+    pace,
+    pasangkan,
+    tempoh,
+    type Aktiviti,
+    type Sukan,
+  } from "../../lib/aktiviti-fail";
+
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+  const BASE = "/me/apps/nubi/activities";
+
+  interface Baris {
+    id: number;
+    startedAt: string;
+    sport: Sukan;
+    name: string | null;
+    distanceM: number;
+    movingS: number;
+    avgHr: number | null;
+    hasGpx: boolean;
+  }
+
+  const tarikh = (iso: string) =>
+    new Date(iso).toLocaleString("ms-MY", {
+      timeZone: "Asia/Kuala_Lumpur", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+    });
+  const el = (tag: string, cls = "", teks = "") => {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (teks) e.textContent = teks; // teks pengguna (nama aktiviti) sentiasa textContent
+    return e;
+  };
+  const butiran = (r: { sport: Sukan; distanceM: number; movingS: number; avgHr: number | null }) =>
+    [LABEL_SUKAN[r.sport], km(r.distanceM), tempoh(r.movingS), pace(r.distanceM, r.movingS), r.avgHr ? `nadi ${Math.round(r.avgHr)}` : null]
+      .filter(Boolean)
+      .join(" · ");
+
+  const s = await sesiSaya();
+  const nubi = s?.apps?.nubi;
+  const ahli = s?.role === "owner" || nubi === "ahli" || nubi === "admin";
+  $("bukan-ahli").hidden = ahli;
+  $("ahli").hidden = !ahli;
+  if (ahli) await mula();
+
+  async function mula() {
+    // Persetujuan sekali (backend: app_items nubi/consent/aktiviti).
+    const c = await api("/me/apps/nubi/consent");
+    const sudah = c.ok && ((await json(c)).data?.items?.length ?? 0) > 0;
+    $("setuju").hidden = sudah;
+    $("muat").hidden = !sudah;
+    const tanda = $<HTMLInputElement>("setuju-tanda");
+    tanda.addEventListener("change", () => ($<HTMLButtonElement>("setuju-btn").disabled = !tanda.checked));
+    $("setuju-btn").addEventListener("click", async () => {
+      const r = await api("/me/apps/nubi/consent/aktiviti", {
+        method: "PUT",
+        body: JSON.stringify({ engine: 1, data: { v: "1" }, progress: [] }),
+      });
+      if (!r.ok) return alert("Tak dapat simpan persetujuan. Cuba lagi.");
+      $("setuju").hidden = true;
+      $("muat").hidden = false;
+    });
+
+    document.querySelectorAll<HTMLInputElement>('input[name="tempoh"]').forEach((r) => r.addEventListener("change", senarai));
+    $("padam-semua").addEventListener("click", padamSemua);
+    $<HTMLInputElement>("fail").addEventListener("change", pilih);
+    $("import").addEventListener("click", importSemua);
+    await Promise.all([senarai(), minggu()]);
+  }
+
+  const dari = (hari: number) => new Date(Date.now() - hari * 86_400_000).toISOString().slice(0, 10);
+
+  async function minggu() {
+    const r = await api(`${BASE}?from=${dari(7)}`);
+    if (!r.ok) return;
+    const t = (await json(r)).data.totals;
+    $("bil-minggu").textContent = String(t.count);
+    $("jarak-minggu").textContent = km(t.distanceM);
+    $("masa-minggu").textContent = tempoh(t.movingS);
+  }
+
+  async function senarai() {
+    const pilihan = document.querySelector<HTMLInputElement>('input[name="tempoh"]:checked')?.value ?? "90";
+    const r = await api(`${BASE}?from=${pilihan === "semua" ? "2000-01-01" : dari(Number(pilihan))}`);
+    const ol = $("senarai");
+    ol.replaceChildren();
+    if (!r.ok) {
+      $("jumlah").textContent = "Tak dapat memuatkan aktiviti. Muat semula page.";
+      return;
+    }
+    const { activities, totals } = (await json(r)).data as { activities: Baris[]; totals: { count: number; distanceM: number; movingS: number } };
+    $("jumlah").textContent = totals.count ? `${totals.count} aktiviti · ${km(totals.distanceM)} · ${tempoh(totals.movingS)}` : "";
+    for (const a of activities) {
+      const li = el("li");
+      const atas = el("div", "item-atas");
+      atas.append(el("strong", "", a.name || LABEL_SUKAN[a.sport]), el("span", "muted", tarikh(a.startedAt)), el("span", "", butiran(a)));
+      const bawah = el("div", "item-bawah");
+      if (a.hasGpx) bawah.append(el("span", "lencana", "+ GPX"));
+      const padam = el("button", "btn btn-outline btn-sm", "Padam") as HTMLButtonElement;
+      padam.type = "button";
+      padam.addEventListener("click", async () => {
+        const ya = await sahkan({
+          tajuk: "Padam aktiviti ini?",
+          mesej: `${a.name || LABEL_SUKAN[a.sport]} (${tarikh(a.startedAt)}) dan fail asalnya akan dibuang. Tindakan ini tak boleh diundur.`,
+          ya: "Padam",
+          bahaya: true,
+        });
+        if (!ya) return;
+        const d = await api(`${BASE}/${a.id}`, { method: "DELETE" });
+        if (!d.ok && d.status !== 404) return alert("Tak dapat padam. Cuba lagi.");
+        await Promise.all([senarai(), minggu()]);
+      });
+      bawah.append(padam);
+      li.append(atas, bawah);
+      ol.append(li);
+    }
+    $("tiada").hidden = activities.length > 0;
+    $("padam-semua").hidden = activities.length === 0;
+  }
+
+  async function padamSemua() {
+    const ya = await sahkan({
+      tajuk: "Padam semua data aktiviti?",
+      mesej: "Semua aktiviti dan fail asal anda akan dibuang dari Nubi Sport. Tindakan ini tak boleh diundur.",
+      ya: "Padam semua",
+      bahaya: true,
+    });
+    if (!ya) return;
+    const r = await api(BASE, { method: "DELETE" });
+    if (!r.ok) return alert("Tak dapat padam. Cuba lagi.");
+    await Promise.all([senarai(), minggu()]);
+  }
+
+  let sedia: Aktiviti[] = [];
+
+  async function pilih(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const fail = [...(input.files ?? [])];
+    $("status").textContent = fail.length ? "Membaca fail…" : "";
+    const { aktiviti, gagal } = await pasangkan(fail);
+    sedia = aktiviti;
+    const ol = $("pratonton");
+    ol.replaceChildren();
+    for (const a of aktiviti) {
+      const li = el("li");
+      const atas = el("div", "item-atas");
+      atas.append(el("strong", "", a.ringkasan.name || LABEL_SUKAN[a.ringkasan.sport]), el("span", "muted", tarikh(a.ringkasan.startedAt)), el("span", "", butiran(a.ringkasan)));
+      const bawah = el("div", "item-bawah");
+      bawah.append(el("span", "lencana", a.gpx ? "FIT + GPX" : "FIT"));
+      li.append(atas, bawah);
+      ol.append(li);
+    }
+    const ralat = $("ralat-fail");
+    ralat.replaceChildren();
+    for (const g of gagal) ralat.append(el("p", "", `${g.fail}: ${g.sebab}`));
+    ralat.hidden = gagal.length === 0;
+    $("import").hidden = aktiviti.length === 0;
+    $("import").textContent = `Import ${aktiviti.length} aktiviti`;
+    $("status").textContent = "";
+    input.value = ""; // pilih fail yang sama sekali lagi tetap mencetuskan change
+  }
+
+  async function importSemua() {
+    const btn = $<HTMLButtonElement>("import");
+    const bar = $<HTMLProgressElement>("kemajuan");
+    btn.disabled = true;
+    bar.hidden = false;
+    bar.max = sedia.length;
+    bar.value = 0;
+    let baru = 0, kemas = 0;
+    const gagal: string[] = [];
+    // Satu aktiviti setiap request (backend: multipart, fail ≤ 5 MB).
+    for (const a of sedia) {
+      const nama = a.ringkasan.name || LABEL_SUKAN[a.ringkasan.sport];
+      try {
+        const r = await api(BASE, { method: "POST", body: await borang(a) });
+        const b = await json(r);
+        if (r.ok) b.data.created ? baru++ : kemas++;
+        else if (b.code === "quota_full") {
+          gagal.push(`${nama}: had ${b.limit} aktiviti penuh.`);
+          break;
+        } else gagal.push(`${nama}: ${r.status === 400 ? "fail ditolak" : "ralat pelayan"}.`);
+      } catch {
+        gagal.push(`${nama}: tiada sambungan.`);
+      }
+      bar.value++;
+    }
+    bar.hidden = true;
+    btn.disabled = false;
+    btn.hidden = true;
+    sedia = [];
+    $("pratonton").replaceChildren();
+    $("status").textContent = `${baru} baru, ${kemas} dikemas kini.`;
+    const ralat = $("ralat-fail");
+    ralat.replaceChildren(...gagal.map((g) => el("p", "", g)));
+    ralat.hidden = gagal.length === 0;
+    await Promise.all([senarai(), minggu()]);
+  }
+</script>
+
+<style>
+  .stat {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1rem;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+  }
+  .stat li,
+  .panel {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+  }
+  .stat li {
+    display: grid;
+    gap: 0.25rem;
+    padding: 1rem 1.25rem;
+  }
+  .stat span {
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .stat strong {
+    font-family: var(--display);
+    font-style: italic;
+    font-size: 2rem;
+    color: var(--navy);
+  }
+  @media (max-width: 36rem) {
+    .stat {
+      gap: 0.5rem;
+    }
+    .stat li {
+      padding: 0.75rem;
+    }
+    .stat span {
+      font-size: 0.68rem;
+    }
+    .stat strong {
+      font-size: 1.35rem;
+    }
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(18rem, 1fr);
+    gap: 1rem;
+    align-items: start;
+  }
+  @media (max-width: 56rem) {
+    .grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  .sisi {
+    display: grid;
+    gap: 1rem;
+  }
+  .panel {
+    display: grid;
+    gap: 0.75rem;
+    justify-items: start;
+    padding: 1.25rem 1.5rem;
+  }
+  .panel h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--navy);
+  }
+  .panel p {
+    margin: 0;
+  }
+  .panel-kepala {
+    justify-self: stretch;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+  .panel :global(.alert),
+  .setuju,
+  .muat {
+    justify-self: stretch;
+  }
+  .setuju,
+  .muat {
+    display: grid;
+    gap: 0.75rem;
+    justify-items: start;
+  }
+  .langkah {
+    margin: 0;
+    padding-left: 1.25rem;
+    display: grid;
+    gap: 0.25rem;
+  }
+  progress {
+    width: 100%;
+  }
+  .kecil {
+    font-size: 0.8rem;
+  }
+
+  .senarai {
+    justify-self: stretch;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.75rem;
+  }
+  /* Item dijana skrip - tiada atribut skop Astro, jadi :global. */
+  .senarai :global(li) {
+    display: grid;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+  }
+  .senarai :global(.item-atas) {
+    display: grid;
+    gap: 0.2rem;
+    padding: 0.85rem 1rem 0.4rem;
+  }
+  .senarai :global(.item-bawah) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0 1rem 0.75rem;
+  }
+  .senarai :global(.item-bawah .btn) {
+    margin-left: auto;
+  }
+  .senarai :global(.lencana) {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    background: var(--paper-2);
+    border: 1px solid var(--line);
+  }
+</style>

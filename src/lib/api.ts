@@ -24,7 +24,8 @@ export async function api(path: string, init: RequestInit = {}): Promise<Respons
   const go = () =>
     fetch(`/api/v1${path}`, {
       ...init,
-      headers: init.body ? { "Content-Type": "application/json", ...init.headers } : init.headers,
+      // JSON hanya untuk badan teks - FormData perlu pelayar tetapkan boundary multipart sendiri.
+      headers: typeof init.body === "string" ? { "Content-Type": "application/json", ...init.headers } : init.headers,
     });
   const res = await go();
   if (res.status === 401 && !TANPA_REFRESH.has(path) && (await refresh())) return go();

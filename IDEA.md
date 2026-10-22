@@ -79,7 +79,7 @@ Cara bina (semua dah ada di portfolio - guna semula, jangan bina lapisan baru):
   had kadar setiap pengguna, konteks = pelan + log tanpa PII, jawapan "panduan umum", tolak soalan perubatan.
 - **Tier berbayar** - lebih slot awan (`quotaFor` sahaja berubah, `docs/plans/simpan-awan.md`). Bayaran
   melalui pihak ketiga, bukan di laman.
-- **Strava** - kelab + pautan dulu; import aktiviti (OAuth) = kerja besar + terma API.
+- **Strava** - OAuth/API ditolak (kos). Ganti: ahli muat naik `.fit` (wajib) + `.gpx` (pilihan) dari Strava, disimpan untuk analitik - `docs/plans/aktiviti-strava.md`.
 - **PWA penuh** - service worker supaya pelan + pemasa (dah ada, berjalan tanpa rangkaian selepas dibuka) boleh
   dibuka tanpa internet (taman sering tiada liputan).
 - **Suara Melayu dalam pemasa** - pemasa kini bunyi + getaran sahaja; `speechSynthesis` ms-MY tak ada di

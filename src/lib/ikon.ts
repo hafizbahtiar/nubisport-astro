@@ -4,6 +4,7 @@
 // pengecualian = jenama (public/brand) dan tanda semak `.check` (path Lucide `check` dalam CSS).
 // Hanya ikon yang diimport masuk ke bundle (skrip pelayar guna ini untuk innerHTML).
 import {
+  Activity,
   BookOpen,
   Calendar,
   Check,
@@ -28,6 +29,7 @@ import {
 } from "lucide-static";
 
 const IKON = {
+  aktiviti: Activity,
   awan: Cloud,
   bawah: ChevronDown,
   bendera: Flag,
