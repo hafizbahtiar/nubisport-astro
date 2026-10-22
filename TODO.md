@@ -88,6 +88,10 @@ Item yang dah siap dibuang (lihat git history).
   (kod app tak dikenali = 400). Hantar semula pautan hanya dari `/verify` (Turnstile action `register`).
 - **Ahli ≠ berdaftar**: ahli = peranan app `nubi/ahli` (migration 026), diluluskan owner/admin di
   portfolio `/admin/app-access`. Berdaftar + disahkan saja = "Pengguna berdaftar - belum ahli".
+- **Peranan app segar**: `currentUser()` sentiasa `GET /me` (`cache: no-store`) pada setiap page load;
+  sessionStorage hanya untuk lukisan pertama (sidebar + header di-paint sebelum paint, tiada loading
+  state). Jangan pulangkan cache 5 min untuk peranan - perubahan ahli/admin mesti nampak selepas
+  refresh/log masuk semula.
 - **Kalendar** (`src/lib/ics.ts`, generik - guna semula untuk 10K/21K): `.ics` RFC 5545, masa Malaysia
   (UTC+8) disimpan UTC, UID tetap `pelan-5k-<kunci>-m<w>s<i>@nubisport.hafizbahtiar.com`, peringatan
   30 min. Semak `bun scripts/check-ics.ts`.
@@ -216,10 +220,8 @@ Item yang dah siap dibuang (lihat git history).
 ## 🚀 Owner - langkah manual
 
 - [ ] `CONTACT` WhatsApp group / Instagram (e-mel dah diisi: hafiz@hafizbahtiar.com) - "Sertai" kini tunjuk e-mel saja.
-- [ ] Lantik admin Nubi di portfolio `/admin/app-access`.
 - [ ] Uji import `.ics` pada iPhone (Safari: terus "Tambah semua" atau simpan ke Files?), Samsung Calendar,
   Google Calendar (web) dan Outlook - nota platform di halaman belum diuji pada peranti sebenar.
-- [ ] E-mel pengesahan untuk `app=nubi` masih teks English dari pengirim portfolio - nak versi Melayu?
 - [ ] **Halaman undang-undang** (2026-10-22): `/privacy`, `/terms`, `/account/pricing` (dalam akaun sahaja buat masa ini) dah ada - semak dengan peguam
   SEBELUM tier berbayar dibuka. Buka tier = `aktif: true` dalam `PELAN` (`src/pages/account/pricing.astro`).
   Ubah data yang disimpan / pembekal (backend) = ubah `/privacy` juga.

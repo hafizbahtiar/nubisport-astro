@@ -35,12 +35,10 @@ export async function api(path: string, init: RequestInit = {}): Promise<Respons
 /** Badan JSON respons, atau {} jika bukan JSON (contoh ralat proxy). */
 export const json = (res: Response): Promise<Record<string, any>> => res.json().catch(() => ({}));
 
-// Salinan /me dalam sessionStorage (per tab): AccountLayout lukis nama/e-mel serta-merta pada setiap
-// page (tiada kelip "…"), dan /me dipanggil semula hanya bila salinan lebih tua daripada SEGAR_MS.
-// ponytail: peranan/nama yang berubah di tempat lain lambat sampai 5 min; data pelan memang setempat
-// dan setiap tulis ke API tetap disemak backend (401 -> refresh/login).
+// Salinan /me dalam sessionStorage (per tab) HANYA untuk lukisan pertama (nama/e-mel serta-merta).
+// currentUser() sentiasa mengambil /me baharu supaya perubahan peranan app (contoh admin jadikan ahli)
+// berkesan pada reload - jangan pulangkan salinan cache untuk peranan.
 export const ME_CACHE_KEY = "nubi:saya";
-const SEGAR_MS = 5 * 60_000;
 const adaSesi = () => /(?:^|; )session_active=1/.test(document.cookie);
 
 export function cacheMe(s: CurrentUser | null) {
@@ -52,29 +50,18 @@ export function cacheMe(s: CurrentUser | null) {
   }
 }
 
-function salinanSaya(): CurrentUser | null {
-  try {
-    const v = JSON.parse(sessionStorage.getItem(ME_CACHE_KEY) ?? "null");
-    return v && Date.now() - v.t < SEGAR_MS ? (v.s as CurrentUser) : null;
-  } catch {
-    return null;
-  }
-}
-
 /** Pengguna semasa dari /me (salinan dikemas kini), atau null jika tidak log masuk. */
 export async function fetchMe(): Promise<CurrentUser | null> {
   if (!adaSesi()) return cacheMe(null), null;
-  const res = await api("/me");
+  const res = await api("/me", { cache: "no-store" });
   const s = res.ok ? ((await json(res)).data as CurrentUser) : null;
   cacheMe(s);
   return s;
 }
 
-// Satu /me bagi setiap page (atau tiada, jika salinan masih segar): AccountLayout dan page di
-// dalamnya kongsi promise yang sama - dua panggilan selari boleh mencetuskan dua refresh.
+// Satu /me bagi setiap page load: AccountLayout dan page di dalamnya kongsi promise yang sama.
 let sesi: Promise<CurrentUser | null> | null = null;
-export const currentUser = () =>
-  (sesi ??= adaSesi() && salinanSaya() ? Promise.resolve(salinanSaya()) : fetchMe().catch(() => null));
+export const currentUser = () => (sesi ??= fetchMe().catch(() => null));
 
 // Turnstile (skrip dimuat oleh page). Token sekali guna - reset() selepas setiap hantaran.
 const ts = () =>

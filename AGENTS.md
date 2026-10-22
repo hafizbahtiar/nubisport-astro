@@ -13,6 +13,13 @@ astro dev --background
 
 Manage the background server with `astro dev stop`, `astro dev status`, and `astro dev logs`.
 
+## Working agreements
+
+- Never commit, push, deploy, or run anything remote unless asked - leave changes in the working tree.
+- Don't spawn subagents unless asked; do the work inline.
+- Before saying done: run every `bun scripts/check-*.ts` and `bun run build`.
+- `scripts/check-*.ts` must compile under this project's tsconfig: no `bun:test` and no untyped Bun APIs (`Bun.file`, `Bun.Glob`); use the existing `ok()`/`check()` assertion pattern and extensionless relative imports.
+
 ## Documentation
 
 Full documentation: https://docs.astro.build

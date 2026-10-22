@@ -295,13 +295,33 @@ const kini = Astro.url.pathname.replace(/\/$/, "") || "/";
   }
 </style>
 
+<script is:inline>
+  // Pre-paint dari salinan /me: elak "Log masuk" berkelip pada setiap navigasi.
+  // Modul di bawah menyegarkan dengan /me sebenar (peranan/nama terkini).
+  try {
+    const s = JSON.parse(sessionStorage.getItem("nubi:saya") || "null")?.s;
+    if (s && /(?:^|; )session_active=1/.test(document.cookie)) {
+      document.querySelectorAll("[data-saya-awal]").forEach((e) => {
+        e.textContent = s.name.trim().charAt(0).toUpperCase() || "?";
+      });
+      const akaun = document.querySelector("[data-akaun]");
+      const menu = document.querySelector("[data-akaun-menu]");
+      if (akaun) akaun.hidden = true;
+      if (menu) menu.hidden = false;
+    }
+  } catch {}
+</script>
+
 <script>
   import { currentUser } from "../../lib/api";
 
-  // Log masuk -> avatar + menu akaun. currentUser() guna salinan /me (5 min) atau satu /me;
-  // tiada sesi (cookie session_active) = tiada panggilan, butang Log masuk kekal.
+  // Pre-paint guna salinan; currentUser() sentiasa /me baharu untuk peranan/nama.
   currentUser().then((s) => {
-    if (!s) return;
+    if (!s) {
+      document.querySelector<HTMLElement>("[data-akaun]")!.hidden = false;
+      document.querySelector<HTMLElement>("[data-akaun-menu]")!.hidden = true;
+      return;
+    }
     document
       .querySelectorAll("[data-saya-awal]")
       .forEach(
