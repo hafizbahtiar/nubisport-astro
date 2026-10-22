@@ -16,6 +16,7 @@ export interface ActivitySummary {
   elevationGainM: number | null;
   avgHr: number | null;
   maxHr: number | null;
+  runRatio: number | null; // bahagian masa bergerak pada kadens lari (0..1); null = tiada kadens
 }
 
 export interface ActivityFiles {
@@ -47,6 +48,24 @@ export const nameFromFile = (nama: string) =>
 
 const bulat = (n: number, dp = 0) => Math.round(n * 10 ** dp) / 10 ** dp;
 
+/**
+ * Bahagian masa bergerak pada kadens lari: langkah/min = (cadence + fractionalCadence) x 2 (FIT = rpm satu
+ * kaki) >= 140; jalan ~100-125. Setiap rekod diberi berat masa ke rekod seterusnya (had 10 s - jeda tak
+ * dikira); laju <= 0.5 m/s (kalau ada) = berhenti. null = fail tiada kadens.
+ */
+export function runShare(rekod: any[]): number | null {
+  let lari = 0, gerak = 0;
+  for (let i = 0; i + 1 < rekod.length; i++) {
+    const r = rekod[i];
+    const laju = r.enhancedSpeed ?? r.speed;
+    const dt = Math.min(10, (+rekod[i + 1].timestamp - +r.timestamp) / 1000);
+    if (typeof r.cadence !== "number" || !(dt > 0) || (typeof laju === "number" && laju <= 0.5)) continue;
+    gerak += dt;
+    if ((r.cadence + (r.fractionalCadence ?? 0)) * 2 >= 140) lari += dt;
+  }
+  return gerak ? bulat(lari / gerak, 3) : null;
+}
+
 /** Ringkasan dari bait FIT. SDK Garmin dimuat hanya bila perlu (saiznya besar). */
 export async function summarizeFit(bait: ArrayBuffer, nama: string): Promise<ActivitySummary> {
   const { Decoder, Stream } = await import("@garmin/fitsdk");
@@ -76,6 +95,7 @@ export async function summarizeFit(bait: ArrayBuffer, nama: string): Promise<Act
     elevationGainM: tinggi.length > 1 ? bulat(naik, 1) : null,
     avgHr: s.avgHeartRate ?? (nadi.length ? bulat(nadi.reduce((a, b) => a + b, 0) / nadi.length, 1) : null),
     maxHr: s.maxHeartRate ?? (nadi.length ? Math.max(...nadi) : null),
+    runRatio: runShare(rekod),
   };
 }
 

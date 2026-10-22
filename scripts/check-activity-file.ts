@@ -13,7 +13,8 @@ const ok = (c: unknown, msg: string) => {
 };
 
 const MULA = new Date("2026-10-21T13:12:07Z");
-function fit(): Uint8Array<ArrayBuffer> {
+// kadens = rpm satu kaki (langkah/min = x2); `kadens` per rekod, undefined = tiada medan kadens.
+function fit(kadens: (i: number) => number | undefined = () => undefined, laju: (i: number) => number | undefined = () => undefined): Uint8Array<ArrayBuffer> {
   const e = new Encoder();
   const N = Profile.MesgNum;
   e.onMesg(N.FILE_ID, { type: "activity", manufacturer: "strava", timeCreated: MULA } as any);
@@ -24,6 +25,8 @@ function fit(): Uint8Array<ArrayBuffer> {
       heartRate: 116 + Math.round((i * 48) / 82),
       enhancedAltitude: 46 + (i % 2),
       distance: i * 32,
+      ...(kadens(i) === undefined ? {} : { cadence: kadens(i) }),
+      ...(laju(i) === undefined ? {} : { enhancedSpeed: laju(i) }),
       // ~0.001° setiap titik; titik 0 tiada GPS (treadmill / isyarat hilang) - mesti dilangkau
       ...(i ? { positionLat: Math.round(i * 0.001 * 2 ** 31 / 180), positionLong: 0 } : {}),
     } as any);
@@ -52,6 +55,19 @@ const fail = (bait: BlobPart, nama: string) => new File([bait], nama);
   ok(r?.elevationGainM === 41, `ketinggian ${r?.elevationGainM}`);
   ok(r?.name === "Night Run", "nama dari nama fail");
   ok(aktiviti[0].gpx === null, "tiada GPX");
+  ok(r?.runRatio === null, "tiada kadens = runRatio null");
+}
+
+// runRatio: 85 rpm (~170 langkah/min) = lari, 55 rpm (~110) = jalan; rekod berhenti (laju 0) tak dikira.
+{
+  const nisbah = async (b: Uint8Array<ArrayBuffer>) => (await pairFiles([fail(b, "x.fit")])).aktiviti[0]?.ringkasan.runRatio;
+  ok((await nisbah(fit(() => 85))) === 1, "semua lari = 1");
+  ok((await nisbah(fit(() => 55))) === 0, "semua jalan = 0");
+  // 82 selang 1 s: 0-60 lari, 61-81 jalan -> 61/82
+  const separa = await nisbah(fit((i) => (i <= 60 ? 85 : 55)));
+  ok(separa === Math.round((61 / 82) * 1000) / 1000, `lari separa ${separa}`);
+  // berhenti di selang jalan (laju 0): hanya masa bergerak dikira -> 1
+  ok((await nisbah(fit((i) => (i <= 60 ? 85 : 55), (i) => (i <= 60 ? 3 : 0)))) === 1, "berhenti tak dikira");
 }
 
 // FIT + GPX sepadan; GPX tanpa pasangan; fail rosak; jenis lain

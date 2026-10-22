@@ -1,6 +1,6 @@
 # Pelan aktif + segerak aktiviti Strava
 
-Status: **dibina** (2026-10-22) - `src/lib/plan-sync.ts`, semak `bun scripts/check-plan-sync.ts`. Bergantung pada: pelan awan
+Status: **dibina** (2026-10-22), **v2 padanan** (2026-10-22: minggu pelan + nisbah lari, migration 033) - `src/lib/plan-sync.ts`, semak `bun scripts/check-plan-sync.ts`. Bergantung pada: pelan awan
 ([cloud-sync.md](./cloud-sync.md)) dan aktiviti Strava ([strava-activities.md](./strava-activities.md)).
 
 ## Tujuan
@@ -45,20 +45,26 @@ Untuk setiap aktiviti yang baru disimpan (dan, semasa mengaktifkan pelan, setiap
 mula pelan):
 
 1. Tarikh aktiviti = tarikh tempatan `Asia/Kuala_Lumpur` dari `startedAt`.
-2. Calon = sesi pelan aktif yang **belum siap**, dengan tarikh sama. Tiada? Cuba sesi belum siap
-   sehari sebelum atau sehari lepas (ahli mengalih hari latihan).
-3. Jenis sukan mesti sesuai:
-   - sesi `jalan-lari` - `run` atau `walk`;
-   - sesi lain - `run` saja (`ride`, `hike`, `other` tak pernah padan).
+2. Calon = sesi pelan aktif yang **belum siap** dalam **minggu pelan yang sama** (Isnin-Ahad). Hari sama
+   dahulu (untuk semua aktiviti), kemudian tarikh paling hampir - dirancang esok tapi lari hari ini tetap
+   dikira. Tak pernah lintas minggu pelan.
+3. Jenis sukan + nisbah lari mesti sesuai (`runRatio` = bahagian masa bergerak pada kadens >= 140
+   langkah/min, dikira di pelayar dari rekod `.fit`; null = tiada kadens atau dimuat naik sebelum 033 - lulus):
+   - sesi `jalan-lari` - `run` atau `walk`, dan `runRatio` >= 0.15 (jalan saja tak dikira);
+   - sesi lain - `run` saja, dan `runRatio` >= 0.7 (Strava mungkin label "Run" walaupun ahli berjalan);
+   - `ride`, `hike`, `other` tak pernah padan.
+   Gagal **hanya** sebab nisbah lari -> `tolak` dengan sesi itu; UI tunjuk `walkedNote` ("Aktiviti ni
+   kebanyakannya jalan (35% lari), jadi Minggu 2, Lari mudah tak ditanda. Tanda sendiri kalau betul.").
 4. Beban mesti cukup:
    - sesi ikut masa - `movingS` sekurang-kurangnya 60% daripada minit sesi;
    - sesi ujian / lumba (ikut jarak) - `distanceM` sekurang-kurangnya 95% daripada jarak sesi.
-5. Beberapa calon - pilih tarikh paling hampir, kemudian sesi lebih awal. Beberapa aktiviti pada hari
-   sama - aktiviti paling lama untuk sesi itu, yang lain jadi tambahan.
+5. Beberapa calon - pilih tarikh paling hampir, kemudian sesi lebih awal. Aktiviti paling lama dipadankan
+   dahulu; aktiviti kedua hari sama boleh ambil sesi lain minggu itu.
 
 Peraturan ini ialah satu fungsi tulen `padankan(pelan, aktiviti[], siap[]) -> token[]` dalam `lib/`,
-dengan skrip semakan `scripts/check-plan-sync.ts` (kes: hari sama, ±1 hari, sukan salah, terlalu
-pendek, dua aktiviti sehari, sesi dah siap, pelan tanpa tarikh).
+dengan skrip semakan `scripts/check-plan-sync.ts` (kes: hari sama, esok/Ahad minggu sama, tak lintas
+minggu, sukan salah, terlalu pendek, dua aktiviti sehari, sesi dah siap, nisbah lari 0.35/0.7/null,
+jalan-lari 0.1/0.2, pelan tanpa tarikh).
 
 ## Aliran pengguna
 
@@ -89,7 +95,7 @@ pendek, dua aktiviti sehari, sesi dah siap, pelan tanpa tarikh).
 | hono-workers | `QUOTA.nubi.active = 1`; satu semakan dalam `scripts/verify-app-items.ts`; `API_CONTRACT.md` |
 | nubisport-astro | `lib/plan-sync.ts` (pelan aktif baca/tulis + `matchActivities`), `scripts/check-plan-sync.ts`; butang + lencana di halaman pelan; panel Dashboard; status padanan di halaman aktiviti; baris sesi di halaman detail; dokumen ini -> "dibina" |
 
-Tiada migration. Tiada perubahan pada `nubi_activities`.
+v1: tiada migration. v2: migration 033 `nubi_activities.run_ratio` (hono-workers), `runRatio` dalam ringkasan upload (`runShare` dalam `lib/activity-file.ts`).
 
 ## Risiko
 
@@ -101,11 +107,13 @@ Tiada migration. Tiada perubahan pada `nubi_activities`.
 
 ## Perbezaan semasa membina
 
-- `matchActivities(sesi, aktiviti, siap)` memulangkan `Map<aktiviti, sesi>` (bukan `token[]`) - dulang dan page
+- `matchActivities(sesi, aktiviti, siap)` memulangkan `{ padan, tolak }` - dua `Map<aktiviti, sesi>` (bukan `token[]`) - dulang dan page
   detail perlu tahu sesi bagi setiap aktiviti. Token = `sesi.id`. `planSessions(kunci, data)` membina sesi
   bertarikh dari parameter pelan awan (null = tiada `mula` / pelan tak sah).
-- Hari sama dipadankan dulu untuk semua aktiviti, baru ±1 hari (aktiviti lama hari lain tak merampas
-  sesi hari ini).
+- Hari sama dipadankan dulu untuk semua aktiviti, baru hari lain minggu itu (aktiviti lama hari lain tak
+  merampas sesi hari ini).
+- Detail: `sessionFor` kira semula dari aktiviti minggu pelan itu; tunjuk "Lari N% masa bergerak" bila
+  `runRatio` ada. Aktiviti lama (null) tiada baris itu.
 - `nubi/active` terbuka kepada mana-mana akaun (route generik `app_items`, tiada pengawal baru); UI hanya
   menunjukkannya kepada ahli. Penunjuk itu tak berbahaya - aktiviti sendiri tetap ahli saja.
 - Muat naik: aktiviti yang disimpan keluar dari dulang (sedia ada), jadi hasil padanan masuk ke mesej

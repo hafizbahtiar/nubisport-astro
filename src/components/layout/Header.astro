@@ -1,6 +1,7 @@
 ---
 import { SITE } from "../../data/site";
 import Icon from "../ui/Icon.astro";
+import UserMenu from "../ui/UserMenu.astro";
 import type { IconName } from "../../lib/icon";
 
 // Panel "Alat": desktop = butang "Alat" + panel 4 kad; telefon = logo + log masuk + butang menu, dan
@@ -67,6 +68,9 @@ const kini = Astro.url.pathname.replace(/\/$/, "") || "/";
         <span class="sr-telefon">Menu</span>
       </button>
       <a class="btn btn-ghost btn-sm" href="/login" data-akaun>Log masuk</a>
+      <div class="akaun-menu" data-akaun-menu hidden>
+        <UserMenu id="menu-header" />
+      </div>
     </nav>
   </div>
 
@@ -292,14 +296,20 @@ const kini = Astro.url.pathname.replace(/\/$/, "") || "/";
 </style>
 
 <script>
-  // session_active = cookie UX (bukan httpOnly) dari backend: tanda sudah log masuk.
-  if (/(?:^|; )session_active=1/.test(document.cookie)) {
-    const a = document.querySelector<HTMLAnchorElement>("[data-akaun]");
-    if (a) {
-      a.textContent = "Akaun";
-      a.href = "/account";
-    }
-  }
+  import { currentUser } from "../../lib/api";
+
+  // Log masuk -> avatar + menu akaun. currentUser() guna salinan /me (5 min) atau satu /me;
+  // tiada sesi (cookie session_active) = tiada panggilan, butang Log masuk kekal.
+  currentUser().then((s) => {
+    if (!s) return;
+    document
+      .querySelectorAll("[data-saya-awal]")
+      .forEach(
+        (e) => (e.textContent = s.name.trim().charAt(0).toUpperCase() || "?"),
+      );
+    document.querySelector<HTMLElement>("[data-akaun]")!.hidden = true;
+    document.querySelector<HTMLElement>("[data-akaun-menu]")!.hidden = false;
+  });
 
   // Panel Alat: klik butang buka/tutup; Esc, klik di luar atau klik pautan menutupnya.
   const butang = document.getElementById("butang-alat")!;

@@ -24,6 +24,12 @@ export interface MatchableActivity {
   sport: string;
   distanceM: number;
   movingS: number;
+  runRatio?: number | null; // bahagian masa bergerak pada kadens lari; null = tiada kadens / sebelum migration 033
+}
+/** padan = sesi ditanda; tolak = gagal HANYA sebab nisbah lari (kebanyakannya jalan), dengan sesi yang hampir padan. */
+export interface MatchResult<A> {
+  padan: Map<A, PlanSession>;
+  tolak: Map<A, PlanSession>;
 }
 
 /** Sesi bertarikh dari kunci + parameter pelan awan. null = tiada tarikh mula / pelan tidak sah. */
@@ -55,28 +61,47 @@ export function planSessions(kunci: string, p: Record<string, string>): PlanSess
 }
 
 const hariAntara = (a: string, b: string) => Math.abs(Date.parse(a) - Date.parse(b)) / 864e5;
-const sesuai = (s: PlanSession, a: MatchableActivity) =>
+/** Isnin bagi tarikh ISO - minggu pelan bermula Isnin (startMonday). */
+const isninOf = (d: string) => addDays(d, -((new Date(`${d}T00:00:00Z`).getUTCDay() + 6) % 7));
+const sesuai = (s: PlanSession, a: MatchableActivity, nisbah: boolean) =>
   (a.sport === "run" || (a.sport === "walk" && s.jenis === "jalan-lari")) &&
+  (!nisbah || a.runRatio == null || a.runRatio >= (s.jenis === "jalan-lari" ? 0.15 : 0.7)) &&
   (s.jenis === "ujian" ? a.distanceM >= 0.95 * s.jarakM : a.movingS >= 0.6 * s.minit * 60);
 
-/**
- * Padankan aktiviti dengan sesi belum siap: hari sama dahulu (tarikh Malaysia), kemudian ±1 hari;
- * aktiviti paling lama dahulu; calon = tarikh paling hampir, kemudian sesi lebih awal. Satu aktiviti
- * untuk satu sesi. Pulang aktiviti -> sesi; aktiviti tiada dalam Map = aktiviti tambahan.
- */
-export function matchActivities<A extends MatchableActivity>(sesi: PlanSession[], aktiviti: A[], siap: Iterable<string>): Map<A, PlanSession> {
-  const diambil = new Set(siap);
+// Hari sama dahulu untuk semua aktiviti, kemudian tarikh paling hampir dalam minggu pelan yang sama
+// (seri -> sesi lebih awal). `diambil` diubah.
+function pilih<A extends MatchableActivity>(sesi: PlanSession[], aktiviti: A[], diambil: Set<string>, nisbah: boolean) {
   const hasil = new Map<A, PlanSession>();
-  const susun = [...aktiviti].sort((x, y) => y.movingS - x.movingS);
-  for (const jarak of [0, 1])
-    for (const a of susun) {
+  for (const samaHari of [true, false])
+    for (const a of aktiviti) {
       if (hasil.has(a)) continue;
       const hari = todayMY(new Date(a.startedAt));
-      const s = sesi.find((s) => !diambil.has(s.id) && hariAntara(s.tarikh, hari) === jarak && sesuai(s, a));
+      const minggu = isninOf(hari);
+      const calon = sesi.filter(
+        (s) => !diambil.has(s.id) && (samaHari ? s.tarikh === hari : isninOf(s.tarikh) === minggu) && sesuai(s, a, nisbah),
+      );
+      const s = calon.reduce<PlanSession | undefined>((b, s) => (!b || hariAntara(s.tarikh, hari) < hariAntara(b.tarikh, hari) ? s : b), undefined);
       if (s) (diambil.add(s.id), hasil.set(a, s));
     }
   return hasil;
 }
+
+/**
+ * Padankan aktiviti dengan sesi belum siap (tarikh Malaysia, minggu pelan Isnin-Ahad, tak pernah lintas minggu).
+ * Aktiviti paling lama dahulu. Satu aktiviti untuk satu sesi. Aktiviti bukan dalam padan/tolak = tambahan.
+ */
+export function matchActivities<A extends MatchableActivity>(sesi: PlanSession[], aktiviti: A[], siap: Iterable<string>): MatchResult<A> {
+  const diambil = new Set(siap);
+  const susun = [...aktiviti].sort((x, y) => y.movingS - x.movingS);
+  const padan = pilih(sesi, susun, diambil, true);
+  // Sesi yang masih kosong yang akan padan kalau nisbah lari diabaikan = gagal sebab nisbah saja.
+  const tolak = pilih(sesi, susun.filter((a) => !padan.has(a)), new Set(diambil), false);
+  return { padan, tolak };
+}
+
+/** Mesej untuk aktiviti dalam `tolak`. */
+export const walkedNote = (a: MatchableActivity, s: PlanSession) =>
+  `Aktiviti ni kebanyakannya jalan (${Math.round((a.runRatio ?? 0) * 100)}% lari), jadi ${sessionLabel(s)} tak ditanda. Tanda sendiri kalau betul.`;
 
 export const sessionLabel = (s: PlanSession) => `Minggu ${s.minggu}, ${s.tajuk}`;
 
@@ -90,9 +115,9 @@ const AKTIVITI = "/me/apps/nubi/activities";
 let aktif: Promise<string | null> | null = null;
 /** Kunci pelan aktif (satu permintaan setiap page), atau null. */
 export const activePlanKey = () =>
-  (aktif ??= api(AKTIF)
-    .then(async (r) => (r.ok ? (((await json(r)).data?.items?.[0]?.data?.plan as string) ?? null) : null))
-    .catch(() => null));
+(aktif ??= api(AKTIF)
+  .then(async (r) => (r.ok ? (((await json(r)).data?.items?.[0]?.data?.plan as string) ?? null) : null))
+  .catch(() => null));
 
 /** Pelan aktif yang boleh dipadankan: di awan, ada tarikh mula, enjin semasa. Selain itu null. */
 export async function activePlan(): Promise<{ kunci: string; sesi: PlanSession[] } | null> {
@@ -107,15 +132,15 @@ export async function activePlan(): Promise<{ kunci: string; sesi: PlanSession[]
 async function tanda<A extends MatchableActivity>(p: { kunci: string; sesi: PlanSession[] }, aktiviti: A[]) {
   const siap = readList(p.kunci);
   const m = matchActivities(p.sesi, aktiviti, siap);
-  if (m.size) {
-    writeList(p.kunci, [...siap, ...[...m.values()].map((s) => s.id)]);
+  if (m.padan.size) {
+    writeList(p.kunci, [...siap, ...[...m.padan.values()].map((s) => s.id)]);
     if ((await saveToCloud(p.kunci)) !== "ok") syncProgress(p.kunci);
   }
   return m;
 }
 
 /** Padankan aktiviti yang baru disimpan. null = tiada pelan aktif yang boleh dipadankan. */
-export async function syncActivities<A extends MatchableActivity>(aktiviti: A[]): Promise<Map<A, PlanSession> | null> {
+export async function syncActivities<A extends MatchableActivity>(aktiviti: A[]): Promise<MatchResult<A> | null> {
   const p = await activePlan();
   return p && tanda(p, aktiviti);
 }
@@ -126,14 +151,18 @@ export async function activitiesBetween<A extends MatchableActivity>(dari: strin
   return r?.ok ? ((await json(r)).data.activities as A[]) : null;
 }
 
-/** Sesi pelan aktif bagi satu aktiviti - dikira semula dari tarikh (aktiviti sekitar ±1 hari), tiada storan. */
-export async function sessionFor<A extends MatchableActivity>(a: A): Promise<PlanSession | null> {
+/**
+ * Sesi pelan aktif bagi satu aktiviti - dikira semula dari aktiviti minggu pelan itu, tiada storan.
+ * ditanda false = sesi itu hampir padan tapi aktiviti kebanyakannya jalan (walkedNote).
+ */
+export async function sessionFor<A extends MatchableActivity>(a: A): Promise<{ sesi: PlanSession; ditanda: boolean } | null> {
   const p = await activePlan();
   if (!p) return null;
-  const hari = todayMY(new Date(a.startedAt));
-  const sekitar = (await activitiesBetween<A>(addDays(hari, -1), addDays(hari, 2))) ?? [];
-  const senarai = [a, ...sekitar.filter((x) => x.startedAt !== a.startedAt)];
-  return matchActivities(p.sesi, senarai, []).get(a) ?? null;
+  const isnin = isninOf(todayMY(new Date(a.startedAt)));
+  const sekitar = (await activitiesBetween<A>(isnin, addDays(isnin, 7))) ?? [];
+  const m = matchActivities(p.sesi, [a, ...sekitar.filter((x) => x.startedAt !== a.startedAt)], []);
+  const padan = m.padan.get(a), tolak = m.tolak.get(a);
+  return padan ? { sesi: padan, ditanda: true } : tolak ? { sesi: tolak, ditanda: false } : null;
 }
 
 /** Jadikan pelan aktif, kemudian padankan aktiviti sejak tarikh mula. Pulang bilangan sesi ditanda, null = gagal. */
@@ -147,7 +176,7 @@ export async function setActivePlan(kunci: string): Promise<number | null> {
   const p = await activePlan();
   if (!p) return 0;
   const a = await activitiesBetween(addDays(p.sesi[0].tarikh, -1));
-  return a ? (await tanda(p, a)).size : 0;
+  return a ? (await tanda(p, a)).padan.size : 0;
 }
 
 /**

@@ -1,0 +1,187 @@
+---
+// Terma penggunaan. Lesen data (seksyen "Data dan fail anda") mesti selari dengan privacy.astro.
+// Owner semak dengan peguam sebelum tier berbayar (TODO.md).
+import Layout from "../layouts/Layout.astro";
+import PageHero from "../components/ui/PageHero.astro";
+import Section from "../components/ui/Section.astro";
+import { CONTACT } from "../data/site";
+
+const hubungi = [
+  ["WhatsApp", CONTACT.whatsapp],
+  ["Instagram", CONTACT.instagram],
+  ["E-mel", CONTACT.email && `mailto:${CONTACT.email}`],
+].filter(([, url]) => url);
+---
+
+<Layout
+  title="Terma Penggunaan - Nubi Sport"
+  description="Syarat guna Nubi Sport: akaun, penggunaan yang dibenarkan, penafian kesihatan, data dan fail anda, dan had tanggungan."
+>
+  <PageHero
+    eyebrow="Undang-undang"
+    title="Terma"
+    accent="penggunaan."
+    lead="Syarat ringkas untuk guna Nubi Sport. Baca sekali, lepas itu terus lari."
+  />
+  <Section narrow>
+    <div class="prose">
+      <p class="muted">
+        Kemas kini terakhir: 22 Oktober 2026 (berkuat kuasa pada tarikh ini).
+      </p>
+
+      <h2>Tentang terma ini</h2>
+      <p>
+        Nubi Sport (nubisport.hafizbahtiar.com) dikendalikan oleh Hafiz Bahtiar.
+        Dengan guna laman ini atau daftar akaun, anda setuju dengan terma ini
+        dan <a class="link" href="/privacy">Dasar Privasi</a>. Kalau anda bawah
+        18 tahun, minta kebenaran ibu bapa atau penjaga dulu.
+      </p>
+
+      <h2>Akaun</h2>
+      <ul>
+        <li>
+          Beri nama dan e-mel yang betul, dan jaga kata laluan anda. Satu akaun
+          untuk seorang.
+        </li>
+        <li>
+          Akaun Nubi Sport juga akaun hafizbahtiar.com - log masuk yang sama.
+        </li>
+        <li>
+          Keahlian (ciri "ahli", contoh import aktiviti Strava) diluluskan oleh
+          pentadbir. Kami boleh beri atau tarik balik keahlian.
+        </li>
+        <li>Anda bertanggungjawab atas apa yang berlaku melalui akaun anda.</li>
+      </ul>
+
+      <h2>Penggunaan yang dibenarkan</h2>
+      <p>Jangan:</p>
+      <ul>
+        <li>
+          cuba ceroboh, ganggu atau bebankan servis (contoh: bot, <em
+            >scraping</em
+          >, serangan);
+        </li>
+        <li>pintas had atau semakan keselamatan;</li>
+        <li>
+          muat naik fail orang lain tanpa izin, atau fail yang berniat jahat;
+        </li>
+        <li>
+          guna Nubi Sport untuk apa-apa yang menyalahi undang-undang Malaysia.
+        </li>
+      </ul>
+
+      <h2>Penafian kesihatan</h2>
+      <p>
+        Pelan latihan, MAF, kadar nadi, pace, nasihat cuaca dan panduan di Nubi
+        Sport ialah
+        <strong>panduan umum, bukan nasihat perubatan</strong>. Ia dikira secara
+        automatik dan tak tahu keadaan kesihatan anda. Jumpa doktor sebelum mula
+        bersenam, terutama kalau anda ada masalah jantung, tekanan darah, hamil,
+        cedera atau tak pasti. Berhenti dan dapatkan bantuan kalau rasa sakit
+        dada, pening atau sesak nafas. Anda berlari atas risiko sendiri.
+      </p>
+
+      <h2>Data dan fail anda</h2>
+      <ul>
+        <li>Data dan fail yang anda simpan atau muat naik kekal milik anda.</li>
+        <li>
+          Anda beri kami lesen bukan eksklusif, percuma, untuk menyimpan,
+          memproses dan memaparkannya kepada anda bagi menjalankan servis, dan
+          untuk analitik Nubi Sport secara agregat dan tanpa nama, supaya pelan
+          dan alat jadi lebih baik.
+        </li>
+        <li>
+          Lesen tamat bila anda padam data itu atau akaun anda. Hasil analitik
+          agregat yang dah dibuat dan tak boleh kenal pasti anda mungkin kekal.
+        </li>
+        <li>
+          Anda sahkan anda berhak muat naik fail itu (contoh: aktiviti anda
+          sendiri).
+        </li>
+        <li>
+          Simpan salinan sendiri - fail asal kekal di Strava atau peranti anda.
+        </li>
+      </ul>
+
+      <h2>Strava dan pihak lain</h2>
+      <p>
+        Nubi Sport tiada kaitan dengan, dan tak ditaja atau disahkan oleh,
+        Strava, Garmin atau penganjur lumba. Import aktiviti cuma baca fail yang
+        anda eksport sendiri - bukan sambungan terus ke Strava. Maklumat lumba
+        disusun dari laman penganjur; semak laman rasmi sebelum daftar atau
+        bayar.
+      </p>
+
+      <h2>Harga</h2>
+      <p>
+        Semua ciri sekarang percuma - lihat <a
+          class="link"
+          href="/account/pricing">Harga</a
+        >. Kalau ada pelan berbayar nanti, harga dan syaratnya akan dinyatakan
+        dengan jelas sebelum anda bayar.
+      </p>
+
+      <h2>Servis "seadanya"</h2>
+      <p>
+        Nubi Sport disediakan seadanya. Kami cuba pastikan ia berjalan dan
+        tepat, tapi tak jamin ia sentiasa ada, bebas ralat, atau data tak akan
+        hilang. Ciri dan had boleh berubah.
+      </p>
+
+      <h2>Penamatan</h2>
+      <p>
+        Anda boleh berhenti guna bila-bila masa dan minta akaun dipadam. Kami
+        boleh gantung atau tutup akaun yang langgar terma ini, atau hentikan
+        servis dengan notis yang munasabah di laman.
+      </p>
+
+      <h2>Had tanggungan</h2>
+      <p>
+        Setakat yang dibenarkan oleh undang-undang Malaysia, kami tak
+        bertanggungjawab atas kecederaan, masalah kesihatan, kehilangan data
+        atau kerugian tak langsung yang timbul daripada penggunaan Nubi Sport.
+        Tiada apa dalam terma ini menghadkan hak anda yang tak boleh dihadkan di
+        bawah undang-undang.
+      </p>
+
+      <h2>Undang-undang</h2>
+      <p>
+        Terma ini tertakluk kepada undang-undang Malaysia, dan pertikaian dibawa
+        ke mahkamah Malaysia.
+      </p>
+
+      <h2>Perubahan</h2>
+      <p>
+        Kami boleh kemas kini terma ini. Tarikh di atas akan berubah, dan
+        perubahan besar dimaklumkan di laman dulu. Terus guna lepas perubahan
+        bermakna anda setuju.
+      </p>
+
+      <h2>Hubungi kami</h2>
+      {
+        hubungi.length ? (
+          <ul>
+            {hubungi.map(([nama, url]) => (
+              <li>
+                <a class="link" href={url}>
+                  {nama}
+                </a>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>Hubungi kami melalui kumpulan larian Nubi Sport.</p>
+        )
+      }
+    </div>
+  </Section>
+</Layout>
+
+<style>
+  /* h2 dalam prose - .prose global hanya gaya h3 */
+  .prose h2 {
+    font-size: 1.75rem;
+    color: var(--navy);
+    margin: 2.5rem 0 0;
+  }
+</style>

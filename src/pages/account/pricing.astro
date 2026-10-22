@@ -1,0 +1,126 @@
+---
+// Harga. Had dari kod sebenar: 3 pelan awan = hono-workers QUOTA.nubi.plan (services/app-items.ts),
+// 5,000 aktiviti = ACTIVITY_QUOTA (services/nubi-activities.ts).
+// Tier akan datang = docs/plans/cloud-sync.md (harga belum ditetapkan). Buka tier: `aktif: true`.
+import AccountLayout from "../../layouts/AccountLayout.astro";
+
+const PELAN = [
+  {
+    nama: "Percuma",
+    harga: "RM0",
+    nota: "Daftar akaun, terus guna.",
+    aktif: true,
+    ciri: [
+      'Pelan 5K versi penuh, dengan pecahan "Realistik tak?"',
+      "Pelan 10K dan 21K",
+      "Ikut nadi (MAF)",
+      "Simpan sesi ke kalendar telefon",
+      "Simpan sehingga 3 pelan ke awan",
+      "Maklumat latihan isi borang sendiri",
+      "Dashboard semua pelan dan kemajuan",
+    ],
+  },
+  {
+    nama: "Ahli",
+    harga: "RM0",
+    nota: "Keahlian diluluskan pentadbir - hubungi kami melalui kumpulan larian.",
+    aktif: true,
+    ciri: [
+      "Semua dalam Percuma",
+      "Import aktiviti dari fail Strava (.fit + .gpx)",
+      "Sehingga 5,000 aktiviti",
+      "Peta laluan peribadi setiap aktiviti",
+    ],
+  },
+  {
+    nama: "Simpan Awan",
+    harga: "Akan datang",
+    nota: "Langganan bulanan / tahunan. Harga belum ditetapkan.",
+    aktif: false,
+    ciri: [
+      "Lebih banyak pelan di awan",
+      "Segerak antara peranti",
+      "Ciri latihan kekal percuma - langganan cuma untuk storan",
+    ],
+  },
+];
+---
+
+<AccountLayout
+  title="Harga"
+  description="Nubi Sport percuma: pelan 5K, 10K dan 21K, MAF, dan 3 pelan di awan. Ahli boleh import aktiviti Strava."
+>
+  <p class="lead">
+    Semua ciri sekarang percuma. Pelan berbayar akan datang, untuk storan
+    tambahan saja.
+  </p>
+  <ul class="grid-cards">
+    {
+      PELAN.map((p) => (
+        <li
+          class:list={["card", "pelan", !p.aktif && "pelan-nanti"]}
+          aria-disabled={p.aktif ? undefined : "true"}
+        >
+          {!p.aktif && <span class="lencana">Akan datang</span>}
+          <h2 class="display card-title">{p.nama}</h2>
+          <p class="harga">{p.harga}</p>
+          <p>{p.nota}</p>
+          <ul>
+            {p.ciri.map((c) => (
+              <li>{c}</li>
+            ))}
+          </ul>
+        </li>
+      ))
+    }
+  </ul>
+  <p class="muted">
+    Kemas kini terakhir: 22 Oktober 2026. Lihat juga <a
+      class="link"
+      href="/terms">Terma</a
+    > dan{" "}
+    <a class="link" href="/privacy">Dasar Privasi</a>.
+  </p>
+</AccountLayout>
+
+<style>
+  .pelan {
+    position: relative;
+    display: grid;
+    align-content: start;
+    gap: 0.75rem;
+  }
+  .pelan ul {
+    margin: 0;
+    padding-left: 1.2rem;
+    display: grid;
+    gap: 0.4rem;
+  }
+  .harga {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--navy) !important;
+  }
+  /* Tier belum dibuka: kelabu, tak boleh klik */
+  .pelan-nanti > :not(.lencana) {
+    filter: grayscale(1);
+    opacity: 0.55;
+  }
+  .pelan-nanti {
+    user-select: none;
+  }
+  .lencana {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    background: var(--navy);
+    color: var(--paper);
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  .muted {
+    margin-top: 1rem;
+  }
+</style>

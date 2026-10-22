@@ -6,6 +6,10 @@ import { SITE } from "../../data/site";
   <div class="container foot">
     <img src="/brand/symbol-on-dark.svg" alt="" width="40" height="32" />
     <p>© {SITE.established} {SITE.name}. {SITE.tagline}.</p>
+    <nav class="foot-pautan" aria-label="Undang-undang">
+      <a href="/privacy">Privasi</a>
+      <a href="/terms">Terma</a>
+    </nav>
   </div>
 </footer>
 
@@ -23,5 +27,25 @@ import { SITE } from "../../data/site";
   .foot p {
     margin: 0;
     font-size: 0.95rem;
+  }
+  .foot-pautan {
+    margin-left: auto;
+    display: flex;
+    gap: 1.25rem;
+    font-size: 0.95rem;
+  }
+  .foot-pautan a {
+    color: inherit;
+  }
+  .foot-pautan a:hover {
+    color: var(--orange);
+  }
+  @media (max-width: 40rem) {
+    .foot {
+      flex-wrap: wrap;
+    }
+    .foot-pautan {
+      margin-left: 0;
+    }
   }
 </style>

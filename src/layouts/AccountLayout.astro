@@ -7,6 +7,7 @@ import Head from "../components/layout/Head.astro";
 import ConfirmDialog from "../components/ui/ConfirmDialog.astro";
 import Icon from "../components/ui/Icon.astro";
 import type { IconName } from "../lib/icon";
+import UserMenu from "../components/ui/UserMenu.astro";
 import ConnectionNotice from "../components/ui/ConnectionNotice.astro";
 import { SITE } from "../data/site";
 
@@ -16,29 +17,37 @@ interface Props {
 }
 const { title, description = `Akaun ${SITE.name}.` } = Astro.props;
 
-// ikon: nama Lucide (src/lib/icon.ts)
-const NAV: { href: string; label: string; ikon: IconName }[] = [
+// ikon: nama Lucide (src/lib/icon.ts). members: hanya ahli Nubi (lihat `ahli` di bawah) - dilukis
+// tersembunyi, didedahkan bila pengguna diketahui. Profil + log keluar ada dalam UserMenu.
+type NavItem = { href: string; label: string; ikon: IconName; members?: true };
+const NAV: { tajuk: string; items: NavItem[] }[] = [
   {
-    href: "/account",
-    label: "Dashboard",
-    ikon: "rumah",
+    tajuk: "Utama",
+    items: [
+      { href: "/account", label: "Dashboard", ikon: "rumah" },
+      {
+        href: "/account/activities",
+        label: "Aktiviti",
+        ikon: "aktiviti",
+        members: true,
+      },
+    ],
   },
   {
-    href: "/account/plan-5k",
-    label: "Pelan 5K",
-    ikon: "pemasa",
+    tajuk: "Latihan",
+    items: [
+      { href: "/account/plan-5k", label: "Pelan 5K", ikon: "pemasa" },
+      {
+        href: "/account/distance-plan",
+        label: "Pelan 10K / 21K",
+        ikon: "bendera",
+      },
+      { href: "/account/maf", label: "Kira MAF", ikon: "nadi" },
+    ],
   },
   {
-    href: "/account/distance-plan",
-    label: "Pelan 10K / 21K",
-    ikon: "bendera",
-  },
-  { href: "/account/maf", label: "Kira MAF", ikon: "nadi" },
-  { href: "/account/activities", label: "Aktiviti", ikon: "aktiviti" },
-  {
-    href: "/account/profile",
-    label: "Profil",
-    ikon: "pengguna",
+    tajuk: "Akaun",
+    items: [{ href: "/account/pricing", label: "Harga", ikon: "harga" }],
   },
 ];
 const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
@@ -80,31 +89,31 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
       </div>
       <nav class="app-nav">
         {
-          NAV.map((n) => (
-            <a
-              href={n.href}
-              aria-current={
-                laluan === n.href ||
-                (n.href !== "/account" && laluan.startsWith(`${n.href}/`))
-                  ? "page"
-                  : undefined
-              }
-            >
-              <Icon name={n.ikon} />
-              {n.label}
-            </a>
+          NAV.map((g) => (
+            <div class="app-nav-kumpulan">
+              <p class="app-nav-tajuk">{g.tajuk}</p>
+              {g.items.map((n) => (
+                <a
+                  href={n.href}
+                  hidden={n.members}
+                  data-ahli={n.members ? "" : undefined}
+                  aria-current={
+                    laluan === n.href ||
+                    (n.href !== "/account" && laluan.startsWith(`${n.href}/`))
+                      ? "page"
+                      : undefined
+                  }
+                >
+                  <Icon name={n.ikon} />
+                  {n.label}
+                </a>
+              ))}
+            </div>
           ))
         }
       </nav>
       <div class="app-pengguna">
-        <span class="avatar" data-saya-awal aria-hidden="true"></span>
-        <span class="app-pengguna-teks">
-          <strong data-saya-nama>…</strong>
-          <small data-saya-emel></small>
-        </span>
-        <button class="btn btn-outline btn-sm" type="button" data-keluar
-          >Log keluar</button
-        >
+        <UserMenu up id="menu-sidebar" />
       </div>
     </aside>
     <div class="app-scrim" data-tutup hidden></div>
@@ -123,12 +132,11 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
         </button>
         <h1 class="display app-tajuk">{title}</h1>
         <span class="app-navbar-pengguna">
-          <span class="avatar" data-saya-awal aria-hidden="true"></span>
-          <span data-saya-nama></span>
+          <UserMenu id="menu-navbar" />
         </span>
       </header>
       <script is:inline>
-        // Lukis nama/e-mel dari salinan /me (lib/api.ts ME_CACHE_KEY) sebelum lukisan pertama.
+        // Lukis nama/e-mel (+ menu ahli) dari salinan /me (lib/api.ts ME_CACHE_KEY) sebelum lukisan pertama.
         try {
           const s = JSON.parse(
             sessionStorage.getItem("nubi:saya") || "null",
@@ -142,6 +150,11 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
               "[data-saya-awal]",
               s.name.trim().charAt(0).toUpperCase() || "?",
             );
+            const n = s.apps && s.apps.nubi;
+            if (s.role === "owner" || n === "ahli" || n === "admin")
+              document
+                .querySelectorAll("[data-ahli]")
+                .forEach((e) => (e.hidden = false));
           }
         } catch {}
       </script>
@@ -155,8 +168,7 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
 </html>
 
 <script>
-  import { api, cacheMe, currentUser } from "../lib/api";
-  import { confirmDialog } from "../lib/confirm";
+  import { currentUser } from "../lib/api";
 
   const s = await currentUser();
   if (!s) {
@@ -174,6 +186,12 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
     document
       .querySelectorAll("[data-saya-awal]")
       .forEach((e) => (e.textContent = awal));
+    // Sama seperti activities/index.astro; backend tetap menyemak peranan pada setiap panggilan.
+    const nubi = s.apps?.nubi;
+    const ahli = s.role === "owner" || nubi === "ahli" || nubi === "admin";
+    document
+      .querySelectorAll<HTMLElement>("[data-ahli]")
+      .forEach((e) => (e.hidden = !ahli));
   }
 
   // Bawah 64rem sidebar = laci (body.menu-buka); atas 64rem ia boleh dilipat (body.sidebar-tutup,
@@ -220,23 +238,6 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
     segerak();
   });
   segerak();
-
-  document
-    .querySelector("[data-keluar]")!
-    .addEventListener("click", async () => {
-      const ya = await confirmDialog({
-        title: "Log keluar?",
-        message:
-          "Lepas ini, log masuk semula untuk buka Dashboard dan pelan versi penuh.",
-        confirmLabel: "Log keluar",
-      });
-      if (!ya) return;
-      await api("/auth/logout", { method: "POST" }).catch(() => {});
-      cacheMe(null);
-      // Cookie httpOnly dipadam oleh backend; session_active juga, tetapi pastikan UI ikut.
-      document.cookie = "session_active=; Max-Age=0; path=/";
-      location.replace("/");
-    });
 </script>
 
 <style>
@@ -306,7 +307,7 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
   }
   .app-nav {
     display: grid;
-    gap: 0.25rem;
+    gap: 1.25rem;
   }
   .app-nav a {
     display: flex;
@@ -330,52 +331,30 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
     outline: 2px solid var(--orange);
     outline-offset: 2px;
   }
-  .app-nav hr {
-    border: 0;
-    border-top: 1px solid var(--on-dark-line);
-    margin: 0.75rem 0;
-  }
   :global(.lucide) {
     width: 1.25rem;
     height: 1.25rem;
   }
 
+  .app-nav-kumpulan {
+    display: grid;
+    gap: 0.25rem;
+  }
+  .app-nav-tajuk {
+    margin: 0;
+    padding: 0 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--on-dark);
+    opacity: 0.7;
+  }
+
   .app-pengguna {
     margin-top: auto;
-    display: grid;
-    grid-template-columns: auto 1fr;
-    align-items: center;
-    gap: 0.75rem;
     padding-top: 1rem;
     border-top: 1px solid var(--on-dark-line);
-  }
-  .app-pengguna-teks {
-    display: grid;
-    min-width: 0;
-  }
-  .app-pengguna-teks strong {
-    color: #fff;
-  }
-  .app-pengguna-teks small {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .app-pengguna .btn {
-    grid-column: 1 / -1;
-    justify-self: stretch;
-    color: #fff;
-    border-color: var(--on-dark-line);
-  }
-  .avatar {
-    display: grid;
-    place-items: center;
-    width: 2.25rem;
-    height: 2.25rem;
-    border-radius: 50%;
-    background: var(--orange);
-    color: var(--navy);
-    font-weight: 800;
   }
 
   /* ---------- Navbar + kandungan ---------- */
@@ -510,9 +489,6 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
     }
     .app-navbar {
       padding: 0 1rem;
-    }
-    .app-navbar-pengguna [data-saya-nama] {
-      display: none;
     }
   }
   @media (prefers-reduced-motion: reduce) {

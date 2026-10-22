@@ -78,8 +78,8 @@ Item yang dah siap dibuang (lihat git history).
   (`"sifar"`, `"jalan-lari"`, `"tak-realistik"`) kekal Melayu - jangan tukar.
 - **Login** (`/login`): `src/lib/api.ts` (`api()` = `/api/v1` + satu refresh dikongsi bila 401, `fetchMe()` =
   `/me` kalau cookie `session_active`). Turnstile widget yang sama dengan portfolio (kunci tapak dalam
-  `src/data/site.ts`, action `login`). Daftar di `/register`, urus profil di `/account/profile`. Header tukar
-  "Log masuk" -> "Akaun" bila `session_active`. Kebenaran sebenar sentiasa di backend.
+  `src/data/site.ts`, action `login`). Daftar di `/register`, urus profil di `/account/profile`. Bila log masuk, Header awam tunjuk avatar
+  (`UserMenu`: Dashboard, Profil & tetapan, Log keluar) ganti "Log masuk". Kebenaran sebenar sentiasa di backend.
 - **Penafian / info**: setiap halaman pelan ada "bukan nasihat perubatan" + "belum disemak jurulatih bertauliah"
   (`docs/training-review.md`); login/daftar menyebut 3 slot awan. Tukar teks itu bila had atau status semakan berubah.
 - **Daftar / sahkan** (`/register`, `/verify`): daftar hantar `app: "nubi"`, jadi pautan e-mel ke
@@ -97,12 +97,14 @@ Item yang dah siap dibuang (lihat git history).
 - **Akaun (`/account/*`)**: `AccountLayout.astro` - sidebar (laci bawah 64rem: Esc / scrim tutup), navbar,
   kandungan lebar penuh. Layout = satu-satunya pengawal sesi (tiada sesi -> `/login?next=`); halaman ambil
   pengguna dengan `currentUser()` (`lib/api.ts`, satu /me dikongsi). `/login` lencong ke `?next=` (laluan
-  dalaman saja) atau `/account`. Header awam: "Akaun" -> `/account`. `<head>` dikongsi = `Head.astro`.
+  dalaman saja) atau `/account`. Sidebar berkumpulan (`NAV`: Utama / Latihan / Akaun); item `members: true`
+  (contoh Aktiviti) tersembunyi bagi bukan ahli. Profil + log keluar dalam `components/ui/UserMenu.astro`
+  (bawah sidebar `up`, navbar akaun, Header awam) - satu komponen, jangan buat menu lain. `<head>` dikongsi = `Head.astro`.
   Item yang dijana skrip perlu `:global(...)` dalam `<style>` halaman (tiada atribut skop Astro).
 - **Pelan 5K awam vs penuh**: `components/Plan5k.astro` (kandungan saja; halaman pilih layout).
   `/plan-5k` = pelan + label "Realistik tak?" + kotak promosi; log masuk -> lencong ke `/account/plan-5k`
   (`full`: pecahan analisis, ikut nadi MAF, .ics, tiada had 3 pelan). Sekatan di pelayar saja.
-  Storan pelan = `lib/saved-plans.ts` (`readList`/`writeList`/`deletePlan`); Dashboard baca `pelan-5k:dibuat` - pelan per pelayar, bukan per akaun (simpan di D1 = kemudian).
+  Storan pelan = `lib/saved-plans.ts` (`readList`/`writeList`/`deletePlan`) + awan (`lib/cloud-sync.ts`).
   Padam pelan: Dashboard + pelan penuh saja (di awam ia membuka semula slot had 3 pelan).
 - **Akaun lain**: `/account/maf` (`components/Maf.astro full`: simpan `maf:terakhir` untuk Dashboard + butang
   Pelan 5K ikut nadi; `/maf` lencong ke situ bila log masuk), `/account/profile` (Maklumat: nama `PATCH /me`) +
@@ -113,16 +115,25 @@ Item yang dah siap dibuang (lihat git history).
 - **Aktiviti** (`/account/activities`, ahli ke atas): fail Strava `.fit` (wajib) + `.gpx` (pilihan) dihurai
   **di pelayar** (`lib/activity-file.ts`; SDK `@garmin/fitsdk` dimuat malas, lesen FIT Protocol Garmin),
   dipadankan ikut masa mula, satu POST multipart setiap aktiviti ke `/me/apps/nubi/activities`.
-  Persetujuan sebaris dengan Simpan (`nubi/consent/aktiviti`). Detail + peta: `/account/activities/view?id=` (MapLibre malas + OpenFreeMap, laluan dari `.fit` asal). Nama aktiviti = `textContent` saja. Backend + R2:
+  Persetujuan sebaris dengan Simpan (`nubi/consent/aktiviti`). Detail + peta: `/account/activities/view?id=` (MapLibre malas, laluan dari `.fit` asal; 2D Positron / 3D
+  Liberty (OpenFreeMap) / Terrain (DEM Mapterhorn), zoom Ctrl/⌘+skrol atau dua jari, skrin penuh;
+  `docs/plans/map-3d.md`). Nama aktiviti = `textContent` saja. Backend + R2:
   `hono-workers/docs/plans/nubi-activities.md`. Pelan: `docs/plans/strava-activities.md`.
 - **Pelan aktif** (2026-10-22, ahli): satu pelan awan bertarikh mula = `app_items` `nubi/active/plan`
   (`data.plan` = kunci). `lib/plan-sync.ts`: `matchActivities` (tulen, `bun scripts/check-plan-sync.ts`) tanda sesi
   siap dari aktiviti Strava (hanya menambah, enjin mesti `ENGINE_VERSION`); butang "Jadikan pelan aktif" di page
-  pelan, panel dashboard, mesej lepas muat naik, baris "Sesi pelan" di detail. Spec: `docs/plans/active-plan-sync.md`.
+  pelan, panel dashboard, mesej lepas muat naik, baris "Sesi pelan" di detail. Padanan (2026-10-22, v2): mana-mana sesi
+  belum siap dalam minggu pelan sama (Isnin-Ahad, hari sama dahulu, kemudian paling hampir); `runRatio` (kadens >= 140
+  langkah/min, dari `.fit`, migration 033) mesti >= 0.7 untuk sesi lari, >= 0.15 untuk jalan-lari - kalau gagal sebab
+  itu saja, mesej `walkedNote` ("kebanyakannya jalan"). Spec: `docs/plans/active-plan-sync.md`.
 - **Jadual data**: `<Table id columns empty variant>` (`components/ui/Table.astro`) + `createTable(id, { columns, search? })`
   (`lib/table.ts`), di pelayar atas data dimuat. `variant`: `compact` (padat, tiada cari/kaki, `limit` baris pertama,
   lalai 5 - panel kecil), `standard` (lalai: cari + halaman, 10 sehalaman), `full` (cari, slot `filters` (`.filter(fn)`),
   papar 10/20/50, halaman). Bawah 40rem baris jadi kad berlabel. `full` di `/account/activities`. Jangan buat jadual sendiri dalam halaman.
+- **Halaman undang-undang + Harga** (2026-10-22): `/privacy`, `/terms` (awam, pautan di Footer; ditulis
+  ikut data yang betul-betul disimpan - ubah storan/pembekal = ubah `/privacy`), `/account/pricing` (akaun
+  saja buat masa ini, sidebar "Akaun"): Percuma + Ahli aktif, tier lain kelabu "Akan datang" (`aktif: false`
+  dalam `PELAN`). Daftar = baris setuju Terma + Privasi.
 - **Dialog sahkan**: `await confirmDialog({ title, message, confirmLabel, danger })` (`lib/confirm.ts`) atas `ConfirmDialog.astro`
   (dipasang sekali dalam `Layout` + `AccountLayout`). Untuk padam pelan dan log keluar; jangan guna `confirm()`.
 - **Pelan 5K dinamik**: dengan masa 5K (wajib tahap "5k", pilihan "jalan"), pace interval/tempo
@@ -191,18 +202,17 @@ Item yang dah siap dibuang (lihat git history).
 
 - [ ] Isi `CONTACT` (WhatsApp group / Instagram / e-mel) - seksyen "Sertai" kosong sampai ini diisi.
 - [ ] Lantik admin Nubi di portfolio `/admin/app-access`.
-- [ ] **Login / daftar production - ikut urutan**: (1) dashboard Cloudflare -> Turnstile -> widget
-  portfolio -> tambah hostname `nubisport.hafizbahtiar.com`; (2) `bun run db:migrate:remote` dalam
-  `hono-workers` (026, peranan `ahli`); (3) deploy `hono-workers` - mesti SEBELUM push Nubi, backend lama
-  tolak `app` (daftar jadi 400); (4) push repo ini; (5) deploy portfolio (dropdown peranan App Access kini
-  tiada pilihan lalai).
 - [ ] Uji import `.ics` pada iPhone (Safari: terus "Tambah semua" atau simpan ke Files?), Samsung Calendar,
   Google Calendar (web) dan Outlook - nota platform di halaman belum diuji pada peranti sebenar.
 - [ ] E-mel pengesahan untuk `app=nubi` masih teks English dari pengirim portfolio - nak versi Melayu?
-- [ ] Deploy `hono-workers` untuk kad "Sesuai lari hari ini?" (`/api/v1/public/air-quality`, `/api/v1/public/weather/:id`,
-  `/api/v1/public/prayer-times/:zone`) dan kuota `nubi.profil` (maklumat latihan - tanpanya simpan gagal 404)
-  - SEBELUM push Nubi; tanpa itu kad hanya kata data tak dapat diambil.
+- [ ] **Halaman undang-undang** (2026-10-22): `/privacy`, `/terms`, `/account/pricing` (dalam akaun sahaja buat masa ini) dah ada - semak dengan peguam
+  SEBELUM tier berbayar dibuka. Buka tier = `aktif: true` dalam `PELAN` (`src/pages/account/pricing.astro`).
+  Ubah data yang disimpan / pembekal (backend) = ubah `/privacy` juga.
 - [ ] Semak pratonton pautan lepas deploy (WhatsApp / Facebook debugger) - `og.png`.
+- [ ] **Deploy aktiviti v2** (2026-10-22): `bun run db:migrate:remote` dalam `hono-workers` (033 `run_ratio`)
+  SEBELUM push `hono-workers` (commit `b850960`), kemudian push repo ini. Lepas itu uji dengan fail Strava
+  sebenar: padanan pelan aktif, % lari, peta 2D/3D/Terrain, zoom dua jari di telefon.
+- [ ] Isi `CONTACT` juga untuk permintaan akses/padam data (PDPA) - `/privacy` kini rujuk "kumpulan larian".
 
 ## 🛠 Frontend - seterusnya
 
@@ -213,6 +223,17 @@ Item yang dah siap dibuang (lihat git history).
 - [ ] `robots.txt` + `sitemap` (bila ada lebih dari satu halaman).
 - [ ] Analitik ringkas tanpa cookie (Cloudflare Web Analytics) - kalau perlu.
 - [ ] Mod gelap? Laman kini sengaja terang + navy; buat hanya kalau diminta.
+- [ ] **Pelan latihan v2** (berat - rancangan [docs/plans/training-plan-v2.md](docs/plans/training-plan-v2.md)):
+  pace lalai + pilih pace sendiri, pelan ikut tarikh lumba (minggu dikira dari hari ini), profil disimpan
+  kali pertama diisi dalam borang pelan, setiap sesi tunjuk data sebenar dari FIT/GPX. Cadangan: pace
+  dikemas kini dari ujian/lumba, semakan blok laju interval/tempo, "Sambung" automatik di Dashboard,
+  carta beban mingguan, taper ikut tarikh lumba. Naikkan `ENGINE_VERSION`.
+- [ ] Uji pemasa pada telefon sebenar: bunyi iOS (suis senyap mematikan Web Audio), getaran (iOS tiada
+  `navigator.vibrate`), Wake Lock Safari 16.4+.
+- [ ] Fail `.ics` lama tak berubah sendiri lepas "Sambung dari Minggu N" - langganan `webcal` (IDEA.md).
+- [ ] Padam akaun sendiri (backend `DELETE /me` + R2 purge) - `/privacy` kini suruh hubungi kami.
+- [ ] **Profil ketinggian** di bawah peta aktiviti (record FIT `altitude`) - selepas varian peta
+  ([docs/plans/map-3d.md](docs/plans/map-3d.md)).
 
 ## 💡 Idea
 
@@ -225,66 +246,9 @@ Semua idea (belum diputuskan, disusun ikut gelombang) dalam **`IDEA.md`**. Yang 
   10K 10 km, 21K 16 km); senarai semak untuk jurulatih di situ. Ambang munasabah + zon pace masih anggaran.
 - [ ] Unit: kini minit (+ pace /km). Tambah km bagi yang ada jam GPS?
 - [ ] Sasaran lain (bawah 28 / 25 minit) - `buildPlan` kini tetap 30 minit. (10K/21K: `/account/distance-plan`.)
-- [ ] Perlu backend: simpan pelan ke akaun, log larian sebenar vs pelan, coach pantau ahli.
+- [ ] Coach pantau ahli (peranan `coach` = migration backend baru).
 
 ## Soalan terbuka
 - Nama: "Nubi Sport" kekal larian saja, atau nanti sukan lain (badminton, kayuh)?
 - Yuran / jersi kumpulan? Kalau ya, jangan kendalikan bayaran di laman - pautan ke pihak ketiga.
 - Bahasa: Melayu saja, atau tambah English?
-
-## Pelan 10K / 21K (akaun saja) - siap
-
-- `/account/distance-plan` (`components/DistancePlan.astro`, enjin `lib/distance-plan.ts`, semak
-  `bun scripts/check-distance-plan.ts`). Bertangga: 10K dari masa 5K, 21K dari masa 10K; 10K 8/10/12
-  minggu, 21K 12/16/20 (puncak larian panjang 10 / 16 km); sasaran lalai habis, masa sasaran pilihan (sesi laju + "Realistik tak?",
-  anggaran Riegel - kasar). Kad minggu + analisis dikongsi dengan 5K (`lib/plan-render.ts`,
-  `styles/plan.css`). Kunci storan `pelan-10k|21k:<minggu>-<masa>-<sasaran>-<hari>`.
-
-## Sambungan, sesi, kos (2026-10-18)
-
-- `components/ui/ConnectionNotice.astro` (Layout + AccountLayout): notis luar talian / kembali dalam talian.
-- Salinan `/me` dalam sessionStorage `nubi:saya` (`lib/api.ts` `cacheMe`): sidebar dilukis sebelum
-  lukisan pertama; `/me` dipanggil semula hanya lepas 5 min. Log keluar / tiada cookie = dibuang.
-- Kos: Worker hanya `/api/*` (aset statik percuma); `public/_headers` simpan `/_astro/*` setahun;
-  `prefetch` (hover) hanya aset statik; `@view-transition` (CSS, tanpa JS), sidebar akaun kekal.
-
-## Pemasa jalan-lari (2026-10-18) - siap
-
-- Butang "Mula pemasa" pada setiap sesi (bukan ujian/lumba - ikut jarak) dalam semua pelan, awam + akaun.
-  Skrin penuh `components/Timer.astro`: langkah dari `Sesi.segmen` (enjin `plan-5k.ts` / `distance-plan.ts`
-  - tambah `segmen` bila buat jenis sesi baru), masa dari jam dinding (`lib/timer.ts`), bunyi + getaran
-  setiap tukar langkah, detik 3-2-1, Wake Lock, Jeda / Langkau, Esc atau X tanya dulu di tengah sesi.
-  Tamat -> "Tanda siap" = event `change` pada kotak sesi (simpan + segerak awan seperti biasa).
-  Semak: `bun scripts/check-timer.ts` (jalan-lari = tepat minit kad).
-- [ ] Uji pada telefon sebenar: bunyi iOS (suis senyap mematikan Web Audio), getaran (iOS tiada
-  `navigator.vibrate`), Wake Lock Safari 16.4+.
-
-## Terlepas sesi -> sambung (2026-10-18) - siap
-
-- Pelan bertarikh (5K + 10K/21K, awam + akaun): notis "Terlepas sesi? Tak apa." bila ada minggu sebelum
-  minggu semasa yang terlepas (lepas sesi terakhir yang ditanda). Butang "Sambung dari Minggu N" = buka
-  semula pelan dengan `mula` baru supaya minggu N mula Isnin depan (hari ini kalau Isnin). Tanda siap ikut
-  nombor minggu jadi kekal; awan ikut sendiri (`mountCloudBox`: param berubah -> pelayar menang).
-  Logik `resumePoint` dalam `lib/plan-5k.ts`, notis `mountResume` dalam `lib/plan-render.ts`,
-  semak dalam `bun scripts/check-plan-5k.ts`.
-- [ ] Fail `.ics` lama tak berubah sendiri - notis menyuruh muat turun semula. Langganan `webcal` (IDEA.md) selesaikan ini.
-
-## Kalkulator pace + pelan seterusnya (2026-10-18) - siap
-
-- `/pace` (awam, statik, pautan header desktop): jarak (5K/10K/21K/42K/lain km) + masa atau pace ->
-  pace, masa, km/j, anggaran jarak lain (Riegel, dilabel kasar). Logik `src/lib/pace.ts`.
-- Kad hari ujian 5K / lumba 10K / 21K: borang "Masa sebenar anda" -> tanda sesi itu siap + cadangan
-  `nextPlan`: 5K <= 30 min -> 10K; 5K > 30 -> pelan 5K baru dari masa itu (atau 10K); 10K -> 21K;
-  21K -> ramalan maraton saja. Masa dibundar ke atas. Pautan 10K/21K = akaun.
-- Semak: `bun scripts/check-pace.ts` (setiap pautan pelan seterusnya membuka pelan yang sah).
-
-## Kongsi pelan + panduan pemula (2026-10-18) - siap
-
-- "Kongsi" (5K dan kini 10K/21K): `shareLink` dalam `lib/plan-render.ts` - 5K berkongsi halaman awam
-  `/plan-5k` (kawan tak perlu akaun), 10K/21K `/account/distance-plan` (kawan perlu akaun). Param MAF
-  (`maf`, `umur`, `keadaan`) dibuang - peribadi. Tarikh mula kekal supaya jadual sama untuk lari berdua.
-- `/guide` (statik, pautan header desktop + "Sebelum mula" dalam kedua-dua pelan): asas setiap larian,
-  kasut, cuaca panas (KKM), keselamatan, bila berhenti, senarai semak hari lumba (cetak senarai saja:
-  `body.cetak-senarai`). **Setiap nasihat kesihatan mesti dari sumber rasmi yang disenaraikan di halaman**
-  (NHS, KKM melalui Berita RTM - moh.gov.my menyekat bacaan automatik). Angka tanpa sumber rasmi (contoh
-  jarak tukar kasut) sengaja tak ditulis. Semak semula pautan sumber setiap 6 bulan.

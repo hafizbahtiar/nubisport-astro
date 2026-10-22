@@ -1,0 +1,224 @@
+---
+/**
+ * Avatar pengguna + menu akaun (Profil & tetapan, Log keluar; Dashboard bila `up` tiada).
+ * - `up`: blok bawah sidebar (avatar + nama + e-mel, menu naik ke atas, gaya gelap).
+ *   Tanpa `up`: avatar sahaja di navbar, menu turun ke kanan.
+ * - Nama/e-mel/huruf awal diisi oleh pemanggil melalui [data-saya-nama|emel|awal]
+ *   (AccountLayout, Header) - komponen ini tidak memanggil /me.
+ * - Corak menu ARIA: Enter/Space/klik buka + fokus item pertama; ↑ ↓ Home End; Esc tutup
+ *   (fokus balik ke butang); Tab / klik di luar tutup. Gaya kotak = .dd-menu (global.css).
+ */
+import Icon from "./Icon.astro";
+
+interface Props {
+  up?: boolean;
+  id: string;
+}
+const { up = false, id } = Astro.props;
+---
+
+<div class:list={["um", up ? "um-up" : "um-down"]} data-user-menu>
+  <button
+    class="um-butang"
+    type="button"
+    id={`${id}-butang`}
+    aria-haspopup="menu"
+    aria-expanded="false"
+    aria-controls={`${id}-menu`}
+    aria-label={up ? undefined : "Menu akaun"}
+    data-butang
+  >
+    <span class="avatar" data-saya-awal aria-hidden="true"></span>
+    {
+      up && (
+        <span class="um-teks">
+          <strong data-saya-nama>…</strong>
+          <small data-saya-emel />
+        </span>
+      )
+    }
+  </button>
+  <div
+    class="dd-menu um-menu"
+    id={`${id}-menu`}
+    role="menu"
+    aria-labelledby={`${id}-butang`}
+    data-menu
+    hidden
+  >
+    {
+      !up && (
+        <a role="menuitem" tabindex="-1" href="/account">
+          <Icon name="rumah" />
+          Dashboard
+        </a>
+      )
+    }
+    <a role="menuitem" tabindex="-1" href="/account/profile">
+      <Icon name="tetapan" />
+      Profil & tetapan
+    </a>
+    <button role="menuitem" tabindex="-1" type="button" data-keluar>
+      <Icon name="keluar" />
+      Log keluar
+    </button>
+  </div>
+</div>
+
+<script>
+  import { api, cacheMe } from "../../lib/api";
+  import { confirmDialog } from "../../lib/confirm";
+
+  document.querySelectorAll<HTMLElement>("[data-user-menu]").forEach((root) => {
+    const butang = root.querySelector<HTMLButtonElement>("[data-butang]")!;
+    const menu = root.querySelector<HTMLElement>("[data-menu]")!;
+    const items = [...menu.querySelectorAll<HTMLElement>("[role=menuitem]")];
+    const fokus = (i: number) =>
+      items[(i + items.length) % items.length].focus();
+    const set = (buka: boolean, balik = true) => {
+      if (buka === !menu.hidden) return;
+      menu.hidden = !buka;
+      butang.setAttribute("aria-expanded", String(buka));
+      if (buka) fokus(0);
+      else if (balik) butang.focus();
+    };
+    butang.addEventListener("click", () => set(menu.hidden !== false));
+    butang.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp")
+        (e.preventDefault(), set(true));
+    });
+    menu.addEventListener("keydown", (e) => {
+      const i = items.indexOf(document.activeElement as HTMLElement);
+      const k: Record<string, () => void> = {
+        ArrowDown: () => fokus(i + 1),
+        ArrowUp: () => fokus(i - 1),
+        Home: () => fokus(0),
+        End: () => fokus(-1),
+        Escape: () => set(false),
+      };
+      if (k[e.key]) return (e.preventDefault(), k[e.key]());
+      if (e.key === "Tab") set(false, false);
+    });
+    document.addEventListener("pointerdown", (e) => {
+      if (!root.contains(e.target as Node)) set(false, false);
+    });
+
+    root.querySelector("[data-keluar]")!.addEventListener("click", async () => {
+      set(false, false);
+      const ya = await confirmDialog({
+        title: "Log keluar?",
+        message:
+          "Lepas ini, log masuk semula untuk buka Dashboard dan pelan versi penuh.",
+        confirmLabel: "Log keluar",
+      });
+      if (!ya) return butang.focus();
+      await api("/auth/logout", { method: "POST" }).catch(() => {});
+      cacheMe(null);
+      // Cookie httpOnly dipadam oleh backend; session_active juga, tetapi pastikan UI ikut.
+      document.cookie = "session_active=; Max-Age=0; path=/";
+      location.replace("/");
+    });
+  });
+</script>
+
+<style>
+  .um {
+    position: relative;
+  }
+  .um-butang {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.25rem;
+    border: 0;
+    border-radius: 999px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .um-butang:focus-visible {
+    outline: 2px solid var(--orange);
+    outline-offset: 2px;
+  }
+  .um-down .um-butang:hover .avatar,
+  .um-butang[aria-expanded="true"] .avatar {
+    box-shadow: 0 0 0 3px var(--orange-hover);
+  }
+  /* Blok bawah sidebar: lebar penuh, gelap. */
+  .um-up .um-butang {
+    width: 100%;
+    padding: 0.5rem;
+    border-radius: var(--radius);
+    color: var(--on-dark);
+  }
+  .um-up .um-butang:hover,
+  .um-up .um-butang[aria-expanded="true"] {
+    background: var(--navy-2);
+  }
+  .um-teks {
+    display: grid;
+    min-width: 0;
+  }
+  .um-teks strong {
+    color: #fff;
+  }
+  .um-teks small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .avatar {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    background: var(--orange);
+    color: var(--navy);
+    font-weight: 800;
+  }
+
+  .um-menu {
+    min-width: 13rem;
+  }
+  .um-down .um-menu {
+    left: auto;
+  }
+  .um-up .um-menu {
+    top: auto;
+    bottom: calc(100% + 0.5rem);
+  }
+  .um-menu [role="menuitem"] {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.55rem 0.75rem;
+    border: 0;
+    border-radius: var(--radius);
+    background: none;
+    color: var(--ink);
+    font: inherit;
+    font-weight: 600;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .um-menu [role="menuitem"]:hover,
+  .um-menu [role="menuitem"]:focus {
+    background: var(--paper-2);
+    outline: none;
+  }
+  .um-menu [role="menuitem"]:focus-visible {
+    outline: 2px solid var(--orange);
+    outline-offset: -2px;
+  }
+  .um-menu :global(.lucide) {
+    width: 1.1rem;
+    height: 1.1rem;
+    color: var(--muted);
+  }
+</style>

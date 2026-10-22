@@ -85,7 +85,8 @@ backend (403). Sekatan di frontend hanyalah untuk UX.
 ## Halaman detail (`/account/activities/view?id=`)
 
 Nama aktiviti dalam senarai = pautan. Halaman detail: peta laluan (MapLibre GL dimuat malas, gaya vektor
-OpenFreeMap Positron - percuma, tiada kunci/had, atribusi wajib; tukar penyedia = tukar `GAYA`), penanda
+OpenFreeMap Positron - percuma, tiada kunci/had, atribusi wajib; tukar penyedia = tukar `GAYA`; varian
+2D / 3D / Terrain + zum Ctrl/⌘ atau dua jari + skrin penuh, lihat `map-3d.md`), penanda
 mula/tamat, ringkasan 6 nilai, butang Padam. Laluan dilukis dari `.fit` asal (`GET …/:id/file`,
 milik sendiri) dengan `fitRoute()` - tiada storan baru, aktiviti lama terus ada peta. Tiada GPS
 (treadmill) = mesej, tiada peta. Peta hanya untuk ahli itu.

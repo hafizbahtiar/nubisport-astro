@@ -14,7 +14,8 @@ import Table from "../../../components/ui/Table.astro";
 <AccountLayout title="Aktiviti">
   <Alert variant="info" title="Ciri untuk ahli" id="bukan-ahli" hidden>
     <p>
-      Import aktiviti Strava terbuka untuk ahli Nubi Sport. Keahlian diluluskan pentadbir - hubungi kami melalui kumpulan larian.
+      Import aktiviti Strava terbuka untuk ahli Nubi Sport. Keahlian diluluskan
+      pentadbir - hubungi kami melalui kumpulan larian.
     </p>
   </Alert>
 
@@ -34,7 +35,8 @@ import Table from "../../../components/ui/Table.astro";
         <summary>Cara dapatkan fail dari Strava</summary>
         <ol>
           <li>
-            Buka aktiviti di <strong>strava.com</strong> (laman web, bukan aplikasi), tekan
+            Buka aktiviti di <strong>strava.com</strong> (laman web, bukan aplikasi),
+            tekan
             <strong>⋯</strong>.
           </li>
           <li>
@@ -53,8 +55,9 @@ import Table from "../../../components/ui/Table.astro";
 
       <Alert variant="warning">
         <p>
-          Hanya fail daripada <strong>Strava</strong> disokong. Fail daripada aplikasi lain (Garmin,
-          Coros dan lain-lain) mungkin tak dapat dipadankan atau nilainya kurang tepat.
+          Hanya fail daripada <strong>Strava</strong> disokong. Fail daripada aplikasi
+          lain (Garmin, Coros dan lain-lain) mungkin tak dapat dipadankan atau nilainya
+          kurang tepat.
         </p>
       </Alert>
 
@@ -187,7 +190,11 @@ import Table from "../../../components/ui/Table.astro";
     type ActivityFiles,
     type Sport,
   } from "../../../lib/activity-file";
-  import { sessionLabel, syncActivities } from "../../../lib/plan-sync";
+  import {
+    sessionLabel,
+    syncActivities,
+    walkedNote,
+  } from "../../../lib/plan-sync";
 
   const $ = <T extends HTMLElement = HTMLElement>(id: string) =>
     document.getElementById(id) as T;
@@ -357,7 +364,11 @@ import Table from "../../../components/ui/Table.astro";
     columns: [
       (a) => tarikh(a.startedAt),
       (a) => {
-        const n = el("a", "akt-nama", a.name || SPORT_LABELS[a.sport]) as HTMLAnchorElement;
+        const n = el(
+          "a",
+          "akt-nama",
+          a.name || SPORT_LABELS[a.sport],
+        ) as HTMLAnchorElement;
         n.href = `/account/activities/view?id=${a.id}`;
         const d = el("span", "akt-sel");
         d.append(n, el("span", "muted", SPORT_LABELS[a.sport]));
@@ -386,7 +397,8 @@ import Table from "../../../components/ui/Table.astro";
     if (!ya) return;
     const d = await api(`${BASE}/${a.id}`, { method: "DELETE" });
     if (!d.ok && d.status !== 404) {
-      $("jumlah").textContent = "Aktiviti tak dapat dipadam. Semak sambungan dan cuba lagi.";
+      $("jumlah").textContent =
+        "Aktiviti tak dapat dipadam. Semak sambungan dan cuba lagi.";
       return;
     }
     await Promise.all([senarai(), minggu()]);
@@ -515,9 +527,7 @@ import Table from "../../../components/ui/Table.astro";
         const st = status.get(a.ringkasan.startedAt);
         const li = el("li", st ? `st-${st.jenis}` : "");
         const hujung = el("div", "akt-hujung");
-        hujung.append(
-          el("span", "lencana", a.gpx ? "FIT + GPX" : "FIT saja"),
-        );
+        hujung.append(el("span", "lencana", a.gpx ? "FIT + GPX" : "FIT saja"));
         hujung.append(el("span", "dulang-status", st?.teks ?? "Sedia"));
         li.append(kad(a.ringkasan), hujung);
         return li;
@@ -565,7 +575,10 @@ import Table from "../../../components/ui/Table.astro";
       status.set(k, { jenis: "kerja", teks: "Menyimpan…" });
       await kemas();
       try {
-        const r = await api(BASE, { method: "POST", body: await buildUploadForm(a) });
+        const r = await api(BASE, {
+          method: "POST",
+          body: await buildUploadForm(a),
+        });
         const b = await json(r);
         if (r.ok) {
           b.data.created ? baru++ : dikemas++;
@@ -600,11 +613,18 @@ import Table from "../../../components/ui/Table.astro";
     const padan = disimpan.length
       ? await syncActivities(disimpan.map((a) => a.ringkasan)).catch(() => null)
       : null;
-    const tambahan = padan ? disimpan.length - padan.size : 0;
+    const tambahan = padan
+      ? disimpan.length - padan.padan.size - padan.tolak.size
+      : 0;
     const hasilPadan = padan
       ? [
-          ...[...padan.values()].map((s) => `${sessionLabel(s)} ditanda siap.`),
-          tambahan ? `${tambahan} aktiviti tambahan (tiada sesi pelan aktif yang padan).` : "",
+          ...[...padan.padan.values()].map(
+            (s) => `${sessionLabel(s)} ditanda siap.`,
+          ),
+          ...[...padan.tolak].map(([a, s]) => walkedNote(a, s)),
+          tambahan
+            ? `${tambahan} aktiviti tambahan (tiada sesi pelan aktif yang padan).`
+            : "",
         ].join(" ")
       : "";
 
