@@ -741,6 +741,20 @@ legend,
   animation: dp-masuk 0.14s ease-out;
 }
 
+/* Dropdown dekat hujung bawah skrin: menu naik ke atas (JS tambah semasa buka). */
+.dd-menu.dd-atas {
+  top: auto;
+  bottom: calc(100% + 0.5rem);
+  animation-name: dp-masuk-atas;
+}
+
+@keyframes dp-masuk-atas {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+}
+
 .dd-menu:focus-visible {
   outline: none;
 }

@@ -20,7 +20,7 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
 </AccountLayout>
 
 <script>
-  import { api, json } from "../../lib/api";
+  import { api, currentUser, json } from "../../lib/api";
 
   const status = document.getElementById("status")!;
   const tindakan = document.getElementById("tindakan")!;
@@ -34,7 +34,10 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
     new URLSearchParams(location.hash.slice(1)).get("t") ??
     new URLSearchParams(location.search).get("t") ??
     "";
-  if (token) history.replaceState(null, "", location.pathname);
+  // Tunggu sesi dulu: tanpa sesi, AccountLayout bawa URL penuh (dengan #t=) ke
+  // /login?next=. Buang token lebih awal = pengguna balik ke sini tanpa token.
+  const sesi = await currentUser();
+  if (token && sesi) history.replaceState(null, "", location.pathname);
   const tunjuk = (el: HTMLElement, teks: string) => {
     el.textContent = teks;
     el.hidden = false;
@@ -46,14 +49,20 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
     tunjuk(ralat, teks);
   };
 
-  if (!token) {
+  if (!sesi) {
+    // AccountLayout sedang ke /login.
+  } else if (!token) {
     gagal("Pautan tak lengkap. Hantar /bind semula dalam Telegram.");
   } else {
     const res = await api(
       `/me/telegram/link?token=${encodeURIComponent(token)}`,
     ).catch(() => null);
     const body = res ? await json(res) : {};
-    if (!res?.ok) {
+    if (res?.status === 403 && body.code === "link_owner") {
+      gagal(
+        "Akaun owner tak boleh dipautkan melalui bot. Pautkan Telegram dari profil admin portfolio.",
+      );
+    } else if (!res?.ok) {
       gagal(
         "Pautan tak sah atau dah tamat. Hantar /bind semula dalam Telegram.",
       );
@@ -66,7 +75,7 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
         status,
         `Pautkan akaun ${data.app.name} dengan Telegram${
           data.telegramName ? ` ${data.telegramName}` : ""
-        }. Selepas dibenarkan, anda boleh taip /nubiplan dalam bot.`,
+        }. Benarkan hanya jika anda sendiri yang hantar /bind tadi. Selepas dibenarkan, anda boleh taip /nubiplan dalam bot.`,
       );
       tindakan.hidden = false;
 
