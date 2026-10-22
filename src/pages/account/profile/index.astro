@@ -32,16 +32,20 @@ import Alert from "../../../components/ui/Alert.astro";
 
   <section class="panel" aria-labelledby="t-telegram">
     <h2 class="display" id="t-telegram">Telegram</h2>
-    <p class="muted">
-      Pautkan akaun ini dengan bot Telegram. Lepas terikat, taip
-      <code>/nubiplan</code> dalam bot untuk lihat pelan awan anda.
-    </p>
-    <a
-      class="btn btn-outline"
-      href="/api/v1/public/telegram"
-      target="_blank"
-      rel="noopener">Pautkan Telegram</a
-    >
+    <p class="muted" id="telegram-status">Menyemak pautan…</p>
+    <Alert variant="danger" id="mesej-telegram" hidden />
+    <div class="actions">
+      <a
+        class="btn btn-outline"
+        id="telegram-paut"
+        href="/api/v1/public/telegram"
+        target="_blank"
+        rel="noopener">Pautkan Telegram</a
+      >
+      <button class="btn btn-bahaya" type="button" id="telegram-nyahpaut" hidden
+        >Nyahpaut Telegram</button
+      >
+    </div>
   </section>
 
   <section class="panel" aria-labelledby="t-bahaya">
@@ -80,6 +84,66 @@ import Alert from "../../../components/ui/Alert.astro";
     profil.nama.value = s.name;
     profil.emel.value = s.email;
   }
+
+  // Telegram: status + nyahpaut dari profil. Amaran dihantar ke chat oleh backend
+  // sebelum pautan dibuang (best effort - outage Telegram tak menghalang nyahpaut).
+  const telegramStatus = document.getElementById("telegram-status")!;
+  const telegramPaut = document.getElementById("telegram-paut")!;
+  const telegramNyah = document.getElementById(
+    "telegram-nyahpaut",
+  ) as HTMLButtonElement;
+  const telegramMesej = document.getElementById("mesej-telegram")!;
+  const linkedAt = s?.telegram?.linkedAt ?? null;
+  if (linkedAt) {
+    telegramStatus.textContent = `Terikat sejak ${new Date(
+      linkedAt,
+    ).toLocaleDateString("ms-MY", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    })}. Bot boleh tunjuk pelan anda.`;
+    telegramPaut.hidden = true;
+    telegramNyah.hidden = false;
+  } else {
+    telegramStatus.textContent =
+      "Belum terikat. Pautkan untuk guna /nubiplan dalam bot.";
+  }
+
+  telegramNyah.addEventListener("click", async () => {
+    telegramMesej.hidden = true;
+    const ya = await confirmDialog({
+      title: "Nyahpaut Telegram?",
+      message:
+        "Amaran akan dihantar ke chat Telegram, kemudian pautan dibuang. Bot tak lagi boleh tunjuk pelan anda sampai anda /bind semula.",
+      confirmLabel: "Nyahpaut",
+      danger: true,
+    });
+    if (!ya) return telegramNyah.focus();
+    telegramNyah.disabled = true;
+    try {
+      const res = await api("/me/telegram/link", { method: "DELETE" });
+      if (!res.ok) {
+        telegramMesej.textContent =
+          "Tak dapat nyahpaut sekarang. Cuba lagi sekejap.";
+        telegramMesej.hidden = false;
+        return;
+      }
+      const body = await json(res);
+      if (s) cacheMe({ ...s, telegram: { linkedAt: null } });
+      telegramStatus.textContent =
+        body.data?.alerted === false
+          ? "Telegram dinyahpaut. Amaran chat tak dapat dihantar, tetapi pautan sudah dibuang."
+          : "Telegram dinyahpaut. Amaran dihantar ke chat.";
+      telegramNyah.hidden = true;
+      telegramPaut.hidden = false;
+    } catch {
+      telegramMesej.textContent =
+        "Tiada sambungan. Semak internet anda dan cuba lagi.";
+      telegramMesej.hidden = false;
+    } finally {
+      telegramNyah.disabled = false;
+    }
+  });
 
   profil.addEventListener("submit", async (e) => {
     e.preventDefault();

@@ -1,6 +1,7 @@
 ---
-// Halaman authorize pautan Telegram dari bot: /account/telegram?t=<token>.
-// Bot (hono-workers services/telegram-public.ts) beri pautan 5 minit sekali guna;
+// Halaman authorize pautan Telegram dari bot: /account/telegram#t=<token>.
+// Token dalam fragment (bukan query) supaya tak masuk log pelayan/Referer. Bot
+// (hono-workers services/telegram-public.ts) beri pautan 5 minit sekali guna;
 // halaman ini baca token, tunjuk akaun/app, kemudian pengguna tekan Benarkan.
 import AccountLayout from "../../layouts/AccountLayout.astro";
 ---
@@ -9,8 +10,8 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
   <section class="card" aria-labelledby="t-paut">
     <h2 class="display card-title" id="t-paut">Pautkan Telegram</h2>
     <p class="muted" id="status" aria-live="polite">Menyemak pautan…</p>
-    <div class="alert alert-danger" id="ralat" hidden></div>
-    <div class="alert alert-success" id="hasil" hidden></div>
+    <div class="alert alert-danger" id="ralat" role="alert" hidden></div>
+    <div class="alert alert-success" id="hasil" role="status" hidden></div>
     <div class="actions" id="tindakan" hidden>
       <button class="btn btn-primary" type="button" id="benar">Benarkan</button>
       <a class="btn btn-outline" href="/account" rel="noreferrer">Batal</a>
@@ -27,8 +28,12 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
   const ralat = document.getElementById("ralat")!;
   const hasil = document.getElementById("hasil")!;
 
-  const token = new URLSearchParams(location.search).get("t") ?? "";
-  // Buang token dari URL/history selepas dibaca - ia kekal dalam pemboleh ubah sahaja.
+  // Bot guna fragment (#t=...); query disokong untuk pautan lama. Buang dari URL
+  // selepas dibaca - token kekal dalam pemboleh ubah sahaja.
+  const token =
+    new URLSearchParams(location.hash.slice(1)).get("t") ??
+    new URLSearchParams(location.search).get("t") ??
+    "";
   if (token) history.replaceState(null, "", location.pathname);
   const tunjuk = (el: HTMLElement, teks: string) => {
     el.textContent = teks;

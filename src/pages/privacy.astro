@@ -73,6 +73,13 @@ const hubungi = [
           dan pelan aktif anda, supaya ikut ke peranti lain.
         </li>
         <li>
+          <strong>Pautan Telegram</strong> (pilihan) - ID chat Telegram dan masa pautan,
+          supaya bot boleh tunjuk pelan anda dan anda boleh gunakannya dari chat.
+          Nama Telegram hanya disimpan dalam token pautan selama 5 minit. Nyahpaut
+          dengan <code>/unbind</code> dalam bot atau butang Nyahpaut di Profil - amaran
+          dihantar ke chat sebelum pautan dibuang.
+        </li>
+        <li>
           <strong>Aktiviti Strava</strong> (ahli saja, lepas anda setuju) - fail asal
           <code>.fit</code> dan
           <code>.gpx</code> (pilihan) yang anda muat naik, <strong
@@ -165,6 +172,11 @@ const hubungi = [
           anda muat jubin terus dari mereka. Laluan anda dilukis dalam pelayar dan
           tak dihantar kepada mereka.
         </li>
+        <li>
+          <strong>Telegram</strong> - bot dan mesej yang anda hantar melalui Telegram.
+          Bila anda guna bot, mesej itu melalui pelayan Telegram; kami hanya simpan
+          ID chat dan pautan seperti di atas.
+        </li>
       </ul>
       <p>
         Pentadbir Nubi Sport boleh akses data untuk menjalankan dan membaiki
@@ -186,6 +198,10 @@ const hubungi = [
         <li>
           Sesi log masuk - tamat dalam 7 hari. Pautan pengesahan e-mel - tamat
           dalam 24 jam.
+        </li>
+        <li>
+          Token pautan Telegram - 5 minit, sekali guna. Pautan Telegram kekal
+          sampai anda nyahpaut (bot atau Profil) atau padam akaun.
         </li>
         <li>Log pelayan - tempoh singkat, mengikut tetapan Cloudflare.</li>
       </ul>
@@ -214,6 +230,11 @@ const hubungi = [
           (profil, pelan, aktiviti dan fail Strava), guna "Padam akaun" di{" "}
           <a href="/account/profile">Profil</a>. Akaun yang sama di
           hafizbahtiar.com juga dipadam sebab log masuk dikongsi.
+        </li>
+        <li>
+          <strong>Nyahpaut Telegram</strong> - taip <code>/unbind</code> dalam bot
+          atau guna butang Nyahpaut di Profil (amaran dihantar ke chat dulu), atau
+          padam akaun. Token pautan yang belum digunakan turut dibatalkan.
         </li>
         <li>
           <strong>Minta salinan atau bantahan</strong> - hubungi kami. Kami akan balas
