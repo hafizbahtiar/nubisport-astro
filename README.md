@@ -37,7 +37,7 @@ oleh owner, **sebelum** Nubi bila Nubi bergantung pada endpoint baru.
 | `/account/distance-plan` | akaun | Pelan 10K / 21K (bertangga dari masa 5K / 10K, masa sasaran pilihan, tempoh lalai 10 / 16 minggu) + kad "Sesuai lari hari ini?" |
 | `/account/maf` | akaun | MAF + butang buat Pelan 5K ikut nadi |
 | `/account/pricing` | akaun | Harga: Percuma + Ahli aktif, tier lain "Akan datang" |
-| `/account/profile`, `/account/profile/training`, `/account/profile/password` | akaun | Maklumat (nama), Latihan (tarikh lahir, keadaan MAF, hari, masa 5K/10K - isi borang MAF/pelan) dan tukar kata laluan - card navigasi `ProfileShell` |
+| `/account/profile`, `/account/profile/training`, `/account/profile/password` | akaun | Maklumat (nama), Latihan (tarikh lahir, keadaan MAF, hari, masa 5K/10K - isi borang MAF/pelan) dan tukar kata laluan - card navigasi `ProfileShell`. Maklumat ada "Zon bahaya": padam akaun sendiri (`DELETE /me`, perlu kata laluan) |
 
 Dalam semua pelan: **pemasa jalan-lari** skrin penuh (bunyi, getar, Wake Lock), **"Terlepas sesi? Sambung
 dari Minggu N"** (anjak tarikh, tanda siap kekal), kad hari ujian/lumba dengan **pelan seterusnya**
@@ -54,7 +54,7 @@ Akaun: sidebar berkumpulan (Utama / Latihan / Akaun), item ahli disorok bagi buk
 
 - Pelan dikira dalam pelayar (`src/lib/plan-5k.ts`, `distance-plan.ts`). Pelayar = salinan kerja
   (`lib/saved-plans.ts`), jadi pelan berfungsi tanpa internet.
-- **Awan**: akaun percuma simpan sehingga **3 pelan** (`lib/cloud-sync.ts` → `/api/v1/me/apps/nubi/plan`,
+- **Awan**: had pelan ikut peranan - akaun percuma **1**, ahli **5**, admin **10** (`lib/cloud-sync.ts` → `/api/v1/me/apps/nubi/plan`,
   migration 029 backend). Tanda siap disegerak (dikumpul 1.5 s), pelan muncul di peranti lain lepas
   log masuk. Had datang dari backend (`QUOTA`) - langganan nanti hanya menaikkannya
   (`docs/plans/cloud-sync.md`). Naikkan `ENGINE_VERSION` bila enjin pelan berubah.

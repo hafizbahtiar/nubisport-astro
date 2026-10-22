@@ -52,9 +52,14 @@ export function planFromParams(kunci: string, p: Record<string, string>): { jeni
   return h?.ok && jenis ? { jenis, minggu: h.minggu, hari } : null;
 }
 
-/** Tarikh sesi; hari lumba (`ujian`) ikut tarikh lumba sebenar bila ada (sesi akhir boleh Sabtu, lumba Ahad). */
-export const planSessionDate = (isnin: Date, w: number, hari: number, i: number, jenis: SessionType, lumba?: string | null) =>
-  jenis === "ujian" && lumba && ISO.test(lumba) ? new Date(`${lumba}T00:00:00`) : sessionDate(isnin, w, hari, i);
+/**
+ * Tarikh sesi. Pelan lumba: hari lumba (`ujian`) = tarikh lumba sebenar (pelan 3 hari: sesi akhir Sabtu, lumba
+ * Ahad), sesi lain dianjak ikut hari lumba (raceShift) - tiada sesi selepas lumba.
+ */
+export function planSessionDate(isnin: Date, w: number, hari: number, i: number, jenis: SessionType, lumba?: string | null) {
+  const l = lumba && ISO.test(lumba) ? new Date(`${lumba}T00:00:00`) : null;
+  return jenis === "ujian" && l ? l : sessionDate(isnin, w, hari, i, l);
+}
 
 /** Sesi bertarikh dari kunci + parameter pelan awan. null = tiada tarikh mula / pelan tidak sah. */
 export function planSessions(kunci: string, p: Record<string, string>): PlanSession[] | null {
@@ -78,8 +83,9 @@ export function planSessions(kunci: string, p: Record<string, string>): PlanSess
 }
 
 const hariAntara = (a: string, b: string) => Math.abs(Date.parse(a) - Date.parse(b)) / 864e5;
-/** Isnin bagi tarikh ISO - minggu pelan bermula Isnin (startMonday). */
-const isninOf = (d: string) => addDays(d, -((new Date(`${d}T00:00:00Z`).getUTCDay() + 6) % 7));
+/** Minggu pelan bagi tarikh ISO: 7 hari dari sesi pertama minggu itu (Isnin, atau dianjak bagi pelan lumba). */
+const weekOf = (sesi: PlanSession[], d: string) =>
+  sesi.find((s) => s.id.endsWith(".0") && s.tarikh <= d && d < addDays(s.tarikh, 7))?.minggu;
 const sesuai = (s: PlanSession, a: MatchableActivity, nisbah: boolean) =>
   (a.sport === "run" || (a.sport === "walk" && s.jenis === "jalan-lari")) &&
   (!nisbah || a.runRatio == null || a.runRatio >= (s.jenis === "jalan-lari" ? 0.15 : 0.7)) &&
@@ -93,9 +99,9 @@ function pilih<A extends MatchableActivity>(sesi: PlanSession[], aktiviti: A[], 
     for (const a of aktiviti) {
       if (hasil.has(a)) continue;
       const hari = todayMY(new Date(a.startedAt));
-      const minggu = isninOf(hari);
+      const minggu = weekOf(sesi, hari);
       const calon = sesi.filter(
-        (s) => !diambil.has(s.id) && (samaHari ? s.tarikh === hari : isninOf(s.tarikh) === minggu) && sesuai(s, a, nisbah),
+        (s) => !diambil.has(s.id) && (samaHari ? s.tarikh === hari : s.minggu === minggu) && sesuai(s, a, nisbah),
       );
       const s = calon.reduce<PlanSession | undefined>((b, s) => (!b || hariAntara(s.tarikh, hari) < hariAntara(b.tarikh, hari) ? s : b), undefined);
       if (s) (diambil.add(s.id), hasil.set(a, s));
@@ -104,7 +110,7 @@ function pilih<A extends MatchableActivity>(sesi: PlanSession[], aktiviti: A[], 
 }
 
 /**
- * Padankan aktiviti dengan sesi belum siap (tarikh Malaysia, minggu pelan Isnin-Ahad, tak pernah lintas minggu).
+ * Padankan aktiviti dengan sesi belum siap (tarikh Malaysia, minggu pelan weekOf, tak pernah lintas minggu).
  * Aktiviti paling lama dahulu. Satu aktiviti untuk satu sesi. Aktiviti bukan dalam padan/tolak = tambahan.
  */
 export function matchActivities<A extends MatchableActivity>(sesi: PlanSession[], aktiviti: A[], siap: Iterable<string>): MatchResult<A> {
@@ -116,17 +122,16 @@ export function matchActivities<A extends MatchableActivity>(sesi: PlanSession[]
   return { padan, tolak };
 }
 
-/** Minit dirancang vs minit run/walk sebenar setiap minggu pelan (Isnin-Ahad, waktu Malaysia). Tiada storan. */
+/** Minit dirancang vs minit run/walk sebenar setiap minggu pelan (weekOf, waktu Malaysia). Tiada storan. */
 export function weeklyLoad(sesi: PlanSession[], aktiviti: MatchableActivity[]): { no: number; rancang: number; sebenar: number }[] {
-  const minggu = new Map<string, { no: number; rancang: number; sebenar: number }>();
+  const minggu = new Map<number, { no: number; rancang: number; sebenar: number }>();
   for (const s of sesi) {
-    const k = isninOf(s.tarikh);
-    const w = minggu.get(k) ?? { no: s.minggu, rancang: 0, sebenar: 0 };
+    const w = minggu.get(s.minggu) ?? { no: s.minggu, rancang: 0, sebenar: 0 };
     w.rancang += s.minit;
-    minggu.set(k, w);
+    minggu.set(s.minggu, w);
   }
   for (const a of aktiviti) {
-    const w = (a.sport === "run" || a.sport === "walk") && minggu.get(isninOf(todayMY(new Date(a.startedAt))));
+    const w = (a.sport === "run" || a.sport === "walk") && minggu.get(weekOf(sesi, todayMY(new Date(a.startedAt)))!);
     if (w) w.sebenar += a.movingS / 60;
   }
   return [...minggu.values()].map((w) => ({ ...w, sebenar: Math.round(w.sebenar) }));
@@ -191,8 +196,10 @@ export async function activitiesBetween<A extends MatchableActivity>(dari: strin
 export async function sessionFor<A extends MatchableActivity>(a: A): Promise<{ sesi: PlanSession; ditanda: boolean } | null> {
   const p = await activePlan();
   if (!p) return null;
-  const isnin = isninOf(todayMY(new Date(a.startedAt)));
-  const sekitar = (await activitiesBetween<A>(isnin, addDays(isnin, 7))) ?? [];
+  const no = weekOf(p.sesi, todayMY(new Date(a.startedAt)));
+  const mula = p.sesi.find((s) => s.minggu === no)?.tarikh; // sesi pertama = awal minggu pelan
+  if (!mula) return null; // luar pelan - tiada sesi untuk dipadankan
+  const sekitar = (await activitiesBetween<A>(mula, addDays(mula, 7))) ?? [];
   const m = matchActivities(p.sesi, [a, ...sekitar.filter((x) => x.startedAt !== a.startedAt)], []);
   const padan = m.padan.get(a), tolak = m.tolak.get(a);
   return padan ? { sesi: padan, ditanda: true } : tolak ? { sesi: tolak, ditanda: false } : null;

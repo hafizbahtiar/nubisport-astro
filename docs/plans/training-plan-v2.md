@@ -73,6 +73,18 @@ buat (dari fail Strava), bukan sekadar tanda siap.
   = ditolak + "Tarikh lumba paling awal yang munasabah" (`earliestRaceDate`) + butang "Cuba tarikh itu"; lebih jauh = mula
   dianjak lewat. Hari lumba di kad + `.ics` + padanan = tarikh lumba sebenar (`planSessionDate`) - sesi akhir pelan 3 hari
   ialah Sabtu, lumba biasanya Ahad. Pilihan cepat dari `/races` (`RaceDateField.astro`, isi tarikh + jarak).
+  **Lumba hari biasa** (pembaikan 2026-10-22): dulu hanya sesi lumba dipindah ke tarikh lumba, jadi lumba Rabu pelan 4 hari
+  masih ada sesi Jumaat (dan Ahad) selepas lumba. Kini `raceShift` (`lib/plan-5k.ts`, dalam `sessionDate`) undur **seluruh
+  pelan** sebanyak (hari sesi akhir - hari lumba), contoh lumba Rabu 4 hari = minggu Khamis-Rabu: corak rehat sama setiap
+  minggu, tirus tetap seminggu penuh sebelum minggu lumba, sehari rehat sebelum lumba, tiada sesi selepasnya. Lumba Ahad (4
+  hari) / Sabtu-Ahad (3 hari) = 0, tak berubah. Minggu pelan = 7 hari dari sesi pertama minggu itu (`weekOf` dalam
+  `lib/plan-sync.ts`) untuk padanan, `weeklyLoad` dan `sessionFor` - bukan Isnin-Ahad kalendar. `racePlan(..., hari)` kini
+  pulang `mula` = tarikh sesi pertama (boleh bukan Isnin); kalau sesi pertama jatuh sebelum tarikh mula input, pelan mula
+  seminggu lewat (minggu -1). Pulang `mula` sendiri = hasil sama, jadi buka semula stabil. Kesan pada pelan lumba hari biasa
+  yang dah disimpan (`mula` = Isnin lama): page pelan kira semula minggu -1 (kunci `Nw` baru, tanda siap lama kekal di kunci
+  lama); Dashboard/padanan guna param tersimpan, tarikh dianjak ke belakang dari Isnin itu. `ENGINE_VERSION` tak dinaikkan -
+  isi sesi tak berubah, v2 belum dilepas meluas. Semak: `check-plan-5k.ts` + `check-plan-sync.ts` (setiap hari lumba ×
+  3/4 hari × 5K/10K/21K).
   Tempoh lalai bila tiada tarikh lumba: 10K **10 minggu**, 21K **16 minggu** (pilihan tengah - ruang untuk minggu
   terlepas atas minimum pemula Higdon 8 / 12), 5K **3 bulan** (= 12 minggu, minimum tahap "jalan"; tahap "sifar" kini
   automatik **4 bulan** = minimum 16 minggu, dulu ditolak dengan butang "Cuba 4 bulan").

@@ -281,6 +281,8 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
       else if (awan && !menukar && !awanIni)
         kotak.append(
           butang("Simpan ke awan", async () => {
+            // Lebih had (peranan ditarik / had turun): tukar pun tak muat - nota di meter, tiada mod tukar.
+            if (awan!.items.length > awan!.limit) return papar();
             if (awan!.items.length >= awan!.limit) {
               menukar = k;
               return papar();
@@ -316,7 +318,10 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
     if (awan) {
       const guna = awan.items.length;
       $("awan-teks").textContent =
-        `Awan: ${guna} / ${awan.limit} slot digunakan`;
+        `Awan: ${guna} / ${awan.limit} slot digunakan` +
+        (guna > awan.limit
+          ? ` - lebih had. Pelan sedia ada selamat; keluarkan ${guna - awan.limit + 1} dari awan untuk simpan pelan baru.`
+          : "");
       $("awan-slot").innerHTML = Array.from(
         { length: awan.limit },
         (_, i) => `<i${i < guna ? ' class="penuh"' : ""}></i>`,

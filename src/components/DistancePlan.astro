@@ -143,8 +143,8 @@ const tahun = new Date().getFullYear();
       >.
     </li>
     <li>
-      Pelan disimpan dalam pelayar ini. Tekan "Simpan ke awan" (sehingga 3
-      pelan) supaya ia dan tanda siap ikut akaun anda ke peranti lain.
+      Pelan disimpan dalam pelayar ini. Tekan "Simpan ke awan" (akaun percuma 1
+      pelan, ahli 5) supaya ia dan tanda siap ikut akaun anda ke peranti lain.
     </li>
     <li>
       Bertangga: 10K perlukan masa 5K (boleh lari 5 km tanpa henti), 21K
@@ -177,6 +177,7 @@ const tahun = new Date().getFullYear();
   import {
     startMonday,
     racePlan,
+    sessionDate,
     earliestRaceDate,
     isoDate,
     formatPace,
@@ -317,6 +318,7 @@ const tahun = new Date().getFullYear();
         ),
         lumba,
         [c.minggu[0], c.minggu.at(-1)!],
+        hari,
       );
       minggu = r.minggu;
       q.set("mula", isoDate(r.mula));
@@ -380,7 +382,7 @@ const tahun = new Date().getFullYear();
           <h2 class="display section-title">${tajuk}</h2>
           <p class="lead">${c.prasyarat.nama} ${masa} minit → ${c.nama} ${sasaranMinit ? `bawah ${formatTime(sasaranMinit)}${pace ? ` (pace ${formatPace(pace)}/km)` : ""}` : `habis (anggaran ~${formatTime(h.ramalan)})`}.
             ${nadi ? `Ikut nadi: had MAF <strong>${nadi.maf}</strong>, julat ${nadi.bawah}-${nadi.maf} denyut/min.` : ""}
-            ${isnin ? `Bermula Isnin, ${isnin.toLocaleDateString("ms-MY", { day: "numeric", month: "long", year: "numeric" })}.` : ""}
+            ${isnin ? `Bermula ${tarikhPanjang(sessionDate(isnin, 1, hari, 0, lumba))}.` : ""}
             <span id="kemajuan"></span></p>
         </div>
         <div class="actions no-print">
@@ -396,7 +398,7 @@ const tahun = new Date().getFullYear();
       ${a ? analysisHtml(a) : ""}
       ${pacesHtml(paces, !!pace, `Lumba ${c.nama}`)}
       ${lumba ? raceDayHtml(lumba, paces.lumba, c.nama) : ""}
-      ${ramadanNotice(h.minggu, isnin)}
+      ${ramadanNotice(h.minggu, isnin, lumba)}
       <div class="kalendar no-print">
         <h3 class="display">Simpan ke kalendar</h3>
         ${

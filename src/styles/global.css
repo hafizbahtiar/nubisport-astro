@@ -819,6 +819,11 @@ legend,
   color: var(--muted);
 }
 
+.confirm-field,
+.confirm-error {
+  margin: 0 0 1.25rem;
+}
+
 .confirm-dialog .actions {
   justify-content: flex-end;
 }

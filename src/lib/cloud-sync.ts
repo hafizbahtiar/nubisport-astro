@@ -149,7 +149,7 @@ export function mountCloudBox(
          <a class="link" href="/account#awan">Urus awan</a>`
       : `${storageBadge(false)} ${guna < a.limit
         ? `<button class="btn btn-outline btn-sm" type="button" data-simpan-awan>Simpan ke awan (${guna}/${a.limit})</button>`
-        : `<span class="muted">Awan penuh (${guna}/${a.limit}).</span> <a class="link" href="/account#awan">Tukar pelan di awan</a>`
+        : `<span class="muted">Awan penuh (${guna}/${a.limit}).${a.limit === 1 ? " Ahli boleh simpan 5." : ""}</span> <a class="link" href="/account#awan">Tukar pelan di awan</a>`
       }`;
     slot
       .querySelector<HTMLButtonElement>("[data-simpan-awan]")

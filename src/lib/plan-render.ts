@@ -40,13 +40,13 @@ export function analysisHtml(a: Analysis, ganti?: string) {
 
 /**
  * `ujian` = pelan apa (kad hari ujian/lumba dapat borang "masa anda" -> pelan seterusnya).
- * `lumba` = tarikh lumba sebenar: kad hari lumba ikut tarikh itu (sesi akhir pelan 3 hari = Sabtu).
+ * `lumba` = tarikh lumba sebenar: kad hari lumba ikut tarikh itu, sesi lain dianjak (raceShift).
  * Slot `data-beban` / `data-sebenar` diisi oleh mountActuals (lib/plan-sync.ts) untuk pelan aktif.
  */
 export function weekHtml(w: Week, isnin: Date | null, hariIni: string, ujian?: TestDistance, lumba?: Date | null) {
   const hari = w.sesi.length;
-  const tarikh = (i: number) => (lumba && w.sesi[i].jenis === "ujian" ? lumba : isnin && sessionDate(isnin, w.no, hari, i));
-  const isninIni = tarikh(0)?.getTime(); // sesi pertama = Isnin minggu itu
+  const tarikh = (i: number) => (lumba && w.sesi[i].jenis === "ujian" ? lumba : isnin && sessionDate(isnin, w.no, hari, i, lumba));
+  const isninIni = tarikh(0)?.getTime(); // sesi pertama = awal minggu itu (Isnin, atau dianjak ikut hari lumba)
   const kini =
     isninIni !== undefined &&
     Date.now() >= isninIni &&
@@ -62,7 +62,7 @@ export function weekHtml(w: Week, isnin: Date | null, hariIni: string, ujian?: T
       .map((s, i) => {
         const d = tarikh(i);
         const label =
-          (d && lumba && s.jenis === "ujian" ? DAY_NAMES[(d.getDay() + 6) % 7] : DAY_NAMES[SESSION_DAYS[hari][i]]) +
+          DAY_NAMES[d ? (d.getDay() + 6) % 7 : SESSION_DAYS[hari][i]] +
           (d
             ? ` ${d.toLocaleDateString("ms-MY", { day: "numeric", month: "short" })}`
             : "");
@@ -161,13 +161,13 @@ export const loadBarHtml = (w: { no: number; rancang: number; sebenar: number },
  * Banner bulan puasa: bilangan sesi yang jatuh dalam Hijri bulan 9. "" bila pelan tiada tarikh
  * mula atau tiada sesi dalam Ramadan. Tarikh = anggaran Umm al-Qura (±1 hari), bukan takwim JAKIM.
  */
-export function ramadanNotice(minggu: Week[], isnin: Date | null): string {
+export function ramadanNotice(minggu: Week[], isnin: Date | null, lumba?: Date | null): string {
   if (!isnin) return "";
   let jumlah = 0;
   for (const w of minggu) {
     const hari = w.sesi.length;
     for (let i = 0; i < hari; i++)
-      if (inRamadan(isoDate(sessionDate(isnin, w.no, hari, i)))) jumlah++;
+      if (inRamadan(isoDate(sessionDate(isnin, w.no, hari, i, lumba)))) jumlah++;
   }
   if (!jumlah) return "";
   return `<div class="alert alert-info no-print">

@@ -1,5 +1,5 @@
 ---
-// Harga. Had dari kod sebenar: 3 pelan awan = hono-workers QUOTA.nubi.plan (services/app-items.ts),
+// Harga. Had dari kod sebenar: pelan awan percuma 1 / ahli 5 = hono-workers QUOTA.nubi.plan (services/app-items.ts),
 // 5,000 aktiviti = ACTIVITY_QUOTA (services/nubi-activities.ts).
 // Tier akan datang = docs/plans/cloud-sync.md (harga belum ditetapkan). Buka tier: `aktif: true`.
 import AccountLayout from "../../layouts/AccountLayout.astro";
@@ -15,7 +15,7 @@ const PELAN = [
       "Pelan 10K dan 21K",
       "Ikut nadi (MAF)",
       "Simpan sesi ke kalendar telefon",
-      "Simpan sehingga 3 pelan ke awan",
+      "Simpan 1 pelan ke awan",
       "Maklumat latihan isi borang sendiri",
       "Dashboard semua pelan dan kemajuan",
     ],
@@ -23,10 +23,11 @@ const PELAN = [
   {
     nama: "Ahli",
     harga: "RM0",
-    nota: "Keahlian diluluskan pentadbir - hubungi kami melalui kumpulan larian.",
+    nota: "Keahlian diluluskan pentadbir - hubungi kami.",
     aktif: true,
     ciri: [
       "Semua dalam Percuma",
+      "Simpan sehingga 5 pelan ke awan",
       "Import aktiviti dari fail Strava (.fit + .gpx)",
       "Sehingga 5,000 aktiviti",
       "Peta laluan peribadi setiap aktiviti",
@@ -48,7 +49,7 @@ const PELAN = [
 
 <AccountLayout
   title="Harga"
-  description="Nubi Sport percuma: pelan 5K, 10K dan 21K, MAF, dan 3 pelan di awan. Ahli boleh import aktiviti Strava."
+  description="Nubi Sport percuma: pelan 5K, 10K dan 21K, MAF, dan 1 pelan di awan. Ahli: 5 pelan di awan dan import aktiviti Strava."
 >
   <p class="lead">
     Semua ciri sekarang percuma. Pelan berbayar akan datang, untuk storan

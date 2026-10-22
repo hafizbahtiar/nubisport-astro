@@ -38,7 +38,7 @@ const tahun = new Date().getFullYear();
   title="5K bawah"
   accent="30 minit."
   lead={full
-    ? "Versi penuh: pecahan kenapa sasaran anda realistik atau tak, latihan ikut nadi, simpan ke kalendar, dan simpan sehingga 3 pelan ke awan."
+    ? "Versi penuh: pecahan kenapa sasaran anda realistik atau tak, latihan ikut nadi, simpan ke kalendar, dan simpan pelan ke awan (1 pelan, ahli 5)."
     : "Pilih tempoh dan tahap anda sekarang. Pelan dikira dalam pelayar anda - tanpa pendaftaran, tiada data dihantar ke mana-mana."}
 >
   <form
@@ -229,6 +229,7 @@ const tahun = new Date().getFullYear();
     startMonday,
     planPaces,
     racePlan,
+    sessionDate,
     earliestRaceDate,
     weeksNeeded,
     isoDate,
@@ -325,7 +326,7 @@ const tahun = new Date().getFullYear();
         <li><strong>Ikut nadi (MAF)</strong> - sesi mudah dengan julat kadar nadi anda.</li>
         <li><strong>Simpan ke kalendar</strong> - setiap sesi masuk kalendar telefon (iPhone, Android, Google, Outlook).</li>
         <li><strong>Pelan 10K dan 21K</strong> - langkah seterusnya lepas 5K, dengan masa sasaran pilihan.</li>
-        <li><strong>Simpan ke awan</strong> - sehingga 3 pelan ikut akaun anda ke telefon atau komputer lain.</li>
+        <li><strong>Simpan ke awan</strong> - 1 pelan (ahli 5) ikut akaun anda ke telefon atau komputer lain.</li>
         <li><strong>Dashboard</strong> - semua pelan anda dan kemajuan dalam satu tempat.</li>
       </ul>
       <div class="actions">
@@ -371,6 +372,7 @@ const tahun = new Date().getFullYear();
         ),
         lumba,
         RACE_WEEKS,
+        hari,
       );
       minggu = r.minggu;
       q.set("mula", isoDate(r.mula));
@@ -460,7 +462,7 @@ const tahun = new Date().getFullYear();
           <h2 class="display section-title">${tempoh} · ${hari} hari seminggu</h2>
           <p class="lead">${LEVELS[tahap]}${masa5k ? ` (${masa5k} minit)` : ""} → 5K bawah ${sasaranTeks}.
             ${nadi ? `Ikut nadi: had MAF <strong>${nadi.maf}</strong>, julat ${nadi.bawah}-${nadi.maf} denyut/min.` : ""}
-            ${isnin ? `Bermula Isnin, ${isnin.toLocaleDateString("ms-MY", { day: "numeric", month: "long", year: "numeric" })}.` : ""}
+            ${isnin ? `Bermula ${tarikhPanjang(sessionDate(isnin, 1, hari, 0, lumba))}.` : ""}
             <span id="kemajuan"></span></p>
         </div>
         <div class="actions no-print">
@@ -478,7 +480,7 @@ const tahun = new Date().getFullYear();
       ${lumba && minggu! < perlu && perlu <= RACE_WEEKS[1] ? `<div class="alert alert-info">${cubaLumba(perlu)}</div>` : ""}
       ${pacesHtml(paces, !!pace, "Ujian 5K")}
       ${lumba ? raceDayHtml(lumba, paces.lumba, "5K") : ""}
-      ${ramadanNotice(h.minggu, isnin)}
+      ${ramadanNotice(h.minggu, isnin, lumba)}
       ${full ? "" : htmlPromosi()}
       ${
         full

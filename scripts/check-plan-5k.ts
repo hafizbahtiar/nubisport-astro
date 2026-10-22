@@ -214,16 +214,40 @@ ok(!buildPlan({ bulan: 0, minggu: RACE_WEEKS[1] + 1, hari: 3, tahap: "5k", masa5
 // Tarikh lumba -> minggu: mula Isnin pada/lepas mula, minggu akhir = minggu lumba.
 {
   const d = (s: string) => new Date(`${s}T00:00:00`);
-  const tepat = racePlan(d("2026-10-21"), d("2026-12-20"), RACE_WEEKS); // Rabu -> Isnin 26 Okt; Ahad 20 Dis = minggu 8
+  const tepat = racePlan(d("2026-10-21"), d("2026-12-20"), RACE_WEEKS, 4); // Rabu -> Isnin 26 Okt; Ahad 20 Dis = minggu 8
   ok(isoDate(tepat.mula) === "2026-10-26" && tepat.minggu === 8, `tepat: ${JSON.stringify(tepat)}`);
   ok(isoDate(sessionDate(tepat.mula, tepat.minggu, 4, 3)) === "2026-12-20", "sesi akhir 4 hari = hari lumba");
-  const dekat = racePlan(d("2026-10-21"), d("2026-11-29"), RACE_WEEKS);
+  const dekat = racePlan(d("2026-10-21"), d("2026-11-29"), RACE_WEEKS, 4);
   ok(dekat.minggu === 5, `terlalu dekat: ${dekat.minggu} minggu`);
   ok(isoDate(earliestRaceDate(dekat.mula, 8, 4)) === "2026-12-20" && isoDate(earliestRaceDate(dekat.mula, 8, 3)) === "2026-12-19", "tarikh lumba paling awal");
-  const jauh = racePlan(d("2026-10-21"), d("2027-06-27"), RACE_WEEKS); // Ahad 27 Jun 2027
+  const jauh = racePlan(d("2026-10-21"), d("2027-06-27"), RACE_WEEKS, 4); // Ahad 27 Jun 2027
   ok(jauh.minggu === RACE_WEEKS[1] && isoDate(sessionDate(jauh.mula, jauh.minggu, 4, 3)) === "2027-06-27", `jauh: ${JSON.stringify(jauh)}`);
-  const sabtu = racePlan(d("2026-10-26"), d("2026-12-19"), RACE_WEEKS);
-  ok(sabtu.minggu === 8, "lumba Sabtu = minggu sama");
+  const sabtu = racePlan(d("2026-10-26"), d("2026-12-19"), RACE_WEEKS, 3);
+  ok(sabtu.minggu === 8, "lumba Sabtu pelan 3 hari = minggu sama");
+  // 4 hari, lumba Sabtu: pelan undur sehari (Ahad-Sabtu); Ahad 25 Okt sebelum mula -> mula seminggu lewat.
+  const sabtu4 = racePlan(d("2026-10-26"), d("2026-12-19"), RACE_WEEKS, 4);
+  ok(sabtu4.minggu === 7 && isoDate(sabtu4.mula) === "2026-11-01", `lumba Sabtu 4 hari: ${JSON.stringify(sabtu4)}`);
+
+  // Setiap hari lumba (Isnin 14 - Ahad 20 Dis) × hari seminggu: tiada sesi selepas lumba, tarikh naik, rehat
+  // sebelum lumba, sesi pertama tak sebelum mula, dan racePlan pada mulanya sendiri = hasil sama (buka semula).
+  for (const hari of DAYS_PER_WEEK)
+    for (let n = 14; n <= 20; n++)
+      for (const mula of ["2026-10-19", "2026-10-21", "2026-10-25"]) {
+        const lumba = d(`2026-12-${n}`);
+        const r = racePlan(d(mula), lumba, RACE_WEEKS, hari);
+        const ulang = racePlan(r.mula, lumba, RACE_WEEKS, hari);
+        const nama = `${hari} hari, lumba ${isoDate(lumba)}, mula ${mula}`;
+        ok(isoDate(ulang.mula) === isoDate(r.mula) && ulang.minggu === r.minggu, `${nama}: racePlan tak stabil`);
+        ok(r.mula >= d(mula), `${nama}: sesi pertama ${isoDate(r.mula)} sebelum mula`);
+        const isnin = startMonday(r.mula);
+        const t = Array.from({ length: r.minggu * hari }, (_, k) => sessionDate(isnin, Math.floor(k / hari) + 1, hari, k % hari, lumba).getTime());
+        ok(isoDate(new Date(t[0])) === isoDate(r.mula), `${nama}: sesi pertama != mula`);
+        ok(t.every((x, k) => k === 0 || x > t[k - 1]), `${nama}: tarikh tak naik`);
+        // Sesi akhir = hari lumba; pelan 3 hari lumba Ahad: sesi akhir Sabtu, planSessionDate ganti dengan Ahad.
+        const akhir = t.at(-1)!, beza = (lumba.getTime() - akhir) / 864e5;
+        ok(beza === 0 || (hari === 3 && lumba.getDay() === 0 && beza === 1), `${nama}: sesi akhir ${isoDate(new Date(akhir))}`);
+        ok((lumba.getTime() - t.at(-2)!) / 864e5 >= 2, `${nama}: tiada rehat sebelum lumba`);
+      }
 }
 
 if (gagal) throw new Error(`${gagal} semakan gagal`);

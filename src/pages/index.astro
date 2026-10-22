@@ -1,6 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import Section from "../components/ui/Section.astro";
+import Alert from "../components/ui/Alert.astro";
 import { CONTACT, SITE } from "../data/site";
 
 const values = [
@@ -56,6 +57,11 @@ const contacts = [
 ---
 
 <Layout>
+  <div class="container dipadam" id="akaun-dipadam" hidden>
+    <Alert variant="success">
+      Akaun anda dah dipadam. Terima kasih kerana berlari bersama Nubi Sport.
+    </Alert>
+  </div>
   <section class="surface-dark hero">
     <div class="container hero-grid">
       <div>
@@ -104,12 +110,7 @@ const contacts = [
     </ul>
   </Section>
 
-  <Section
-    id="cara"
-    band
-    eyebrow="Cara sertai"
-    title="Tiga langkah, itu saja."
-  >
+  <Section id="cara" band eyebrow="Cara sertai" title="Tiga langkah, itu saja.">
     <ol class="steps">
       {
         steps.map((s) => (
@@ -162,7 +163,18 @@ const contacts = [
   </section>
 </Layout>
 
+<script>
+  // Lepas padam akaun (/account/profile) - tunjuk sekali, buang param dari URL.
+  if (new URLSearchParams(location.search).get("akaun") === "dipadam") {
+    document.getElementById("akaun-dipadam")!.hidden = false;
+    history.replaceState(null, "", "/");
+  }
+</script>
+
 <style>
+  .dipadam {
+    padding-block: 1rem;
+  }
   .hero {
     padding-block: clamp(3.5rem, 9vw, 7rem);
   }

@@ -16,7 +16,7 @@ Item yang dah siap dibuang (lihat git history).
   `apple-touch-icon.png`, `og.png` dengan tangan.
 - **Domain** ada di `astro.config.mjs` `site`. `canonical` / `og:*` dibina dari situ - jangan tulis URL
   penuh dengan tangan.
-- **Hubungan** (`src/data/site.ts` `CONTACT`): biar `""` sampai pautan sebenar wujud - tiada URL contoh.
+- **Hubungan** (`src/data/site.ts` `CONTACT`): e-mel `hafiz@hafizbahtiar.com`; WhatsApp/Instagram biar `""` sampai pautan sebenar wujud.
 - **Peranan**: akses Nubi diurus owner di portfolio `/admin/app-access` (backend `/owner/apps/*`,
   migration 025). Endpoint Nubi baru wajib guna `requireAppRole("nubi", ...)` di backend - jangan
   semak peranan di frontend saja. Peranan baru (contoh `coach`) = migration baru di backend, bukan halaman.
@@ -81,7 +81,7 @@ Item yang dah siap dibuang (lihat git history).
   `src/data/site.ts`, action `login`). Daftar di `/register`, urus profil di `/account/profile`. Bila log masuk, Header awam tunjuk avatar
   (`UserMenu`: Dashboard, Profil & tetapan, Log keluar) ganti "Log masuk". Kebenaran sebenar sentiasa di backend.
 - **Penafian / info**: setiap halaman pelan ada "bukan nasihat perubatan" + "belum disemak jurulatih bertauliah"
-  (`docs/training-review.md`); login/daftar menyebut 3 slot awan. Tukar teks itu bila had atau status semakan berubah.
+  (`docs/training-review.md`); login/daftar menyebut had awan (1, ahli 5). Tukar teks itu bila had atau status semakan berubah.
 - **Daftar / sahkan** (`/register`, `/verify`): daftar hantar `app: "nubi"`, jadi pautan e-mel ke
   `nubisport.hafizbahtiar.com/verify`. Alamat pautan datang dari senarai `APP_SITES` di backend
   (`services/registration.ts`) - laman baru = entri baru di situ; URL tak pernah diterima dari klien
@@ -110,9 +110,10 @@ Item yang dah siap dibuang (lihat git history).
   Storan pelan = `lib/saved-plans.ts` (`readList`/`writeList`/`deletePlan`) + awan (`lib/cloud-sync.ts`).
   Padam pelan: Dashboard + pelan penuh saja (di awam ia membuka semula slot had 3 pelan).
 - **Akaun lain**: `/account/maf` (`components/Maf.astro full`: simpan `maf:terakhir` untuk Dashboard + butang
-  Pelan 5K ikut nadi; `/maf` lencong ke situ bila log masuk), `/account/profile` (Maklumat: nama `PATCH /me`) +
+  Pelan 5K ikut nadi; `/maf` lencong ke situ bila log masuk), `/account/profile` (Maklumat: nama `PATCH /me`; Zon bahaya: padam akaun `DELETE /me` dengan kata laluan dalam
+  `confirmDialog({ passwordLabel, action })`, lepas itu `localStorage.clear()` -> `/?akaun=dipadam`) +
   `/account/profile/password` (`PUT /me/password` - tamatkan semua sesi); navigasi = card dalam `components/ProfileShell.astro` (tab segmen bawah 48rem). Sidebar: X tutup laci (telefon) / lipat (desktop, `akaun:sidebar`).
-- **Simpan awan**: akaun percuma 3 slot (`lib/cloud-sync.ts`, backend `/me/apps/nubi/plan`, migration 029).
+- **Simpan awan**: had ikut peranan - percuma 1, ahli 5, admin/owner 10 (`lib/cloud-sync.ts`, backend `/me/apps/nubi/plan`, migration 029).
   Pelayar = salinan kerja, awan = ikut akaun; Dashboard: lencana Awan / Peranti ini, meter slot, "Ganti"
   bila penuh. Naikkan `ENGINE_VERSION` bila enjin pelan berubah. Langganan: `docs/plans/cloud-sync.md`.
 - **Aktiviti** (`/account/activities`, ahli ke atas): fail Strava `.fit` (wajib) + `.gpx` (pilihan) dihurai
@@ -210,7 +211,7 @@ Item yang dah siap dibuang (lihat git history).
 
 ## 🚀 Owner - langkah manual
 
-- [ ] Isi `CONTACT` (WhatsApp group / Instagram / e-mel) - seksyen "Sertai" kosong sampai ini diisi.
+- [ ] `CONTACT` WhatsApp group / Instagram (e-mel dah diisi: hafiz@hafizbahtiar.com) - "Sertai" kini tunjuk e-mel saja.
 - [ ] Lantik admin Nubi di portfolio `/admin/app-access`.
 - [ ] Uji import `.ics` pada iPhone (Safari: terus "Tambah semua" atau simpan ke Files?), Samsung Calendar,
   Google Calendar (web) dan Outlook - nota platform di halaman belum diuji pada peranti sebenar.
@@ -219,10 +220,8 @@ Item yang dah siap dibuang (lihat git history).
   SEBELUM tier berbayar dibuka. Buka tier = `aktif: true` dalam `PELAN` (`src/pages/account/pricing.astro`).
   Ubah data yang disimpan / pembekal (backend) = ubah `/privacy` juga.
 - [ ] Semak pratonton pautan lepas deploy (WhatsApp / Facebook debugger) - `og.png`.
-- [ ] **Deploy aktiviti v2** (2026-10-22): `bun run db:migrate:remote` dalam `hono-workers` (033 `run_ratio`)
-  SEBELUM push `hono-workers` (commit `b850960`), kemudian push repo ini. Lepas itu uji dengan fail Strava
-  sebenar: padanan pelan aktif, % lari, peta 2D/3D/Terrain, zoom dua jari di telefon.
-- [ ] Isi `CONTACT` juga untuk permintaan akses/padam data (PDPA) - `/privacy` kini rujuk "kumpulan larian".
+- [ ] Uji dengan fail Strava sebenar (deploy aktiviti v2 dah live 2026-10-22): padanan pelan aktif, % lari,
+  semua gaya peta, bottom sheet + zoom dua jari di telefon, seksyen Nadi.
 - [ ] **Header keselamatan** (pentest 2026-10-22 F-02 - dah dibuat): `bun run build` kini jalankan
   `scripts/security-headers.ts` -> HSTS, `X-Frame-Options: DENY`, nosniff, Referrer/Permissions-Policy dan CSP
   ber-hash (tiada `unsafe-inline` skrip) dalam `dist/_headers`. Lepas deploy: `curl -sI
@@ -245,7 +244,6 @@ Item yang dah siap dibuang (lihat git history).
 - [ ] Uji pemasa pada telefon sebenar: bunyi iOS (suis senyap mematikan Web Audio), getaran (iOS tiada
   `navigator.vibrate`), Wake Lock Safari 16.4+.
 - [ ] Fail `.ics` lama tak berubah sendiri lepas "Sambung dari Minggu N" - langganan `webcal` (IDEA.md).
-- [ ] Padam akaun sendiri (backend `DELETE /me` + R2 purge) - `/privacy` kini suruh hubungi kami.
 - [ ] **Profil ketinggian** di bawah peta aktiviti (record FIT `altitude`) - selepas varian peta
   ([docs/plans/map-3d.md](docs/plans/map-3d.md)).
 

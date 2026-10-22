@@ -1,5 +1,7 @@
 // bun scripts/check-plan-sync.ts - semak padankan() dalam src/lib/plan-sync.ts (docs/plans/active-plan-sync.md).
 import { matchActivities, planSessions, walkedNote, weeklyLoad, planFromParams } from "../src/lib/plan-sync";
+import { racePlan, isoDate, RACE_WEEKS } from "../src/lib/plan-5k";
+import { DISTANCES } from "../src/lib/distance-plan";
 
 let gagal = 0;
 const ok = (c: unknown, msg: string) => {
@@ -7,6 +9,7 @@ const ok = (c: unknown, msg: string) => {
     gagal++;
     console.error("GAGAL:", msg);
   }
+  return !!c;
 };
 
 // Pelan 5K jalan, 3 hari: sesi Isnin/Rabu/Sabtu dari Isnin 2 Nov 2026 (minggu 1 = jalan-lari).
@@ -122,6 +125,33 @@ ok(j && j.length > 0, "pelan 10K dibina");
   ok(w.length === 12 && w[0].no === 1 && w[0].rancang === rancang1, `weeklyLoad rancang: ${JSON.stringify(w[0])}`);
   ok(w[0].sebenar === 40 && w[1].sebenar === 20 && w[2].sebenar === 0, `weeklyLoad sebenar: ${w.slice(0, 3).map((x) => x.sebenar)}`);
 }
+
+// Lumba setiap hari (Isnin 8 - Ahad 14 Feb 2027) × 3/4 hari × 5K/10K/21K: tarikh dari planSessions (kad, .ics,
+// padanan): naik, lumba = sesi terakhir = tarikh lumba, rehat sebelum lumba; beban mingguan = minit minggu pelan.
+for (const [kunci, asas, had] of [
+  ["pelan-5k:x", { tahap: "5k", masa: "33" }, RACE_WEEKS],
+  ["pelan-10k:x", { jarak: "10k", masa: "30" }, [DISTANCES["10k"].minggu[0], DISTANCES["10k"].minggu.at(-1)!]],
+  ["pelan-21k:x", { jarak: "21k", masa: "60" }, [DISTANCES["21k"].minggu[0], DISTANCES["21k"].minggu.at(-1)!]],
+] as const)
+  for (const hari of [3, 4])
+    for (let n = 8; n <= 14; n++) {
+      const lumba = `2027-02-${String(n).padStart(2, "0")}`;
+      const r = racePlan(new Date("2026-10-21T00:00:00"), new Date(`${lumba}T00:00:00`), had, hari);
+      const p = { ...asas, hari: String(hari), minggu: String(r.minggu), mula: isoDate(r.mula), lumba };
+      const s = planSessions(kunci, p);
+      const nama = `${kunci} ${hari} hari lumba ${lumba}`;
+      if (!ok(s, `${nama}: tiada pelan`) || !s) continue;
+      ok(s[0].tarikh === p.mula && s.every((x, k) => k === 0 || x.tarikh > s[k - 1].tarikh), `${nama}: tarikh tak naik`);
+      ok(s.at(-1)!.jenis === "ujian" && s.at(-1)!.tarikh === lumba && s.every((x) => x.tarikh <= lumba), `${nama}: sesi selepas lumba`);
+      ok(Date.parse(lumba) - Date.parse(s.at(-2)!.tarikh) >= 2 * 864e5, `${nama}: tiada rehat sebelum lumba`);
+      const w = weeklyLoad(s, []);
+      ok(w.length === r.minggu && w.every((x) => x.rancang === s.filter((y) => y.minggu === x.no).reduce((t, y) => t + y.minit, 0)), `${nama}: weeklyLoad`);
+      // Aktiviti sehari selepas sesi pertama minggu akhir = minggu akhir (minggu pelan, bukan Isnin-Ahad).
+      const akhir = s.find((x) => x.minggu === r.minggu)!;
+      const esok = new Date(Date.parse(`${akhir.tarikh}T00:00:00Z`) + 864e5).toISOString().slice(0, 10);
+      const wl = weeklyLoad(s, [a(`${esok}T00:00:00Z`, "run", 600)]);
+      ok(wl.at(-1)!.sebenar === 10, `${nama}: aktiviti minggu akhir`);
+    }
 
 if (gagal) throw new Error(`${gagal} semakan gagal`);
 console.log("plan-sync: semua semakan lulus.");

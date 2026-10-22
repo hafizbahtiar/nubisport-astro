@@ -1,6 +1,7 @@
 ---
 // Profil Nubi - Maklumat: nama (PATCH /me). Backend sama dengan portfolio - akaun satu, jadi
 // perubahan di sini juga nampak di hafizbahtiar.com. E-mel tidak boleh diubah (backend).
+// Zon bahaya: padam akaun sendiri (DELETE /me, perlu kata laluan) - PDPA.
 import ProfileShell from "../../../components/ProfileShell.astro";
 import Field from "../../../components/ui/Field.astro";
 import Alert from "../../../components/ui/Alert.astro";
@@ -28,10 +29,29 @@ import Alert from "../../../components/ui/Alert.astro";
       <button class="btn btn-primary" type="submit">Simpan</button>
     </form>
   </section>
+
+  <section class="panel" aria-labelledby="t-bahaya">
+    <h2 class="display" id="t-bahaya">Zon bahaya</h2>
+    <p class="muted">
+      Padam akaun anda dan semua data yang disimpan untuknya. Tak boleh
+      dibatalkan.
+    </p>
+    <Alert variant="danger" id="mesej-padam" hidden />
+    <button class="btn btn-bahaya" type="button" id="padam-akaun">
+      Padam akaun
+    </button>
+  </section>
 </ProfileShell>
 
 <script>
-  import { api, cacheMe, json, commonError, currentUser } from "../../../lib/api";
+  import {
+    api,
+    cacheMe,
+    json,
+    commonError,
+    currentUser,
+  } from "../../../lib/api";
+  import { confirmDialog } from "../../../lib/confirm";
 
   const profil = document.getElementById("profil") as HTMLFormElement;
   const papar = (id: string, teks: string | null) => {
@@ -83,6 +103,44 @@ import Alert from "../../../components/ui/Alert.astro";
     } finally {
       butang.disabled = false;
     }
+  });
+
+  const padam = document.getElementById("padam-akaun") as HTMLButtonElement;
+  padam.addEventListener("click", async () => {
+    papar("mesej-padam", null);
+    if (s?.role === "owner")
+      return papar("mesej-padam", "Akaun pemilik tak boleh dipadam.");
+    const dipadam = await confirmDialog({
+      title: "Padam akaun?",
+      message:
+        "Akaun anda akan dipadam untuk selamanya: profil, maklumat latihan, pelan yang disimpan, aktiviti dan fail Strava. Log masuk dikongsi dengan hafizbahtiar.com, jadi akaun di sana juga dipadam. Masukkan kata laluan untuk sahkan.",
+      confirmLabel: "Padam akaun",
+      danger: true,
+      passwordLabel: "Kata laluan",
+      action: async (password) => {
+        if (!password) return "Masukkan kata laluan anda.";
+        const res = await api("/me", {
+          method: "DELETE",
+          body: JSON.stringify({ password }),
+        });
+        if (res.ok) return null;
+        const body = await json(res);
+        return (
+          commonError(res.status, body) ??
+          (body.code === "owner_account"
+            ? "Akaun pemilik tak boleh dipadam."
+            : res.status === 400
+              ? "Kata laluan salah."
+              : "Tak dapat padam sekarang. Cuba lagi sekejap.")
+        );
+      },
+    });
+    if (!dipadam) return padam.focus();
+    // Semua storan laman ini milik Nubi (pelan, progres, MAF, lokasi) - buang semuanya.
+    localStorage.clear();
+    sessionStorage.clear();
+    document.cookie = "session_active=; Max-Age=0; path=/";
+    location.replace("/?akaun=dipadam");
   });
 </script>
 

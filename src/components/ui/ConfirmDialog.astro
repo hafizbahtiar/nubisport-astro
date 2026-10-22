@@ -12,6 +12,23 @@
   <div>
     <h2 class="display confirm-title" id="confirm-title"></h2>
     <p class="confirm-message" id="confirm-message"></p>
+    <!-- Kata laluan pilihan (passwordLabel) + ralat dari action(), kedua-duanya tersembunyi biasanya. -->
+    <label class="field confirm-field" hidden>
+      <span class="field-label" id="confirm-field-label"></span>
+      <input
+        class="input"
+        id="confirm-input"
+        type="password"
+        autocomplete="current-password"
+      />
+    </label>
+    <p
+      class="alert alert-danger confirm-error"
+      id="confirm-error"
+      role="alert"
+      hidden
+    >
+    </p>
     <div class="actions">
       <button class="btn btn-outline" type="button" data-batal>Batal</button>
       <button class="btn btn-primary" type="button" data-ya>Ya</button>

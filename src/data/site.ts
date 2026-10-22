@@ -11,7 +11,7 @@ export const SITE = {
 export const CONTACT = {
   whatsapp: "", // e.g. https://chat.whatsapp.com/...
   instagram: "", // e.g. https://instagram.com/nubisport
-  email: "", // e.g. hello@nubisport.com
+  email: "hafiz@hafizbahtiar.com",
 };
 
 // Kunci TAPAK Turnstile (awam - memang dipapar dalam HTML), widget yang sama dengan portfolio.
@@ -19,6 +19,6 @@ export const CONTACT = {
 // dan pada TURNSTILE_HOSTNAMES backend - jika tidak, login production gagal "captcha".
 export const TURNSTILE_SITE_KEY = "0x4AAAAAAFD-PSk_u7NHAF-5";
 
-// Pelan awam (/plan-5k): storan pelayar + manfaat akaun. Akaun = lib/cloud-sync.ts (3 slot dari backend);
-// tukar teks ini bila had berubah (docs/plans/cloud-sync.md).
-export const CLOUD_NOTE = "Akaun percuma boleh simpan sehingga 3 pelan ke awan supaya ikut ke peranti lain.";
+// Pelan awam (/plan-5k): storan pelayar + manfaat akaun. Akaun = lib/cloud-sync.ts (had dari backend
+// QUOTA.nubi.plan: percuma 1, ahli 5, admin 10); tukar teks ini bila had berubah (docs/plans/cloud-sync.md).
+export const CLOUD_NOTE = "Akaun percuma boleh simpan 1 pelan ke awan (ahli 5) supaya ikut ke peranti lain.";

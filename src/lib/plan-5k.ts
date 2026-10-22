@@ -125,19 +125,35 @@ export const isoDate = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
 /**
- * Pelan ikut tarikh lumba: mula Isnin pada/lepas `mula`, minggu akhir = minggu lumba (Isnin-Ahad), jadi
- * tirus + minggu lumba sentiasa betul-betul sebelum lumba. Lebih jauh dari had = mula dianjak lewat.
- * `minggu` bawah had[0] = terlalu dekat (pemanggil tolak + earliestRaceDate).
+ * Pelan ikut tarikh lumba: minggu akhir = minggu lumba (Isnin-Ahad), jadi tirus + minggu lumba sentiasa
+ * betul-betul sebelum lumba. Lumba hari biasa: seluruh pelan dianjak ke belakang (raceShift) supaya sesi
+ * akhir = hari lumba. `mula` dipulang = tarikh sesi pertama, tak pernah sebelum `mula` input (kalau
+ * sebelum, mula seminggu lewat). Pulang mula sendiri = hasil sama (pelan dibuka semula tak berubah).
+ * Lebih jauh dari had = mula dianjak lewat. `minggu` bawah had[0] = terlalu dekat (pemanggil tolak + earliestRaceDate).
  */
-export function racePlan(mula: Date, lumba: Date, had: readonly [number, number]): { mula: Date; minggu: number } {
+export function racePlan(mula: Date, lumba: Date, had: readonly [number, number], hari: number): { mula: Date; minggu: number } {
+  const anjak = raceShift(hari, lumba);
   let isnin = startMonday(mula);
-  const isninLumba = new Date(lumba.getFullYear(), lumba.getMonth(), lumba.getDate() - ((lumba.getDay() + 6) % 7));
+  if (addDays(isnin, anjak) < mula) isnin = addDays(isnin, 7);
+  const isninLumba = addDays(lumba, -((lumba.getDay() + 6) % 7));
   let minggu = Math.round((isninLumba.getTime() - isnin.getTime()) / (7 * 864e5)) + 1;
   if (minggu > had[1]) {
-    isnin = new Date(isninLumba.getFullYear(), isninLumba.getMonth(), isninLumba.getDate() - (had[1] - 1) * 7);
+    isnin = addDays(isninLumba, -(had[1] - 1) * 7);
     minggu = had[1];
   }
-  return { mula: isnin, minggu };
+  return { mula: addDays(isnin, anjak), minggu };
+}
+
+const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+
+/**
+ * Anjakan hari (<= 0) pelan lumba: lumba sebelum hari sesi akhir minggu (Ahad / Sabtu) = seluruh pelan
+ * undur sebanyak itu, supaya tiada sesi selepas lumba dan corak rehat kekal (sekurang-kurangnya sehari
+ * rehat sebelum lumba). Lumba Ahad pelan 3 hari = 0: sesi lumba saja ke Ahad (planSessionDate).
+ */
+export function raceShift(hari: number, lumba?: Date | null): number {
+  const akhir = SESSION_DAYS[hari]?.[hari - 1]; // hari tak sah = 0 (pemanggil tolak kemudian)
+  return lumba && akhir !== undefined ? Math.min(0, ((lumba.getDay() + 6) % 7) - akhir) : 0;
 }
 
 /** Tarikh lumba paling awal untuk `minggu` minggu latihan dari `mula` (sesi akhir minggu itu). */
@@ -150,10 +166,10 @@ export function startMonday(d: Date): Date {
   return r;
 }
 
-/** Tarikh sesi ke-`sesi` (dari 0) dalam minggu ke-`minggu` (dari 1). */
-export function sessionDate(isnin: Date, minggu: number, hari: number, sesi: number): Date {
+/** Tarikh sesi ke-`sesi` (dari 0) dalam minggu ke-`minggu` (dari 1). `lumba` = pelan lumba (raceShift). */
+export function sessionDate(isnin: Date, minggu: number, hari: number, sesi: number, lumba?: Date | null): Date {
   const r = new Date(isnin);
-  r.setDate(r.getDate() + (minggu - 1) * 7 + SESSION_DAYS[hari][sesi]);
+  r.setDate(r.getDate() + (minggu - 1) * 7 + SESSION_DAYS[hari][sesi] + raceShift(hari, lumba));
   return r;
 }
 
