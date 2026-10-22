@@ -145,8 +145,10 @@ Item yang dah siap dibuang (lihat git history).
   sama - `check-plan-5k` / `check-distance-plan` semak cincangan output, jadi `ENGINE_VERSION` tak dinaikkan. Pelan lumba
   tak ada "Sambung" (tarikh lumba tetap). Data sebenar di kad sesi + bar beban = `mountActuals` (pelan aktif saja).
   Profil kali pertama = `fillEmptyProfile` (medan kosong saja; gagal baca = tak tulis).
-- **Jadual data**: `<Table id columns empty variant>` (`components/ui/Table.astro`) + `createTable(id, { columns, search? })`
-  (`lib/table.ts`), di pelayar atas data dimuat. `variant`: `compact` (padat, tiada cari/kaki, `limit` baris pertama,
+- **Jadual data**: `<Table id columns empty emptyHint emptyIcon variant>` (`components/ui/Table.astro`) + `createTable(id, { columns, search? })`
+  (`lib/table.ts`), di pelayar atas data dimuat. `createTable` terus tunjuk baris rangka (loading) sampai `data(baris)` dipanggil;
+  panggil `jadual.loading()` sebelum muat semula (contoh tukar tempoh). Empty state = ikon + `empty` + `emptyHint`; bila carian
+  tiada padanan tajuk bertukar sendiri. `variant`: `compact` (padat, tiada cari/kaki, `limit` baris pertama,
   lalai 5 - panel kecil), `standard` (lalai: cari + halaman, 10 sehalaman), `full` (cari, slot `filters` (`.filter(fn)`),
   papar 10/20/50, halaman). Bawah 40rem baris jadi kad berlabel. `full` di `/account/activities`. Jangan buat jadual sendiri dalam halaman.
 - **Halaman undang-undang + Harga** (2026-10-22): `/privacy`, `/terms` (awam, pautan di Footer; ditulis

@@ -9,12 +9,18 @@
  * (label lajur di kiri) - telefon tidak perlu skrol mendatar.
  *
  *   <Table id="aktiviti" variant="full" columns={[{ label: "Nama" }, { label: "Jarak", numeric: true },
- *     { label: "Tindakan", srOnly: true }]} empty="Belum ada aktiviti.">
+ *     { label: "Tindakan", srOnly: true }]} empty="Belum ada aktiviti."
+ *     emptyHint="Muat naik fail .fit untuk mula.">
  *     <ChipGroup slot="filters" ... />
  *   </Table>
+ *
+ * createTable() terus tunjuk baris rangka (loading) sampai `data()` dipanggil; panggil `loading()`
+ * sebelum muat semula data (contoh tukar tempoh). Empty state: ikon + `empty` + `emptyHint`;
+ * bila carian tiada padanan, tajuk bertukar sendiri.
  */
 import Dropdown from "./Dropdown.astro";
 import Icon from "./Icon.astro";
+import type { IconName } from "../../lib/icon";
 
 interface Props {
   id: string;
@@ -22,11 +28,22 @@ interface Props {
   columns: { label: string; numeric?: boolean; srOnly?: boolean }[];
   searchPlaceholder?: string;
   empty?: string;
+  emptyHint?: string;
+  emptyIcon?: IconName;
   variant?: "compact" | "standard" | "full";
   /** Bilangan baris untuk compact. */
   limit?: number;
 }
-const { id, columns, searchPlaceholder = "Cari…", empty = "Tiada rekod.", variant = "standard", limit = 5 } = Astro.props;
+const {
+  id,
+  columns,
+  searchPlaceholder = "Cari…",
+  empty = "Tiada rekod.",
+  emptyHint = "",
+  emptyIcon = "cari",
+  variant = "standard",
+  limit = 5,
+} = Astro.props;
 const full = variant === "full";
 ---
 
@@ -60,7 +77,11 @@ const full = variant === "full";
       <tbody></tbody>
     </table>
   </div>
-  <p class="muted" data-kosong hidden>{empty}</p>
+  <p class="muted jadual-kosong" data-kosong hidden role="status">
+    <span class="jadual-kosong-ikon" aria-hidden="true"><Icon name={emptyIcon} /></span>
+    <span data-kosong-tajuk>{empty}</span>
+    {emptyHint && <span class="jadual-kosong-hint" data-kosong-hint>{emptyHint}</span>}
+  </p>
 
   {
     variant !== "compact" && (
@@ -165,6 +186,58 @@ const full = variant === "full";
   }
   .jadual-bungkus:has(tbody:empty) {
     display: none;
+  }
+
+  /* Empty state: ikon + tajuk + petunjuk, bukan sekadar satu baris kelabu. */
+  .jadual-kosong {
+    display: grid;
+    justify-items: center;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 2rem 1rem;
+    text-align: center;
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+  }
+  .jadual-kosong-ikon {
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    margin-bottom: 0.35rem;
+    border-radius: 999px;
+    background: var(--paper-2);
+    color: var(--muted);
+  }
+  .jadual-kosong-ikon :global(.lucide) {
+    width: 1.15rem;
+    height: 1.15rem;
+  }
+  [data-kosong-tajuk] {
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .jadual-kosong-hint {
+    font-size: 0.9rem;
+  }
+
+  /* Skeleton semasa data dimuat - bukan ruang kosong. */
+  .jadual :global(.rangka) {
+    display: block;
+    height: 0.8rem;
+    border-radius: 999px;
+    background: var(--paper-2);
+    animation: jadual-nadi 1.2s ease-in-out infinite;
+  }
+  @keyframes jadual-nadi {
+    50% {
+      opacity: 0.45;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .jadual :global(.rangka) {
+      animation: none;
+    }
   }
   table {
     width: 100%;

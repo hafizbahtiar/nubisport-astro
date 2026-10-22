@@ -27,7 +27,9 @@ siap tanpa klik tambahan, di semua peranti.
 
 1. **Satu pelan aktif setiap akaun.** Disimpan sebagai rekod `app_items` baru `nubi/active` (had 1,
    kunci `plan`, `data = { plan: "<kunci pelan>" }`). Backend: satu entri dalam `QUOTA`
-   (`services/app-items.ts`) - tiada jadual, tiada route baru.
+   (`services/app-items.ts`) - tiada jadual, tiada route baru. Padam atau ganti (`?replace`) pelan
+   yang sedang aktif membuang penunjuk itu dalam transaksi yang sama (`clearActivePointer`), supaya
+   kunci yang sama tak menjadi aktif semula secara senyap bila disimpan kemudian.
 2. **Syarat pelan aktif:** pelan mesti disimpan di awan (supaya ikut akaun ke peranti lain) dan mesti
    ada tarikh mula. Pelan tanpa tarikh mula: butang "Aktifkan" meminta tarikh mula dulu (guna aliran
    `mula` yang sedia ada).

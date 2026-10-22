@@ -155,11 +155,24 @@ const laluan = Astro.url.pathname.replace(/\/$/, "");
     color: var(--navy);
   }
 
-  /* Kandungan: panel dari page (Maklumat / Kata laluan) */
+  /* Kandungan: panel dari page (Maklumat / Kata laluan). */
   .profil-isi {
     display: grid;
     gap: 1.5rem;
-    max-width: 40rem;
+    align-content: start;
+  }
+
+  /* Skrin lebar: borang dua kolum supaya panel mengisi lebar kandungan (bukan 40rem di kiri).
+     Fieldset (chip), alert, butang dan perenggan kekal satu baris penuh. */
+  @media (min-width: 64rem) {
+    .profil-isi :global(.form) {
+      max-width: none;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: start;
+    }
+    .profil-isi :global(.form > :is(fieldset, .form-group, .alert, .btn, p)) {
+      grid-column: 1 / -1;
+    }
   }
   .profil-isi :global(.panel) {
     display: grid;

@@ -139,7 +139,9 @@ import Table from "../../../components/ui/Table.astro";
         id="senarai"
         variant="full"
         searchPlaceholder="Cari nama aktiviti…"
-        empty="Tiada aktiviti. Seret fail .fit daripada Strava ke kotak di atas, atau tukar tempoh / penapis."
+        empty="Tiada aktiviti dalam tempoh ini."
+        emptyHint="Seret fail .fit daripada Strava ke kotak di atas, atau tukar tempoh / penapis."
+        emptyIcon="aktiviti"
         columns={[
           { label: "Tarikh" },
           { label: "Aktiviti" },
@@ -335,6 +337,7 @@ import Table from "../../../components/ui/Table.astro";
 
   /** Senarai aktiviti tersimpan. Pulang bilangan dalam tempoh, atau -1 bila gagal. */
   async function senarai(): Promise<number> {
+    jadualAkt.loading();
     const pilihan =
       document.querySelector<HTMLInputElement>('input[name="tempoh"]:checked')
         ?.value ?? "90";
@@ -342,6 +345,7 @@ import Table from "../../../components/ui/Table.astro";
       `${BASE}?from=${pilihan === "semua" ? "2000-01-01" : dari(Number(pilihan))}`,
     );
     if (!r.ok) {
+      jadualAkt.data([]);
       $("jumlah").textContent =
         "Aktiviti tak dapat dimuatkan. Muat semula halaman.";
       return -1;
@@ -408,7 +412,7 @@ import Table from "../../../components/ui/Table.astro";
     const ya = await confirmDialog({
       title: "Padam semua data aktiviti?",
       message:
-        "Semua aktiviti dan fail asal anda akan dibuang daripada Nubi Sport. Tindakan ini tak boleh dibatalkan.",
+        "Semua aktiviti, fail asal dan rekod persetujuan anda akan dibuang daripada Nubi Sport. Muat naik seterusnya akan minta persetujuan semula. Tindakan ini tak boleh dibatalkan.",
       confirmLabel: "Padam semua",
       danger: true,
     });
@@ -419,6 +423,11 @@ import Table from "../../../components/ui/Table.astro";
         "Data tak dapat dipadam. Semak sambungan dan cuba lagi.";
       return;
     }
+    // Backend also removes the consent record: uploads need the checkbox again.
+    perluSetuju = true;
+    $<HTMLInputElement>("setuju-tanda").checked = false;
+    segarButang();
+    papar("Data aktiviti dipadam dan persetujuan ditarik.", "success");
     await Promise.all([senarai(), minggu()]);
   }
 

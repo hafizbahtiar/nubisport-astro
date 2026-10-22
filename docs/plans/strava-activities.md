@@ -43,7 +43,8 @@ backend (403). Sekatan di frontend hanyalah untuk UX.
    > Saya faham fail asal (termasuk laluan GPS) disimpan dan digunakan untuk analitik Nubi secara
    > agregat. Saya boleh padam bila-bila masa.
 
-   Disimpan di backend (`nubi.consent`), bukan localStorage.
+   Disimpan di backend (`nubi.consent`), bukan localStorage. "Padam semua data aktiviti" membuang
+   rekod itu juga (tarik balik), jadi muat naik seterusnya bertanya semula.
 4. Pilih fail. **Pelayar yang menghurai FIT** untuk ringkasan (`lib/activity-file.ts`). Pratonton untuk
    setiap aktiviti: tarikh, jenis, jarak, masa, pace, dan lencana "+ GPX" kalau ada GPX. Fail yang
    gagal atau GPX yang tiada pasangan disenaraikan dengan sebabnya.
