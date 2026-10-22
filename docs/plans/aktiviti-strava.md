@@ -26,8 +26,9 @@ backend (403). Sekatan di frontend hanyalah untuk UX.
 
 - Kedua-dua fail ialah larian yang sama, dan **dipadankan ikut masa mula**. Dalam fail contoh,
   masanya sama tepat (`2026-10-21T13:12:07Z`).
-- Ahli boleh pilih banyak fail sekali gus (`<input type="file" multiple accept=".fit,.gpx">`).
-  Pelayar mengumpulkan fail ikut masa mula:
+- Dua zon seret-lepas (`.fit` wajib, `.gpx` pilihan) yang **mengumpul** fail: pilih FIT dulu, GPX
+  kemudian (atau sebaliknya) tetap berpasangan. Fail masuk ikut sambungan, bukan zon. Banyak
+  aktiviti sekali gus. Pelayar mengumpulkan semua fail ikut masa mula:
   - FIT sahaja: OK.
   - FIT + GPX yang sepadan: OK.
   - GPX tanpa FIT yang sepadan: ditolak dengan mesej "Perlukan fail .fit untuk aktiviti ini".

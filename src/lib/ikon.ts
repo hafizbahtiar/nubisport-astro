@@ -24,6 +24,7 @@ import {
   SkipForward,
   Smartphone,
   Timer,
+  Upload,
   UserRound,
   X,
 } from "lucide-static";
@@ -45,6 +46,7 @@ const IKON = {
   menu: Menu,
   nadi: HeartPulse,
   pemasa: Timer,
+  muatNaik: Upload,
   pengguna: UserRound,
   peranti: Smartphone,
   rumah: House,
