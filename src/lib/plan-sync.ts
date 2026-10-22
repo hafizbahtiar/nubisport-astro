@@ -5,8 +5,9 @@
 import { api, json, currentUser, type CurrentUser } from "./api";
 import { todayMY, addDays } from "./date";
 import { DISTANCES, buildDistancePlan, type Distance } from "./distance-plan";
+import { formatDuration, formatKm, paceFromDistance } from "./activity-file";
 import { icon } from "./icon";
-import { buildPlan, startMonday, isoDate, sessionDate, type SessionType, type Week, type Level } from "./plan-5k";
+import { buildPlan, startMonday, isoDate, sessionDate, formatPace, type SessionType, type Week, type Level } from "./plan-5k";
 import { readList, writeList } from "./saved-plans";
 import { ENGINE_VERSION, syncProgress, listCloud, saveToCloud, pullCloud } from "./cloud-sync";
 
@@ -32,26 +33,42 @@ export interface MatchResult<A> {
   tolak: Map<A, PlanSession>;
 }
 
-/** Sesi bertarikh dari kunci + parameter pelan awan. null = tiada tarikh mula / pelan tidak sah. */
-export function planSessions(kunci: string, p: Record<string, string>): PlanSession[] | null {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(p.mula ?? "")) return null;
-  const jenis = /^pelan-(5k|10k|21k):/.exec(kunci)?.[1];
+const ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Bina pelan dari kunci + parameter tersimpan (pelan lama `bulan`/`minggu` dan v2 `minggu`+`lumba`, `pace`).
+ * Nadi (MAF) tidak mengubah minit sesi, jadi tidak perlu di sini. null = tidak sah.
+ */
+export function planFromParams(kunci: string, p: Record<string, string>): { jenis: "5k" | Distance; minggu: Week[]; hari: number } | null {
+  const jenis = /^pelan-(5k|10k|21k):/.exec(kunci)?.[1] as "5k" | Distance | undefined;
   const hari = Number(p.hari);
-  // Nadi (MAF) tidak mengubah minit sesi, jadi tidak perlu di sini.
+  const n = (k: string) => (p[k] ? Number(p[k]) : undefined);
   const h =
     jenis === "5k"
-      ? buildPlan({ bulan: Number(p.bulan), tahap: p.tahap as Level, hari, masa5k: p.masa ? Number(p.masa) : undefined })
+      ? buildPlan({ bulan: Number(p.bulan), minggu: n("minggu"), pace: n("pace"), tahap: p.tahap as Level, hari, masa5k: n("masa") })
       : jenis
-        ? buildDistancePlan({ jarak: jenis as Distance, minggu: Number(p.minggu), hari, masa: Number(p.masa), sasaran: p.sasaran ? Number(p.sasaran) : undefined })
+        ? buildDistancePlan({ jarak: jenis, minggu: Number(p.minggu), hari, masa: Number(p.masa), sasaran: n("sasaran"), pace: n("pace") })
         : null;
-  if (!h?.ok) return null;
-  const jarakM = jenis === "5k" ? 5000 : DISTANCES[jenis as Distance].km * 1000;
+  return h?.ok && jenis ? { jenis, minggu: h.minggu, hari } : null;
+}
+
+/** Tarikh sesi; hari lumba (`ujian`) ikut tarikh lumba sebenar bila ada (sesi akhir boleh Sabtu, lumba Ahad). */
+export const planSessionDate = (isnin: Date, w: number, hari: number, i: number, jenis: SessionType, lumba?: string | null) =>
+  jenis === "ujian" && lumba && ISO.test(lumba) ? new Date(`${lumba}T00:00:00`) : sessionDate(isnin, w, hari, i);
+
+/** Sesi bertarikh dari kunci + parameter pelan awan. null = tiada tarikh mula / pelan tidak sah. */
+export function planSessions(kunci: string, p: Record<string, string>): PlanSession[] | null {
+  if (!ISO.test(p.mula ?? "")) return null;
+  const h = planFromParams(kunci, p);
+  if (!h) return null;
+  const { jenis, hari } = h;
+  const jarakM = jenis === "5k" ? 5000 : DISTANCES[jenis].km * 1000;
   const isnin = startMonday(new Date(`${p.mula}T00:00:00`));
-  return (h.minggu as Week[]).flatMap((w) =>
+  return h.minggu.flatMap((w) =>
     w.sesi.map((s, i) => ({
       id: `${w.no}.${i}`,
       minggu: w.no,
-      tarikh: isoDate(sessionDate(isnin, w.no, hari, i)),
+      tarikh: isoDate(planSessionDate(isnin, w.no, hari, i, s.jenis, p.lumba)),
       jenis: s.jenis,
       minit: s.minit,
       tajuk: s.tajuk,
@@ -97,6 +114,22 @@ export function matchActivities<A extends MatchableActivity>(sesi: PlanSession[]
   // Sesi yang masih kosong yang akan padan kalau nisbah lari diabaikan = gagal sebab nisbah saja.
   const tolak = pilih(sesi, susun.filter((a) => !padan.has(a)), new Set(diambil), false);
   return { padan, tolak };
+}
+
+/** Minit dirancang vs minit run/walk sebenar setiap minggu pelan (Isnin-Ahad, waktu Malaysia). Tiada storan. */
+export function weeklyLoad(sesi: PlanSession[], aktiviti: MatchableActivity[]): { no: number; rancang: number; sebenar: number }[] {
+  const minggu = new Map<string, { no: number; rancang: number; sebenar: number }>();
+  for (const s of sesi) {
+    const k = isninOf(s.tarikh);
+    const w = minggu.get(k) ?? { no: s.minggu, rancang: 0, sebenar: 0 };
+    w.rancang += s.minit;
+    minggu.set(k, w);
+  }
+  for (const a of aktiviti) {
+    const w = (a.sport === "run" || a.sport === "walk") && minggu.get(isninOf(todayMY(new Date(a.startedAt))));
+    if (w) w.sebenar += a.movingS / 60;
+  }
+  return [...minggu.values()].map((w) => ({ ...w, sebenar: Math.round(w.sebenar) }));
 }
 
 /** Mesej untuk aktiviti dalam `tolak`. */
@@ -214,4 +247,56 @@ export async function mountActivePlanBox(slot: HTMLElement, kunci: string, adaMu
   };
   document.addEventListener("cloud-change", () => void lukis());
   await lukis();
+}
+
+export interface ActivityRow extends MatchableActivity {
+  id: number;
+  avgHr: number | null;
+}
+/** Masa "m:ss" / "h:mm:ss" dari saat (borang hari ujian, lib/pace.ts parseTime). */
+const masaTeks = (saat: number) => {
+  const s = Math.round(saat);
+  const j = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), d = s % 60;
+  return j ? `${j}:${String(m).padStart(2, "0")}:${String(d).padStart(2, "0")}` : `${m}:${String(d).padStart(2, "0")}`;
+};
+
+/**
+ * Page pelan, pelan aktif sahaja (ahli): data sebenar dari aktiviti Strava di kad sesi (padanan sama dengan
+ * sessionFor - dikira semula, tiada storan), bar beban setiap minggu, dan masa hari ujian/lumba diisi ke borang
+ * "Pelan seterusnya" (pace baru dari ujian itu). `loadBar` = lib/plan-render.ts loadBarHtml.
+ */
+export async function mountActuals(akar: HTMLElement, kunci: string, loadBar: (w: { no: number; rancang: number; sebenar: number }) => string) {
+  if (!isMember(await currentUser())) return;
+  const p = await activePlan();
+  if (!p || p.kunci !== kunci) return;
+  const akt = await activitiesBetween<ActivityRow>(p.sesi[0].tarikh);
+  if (!akt) return;
+  const hariIni = todayMY();
+  for (const w of weeklyLoad(p.sesi, akt)) {
+    const el = akar.querySelector<HTMLElement>(`[data-beban="${w.no}"]`);
+    // Minggu akan datang tiada apa untuk dibanding.
+    if (el && p.sesi.find((s) => s.minggu === w.no)!.tarikh <= hariIni) (el.innerHTML = loadBar(w)), (el.hidden = false);
+  }
+  const { padan } = matchActivities(p.sesi, akt, []);
+  for (const [a, s] of padan) {
+    const el = akar.querySelector<HTMLElement>(`[data-sebenar="${s.id}"]`);
+    if (!el) continue;
+    const bahagian = [
+      formatKm(a.distanceM),
+      formatDuration(a.movingS),
+      paceFromDistance(a.distanceM, a.movingS),
+      a.avgHr ? `${Math.round(a.avgHr)} bpm` : null,
+      a.runRatio != null ? `${Math.round(a.runRatio * 100)}% lari` : null,
+    ].filter(Boolean);
+    el.innerHTML = `${icon("aktiviti")}<span>Strava: ${bahagian.join(" · ")}</span> <a class="link" href="/account/activities/view?id=${Number(a.id)}">Lihat</a>`;
+    el.hidden = false;
+    // Hari ujian/lumba: masa untuk jarak penuh (skala dari jarak sebenar) -> borang pelan seterusnya.
+    const f = s.jenis === "ujian" ? akar.querySelector<HTMLFormElement>(`form[data-sesi-ujian="${s.id}"]`) : null;
+    if (f && a.distanceM > 0 && !f.masa.value) {
+      const saat = (a.movingS * s.jarakM) / a.distanceM;
+      f.masa.value = masaTeks(saat);
+      f.querySelector("[data-ujian-hasil]")!.innerHTML =
+        `<p class="muted">Dari Strava: ~${masaTeks(saat)} (pace ${formatPace(saat / (s.jarakM / 1000))}/km). Tekan "Pelan seterusnya" untuk kemas kini pace dari ${s.jarakM === 5000 ? "ujian" : "lumba"} ini.</p>`;
+    }
+  }
 }

@@ -25,6 +25,8 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
     <p id="aktif-seterusnya" hidden></p>
     <p id="aktif-minggu" hidden></p>
     <p id="aktif-minit" hidden></p>
+    <div class="beban-senarai" id="aktif-beban" hidden></div>
+    <div id="aktif-sambung" hidden></div>
   </section>
 
   <div class="grid">
@@ -32,8 +34,7 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
       <div class="panel-kepala">
         <h3 class="display">Pelan saya</h3>
         <div class="actions">
-          <a class="btn btn-primary btn-sm" href="/account/plan-5k">Pelan 5K</a
-          >
+          <a class="btn btn-primary btn-sm" href="/account/plan-5k">Pelan 5K</a>
           <a class="btn btn-outline btn-sm" href="/account/distance-plan"
             >Pelan 10K / 21K</a
           >
@@ -60,7 +61,8 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
       </div>
       <ol class="senarai" id="pelan"></ol>
       <p class="muted" id="tiada-pelan" hidden>
-        Belum ada pelan di pelayar ini. Buat satu - nanti ia muncul di sini dengan kemajuannya.
+        Belum ada pelan di pelayar ini. Buat satu - nanti ia muncul di sini
+        dengan kemajuannya.
       </p>
     </section>
 
@@ -73,7 +75,8 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
             data-saya-emel></span>
         </p>
         <p class="muted" id="peranan"></p>
-        <a class="btn btn-outline btn-sm" href="/account/profile">Urus profil</a>
+        <a class="btn btn-outline btn-sm" href="/account/profile">Urus profil</a
+        >
       </section>
       <section class="panel">
         <h3 class="display">Lari ikut nadi</h3>
@@ -88,13 +91,20 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
 
 <script>
   import { currentUser } from "../../lib/api";
-  import { LEVELS, buildPlan, type Level } from "../../lib/plan-5k";
+  import {
+    LEVELS,
+    resumePoint,
+    startMonday,
+    isoDate,
+    formatPace,
+    type Level,
+  } from "../../lib/plan-5k";
   import {
     DISTANCES,
-    buildDistancePlan,
     formatTime,
     type Distance,
   } from "../../lib/distance-plan";
+  import { loadBarHtml } from "../../lib/plan-render";
   import {
     CREATED_KEY,
     readList,
@@ -117,6 +127,8 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
     activitiesBetween,
     sessionLabel,
     activePlan,
+    planFromParams,
+    weeklyLoad,
   } from "../../lib/plan-sync";
 
   const $ = (id: string) => document.getElementById(id)!;
@@ -139,45 +151,48 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
         : "Pengguna berdaftar - keahlian Nubi Sport diluluskan pentadbir.";
   }
 
-  // Pelan tersimpan (lib/saved-plans.ts): "pelan-5k:<bulan>-<tahap>-<masa>-<hari>" atau
-  // "pelan-10k|21k:<minggu>-<masa>-<sasaran>-<hari>".
+  // Pelan tersimpan (lib/saved-plans.ts): parameter "<kunci>#p" (v2: lumba, pace, minggu 5K), atau - pelan
+  // lama tanpa parameter - dari kunci "pelan-5k:<bulan>-<tahap>-<masa>-<hari>" / "pelan-10k|21k:<minggu>-<masa>-<sasaran>-<hari>".
   function butiran(kunci: string) {
     const [jenis, isi] = kunci.split(":");
     const [a, b, c, hari] = isi.split("-");
-    if (jenis === "pelan-5k") {
-      const h = buildPlan({
-        bulan: +a,
-        tahap: b as Level,
-        hari: +hari,
-        masa5k: c ? +c : undefined,
-      });
-      return (
-        h.ok && {
-          h,
-          nama: `5K · ${a} bulan · ${hari} hari seminggu`,
-          sub: `${LEVELS[b as Level]}${c ? ` (${c} min)` : ""}`,
-          href: `/account/plan-5k?${new URLSearchParams(readParams(kunci) ?? { bulan: a, tahap: b, hari, ...(c ? { masa: c } : {}) })}`,
-        }
-      );
-    }
-    const jarak = jenis.slice("pelan-".length) as Distance;
-    if (!(jarak in DISTANCES)) return false;
-    const h = buildDistancePlan({
-      jarak,
-      minggu: +a,
-      masa: +b,
-      sasaran: c ? +c : undefined,
-      hari: +hari,
-    });
-    const k = DISTANCES[jarak];
-    return (
-      h.ok && {
+    const p: Record<string, string> =
+      readParams(kunci) ??
+      (jenis === "pelan-5k"
+        ? { bulan: a, tahap: b, hari, ...(c ? { masa: c } : {}) }
+        : {
+            jarak: jenis.slice("pelan-".length),
+            minggu: a,
+            masa: b,
+            hari,
+            ...(c ? { sasaran: c } : {}),
+          });
+    const h = planFromParams(kunci, p);
+    if (!h) return false;
+    const lumba = p.lumba
+      ? `Lumba ${new Date(`${p.lumba}T00:00:00`).toLocaleDateString("ms-MY", { day: "numeric", month: "short", year: "numeric" })} · ${p.minggu} minggu`
+      : null;
+    if (h.jenis === "5k")
+      return {
         h,
-        nama: `${k.nama} · ${a} minggu · ${hari} hari seminggu`,
-        sub: `${k.prasyarat.nama} ${b} min → ${c ? `bawah ${formatTime(+c)}` : "habis"}`,
-        href: `/account/distance-plan?${new URLSearchParams(readParams(kunci) ?? { jarak, minggu: a, masa: b, hari, ...(c ? { sasaran: c } : {}) })}`,
-      }
-    );
+        p,
+        nama: `5K · ${lumba ?? `${p.bulan} bulan`} · ${p.hari} hari seminggu`,
+        sub: `${LEVELS[p.tahap as Level]}${p.masa ? ` (${p.masa} min)` : ""}${p.pace ? ` · pace ${formatPace(+p.pace)}/km` : ""}`,
+        href: `/account/plan-5k?${new URLSearchParams(p)}`,
+      };
+    const k = DISTANCES[h.jenis as Distance];
+    const sasaran = p.pace
+      ? (+p.pace * k.km) / 60
+      : p.sasaran
+        ? +p.sasaran
+        : null;
+    return {
+      h,
+      p,
+      nama: `${k.nama} · ${lumba ?? `${p.minggu} minggu`} · ${p.hari} hari seminggu`,
+      sub: `${k.prasyarat.nama} ${p.masa} min → ${sasaran ? `bawah ${formatTime(sasaran)}` : "habis"}`,
+      href: `/account/distance-plan?${new URLSearchParams(p)}`,
+    };
   }
 
   const senarai = $("pelan");
@@ -345,8 +360,14 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
       const ahad = addDays(isnin, 6);
       const siap = new Set(readList(p.kunci));
       const lagi = p.sesi.find((x) => x.tarikh >= hariIni && !siap.has(x.id));
-      const minggu = p.sesi.filter((x) => x.tarikh >= isnin && x.tarikh <= ahad);
-      const akt = (await activitiesBetween(isnin, addDays(isnin, 7))) ?? [];
+      const minggu = p.sesi.filter(
+        (x) => x.tarikh >= isnin && x.tarikh <= ahad,
+      );
+      // Satu permintaan dari mula pelan: minit minggu ini + bar beban mingguan.
+      const semua = await activitiesBetween(
+        p.sesi[0].tarikh < isnin ? p.sesi[0].tarikh : isnin,
+      );
+      const akt = semua ?? [];
       const sebenar = akt
         .filter(
           (a) =>
@@ -374,6 +395,36 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
         "aktif-minit",
         `Minit minggu ini: ${minggu.reduce((n, x) => n + x.minit, 0)} dirancang, ${Math.round(sebenar)} sebenar`,
       );
+      // Beban mingguan (6 minggu terakhir sehingga minggu ini): dirancang vs sebenar.
+      if (semua) {
+        const lepas = weeklyLoad(p.sesi, semua)
+          .filter(
+            (w) => p.sesi.find((x) => x.minggu === w.no)!.tarikh <= hariIni,
+          )
+          .slice(-6);
+        if (lepas.length) {
+          $("aktif-beban").innerHTML =
+            `<p class="muted">Beban mingguan (minit)</p>${lepas.map((w) => `<p class="beban">${loadBarHtml(w, `<span>Minggu ${w.no}</span>`)}</p>`).join("")}`;
+          $("aktif-beban").hidden = false;
+        }
+      }
+      // Ketinggalan > 1 minggu: "Sambung dari Minggu N" (aliran sama dengan page pelan). Pelan lumba tak dianjak.
+      if (href && !href.p.lumba && href.p.mula) {
+        const r = resumePoint(
+          href.h.minggu,
+          startMonday(new Date(`${href.p.mula}T00:00:00`)),
+          siap,
+        );
+        if (r) {
+          const q = new URLSearchParams({ ...href.p, mula: isoDate(r.mula) });
+          $("aktif-sambung").innerHTML = `<div class="alert alert-info">
+            <p class="alert-title">Terlepas sesi? Tak apa.</p>
+            <p>Sambung dari <strong>Minggu ${r.no}</strong> mulai ${r.isninMinggu.toDateString() === new Date().toDateString() ? "hari ini" : "Isnin depan"}, ${r.isninMinggu.toLocaleDateString("ms-MY", { day: "numeric", month: "long" })}. Tarikh pelan dianjak ${r.anjak} minggu; tanda siap kekal.</p>
+            <div class="actions"><a class="btn btn-primary btn-sm" href="${href.href.split("?")[0]}?${q}">Sambung dari Minggu ${r.no}</a></div>
+          </div>`;
+          $("aktif-sambung").hidden = false;
+        }
+      }
     }
   }
 

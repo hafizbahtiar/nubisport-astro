@@ -99,14 +99,43 @@ export async function summarizeFit(bait: ArrayBuffer, nama: string): Promise<Act
   };
 }
 
-/** Laluan [lat, lon] dari record FIT (semicircle -> darjah). [] = tiada GPS (contoh treadmill). */
-export async function fitRoute(bait: ArrayBuffer): Promise<[number, number][]> {
+/** Record FIT (diurai sekali - laluan dan nadi diambil dari hasil yang sama). */
+export async function fitRecords(bait: ArrayBuffer): Promise<any[]> {
   const { Decoder, Stream } = await import("@garmin/fitsdk");
-  const { messages: m } = new Decoder(Stream.fromArrayBuffer(bait)).read();
+  return new Decoder(Stream.fromArrayBuffer(bait)).read().messages.recordMesgs ?? [];
+}
+
+/** Laluan [lat, lon] dari record FIT (semicircle -> darjah). [] = tiada GPS (contoh treadmill). */
+export function routeOf(rekod: any[]): [number, number][] {
   const darjah = 180 / 2 ** 31;
-  return (m.recordMesgs ?? [])
-    .filter((r: any) => typeof r.positionLat === "number" && typeof r.positionLong === "number")
-    .map((r: any): [number, number] => [r.positionLat * darjah, r.positionLong * darjah]);
+  return rekod
+    .filter((r) => typeof r.positionLat === "number" && typeof r.positionLong === "number")
+    .map((r): [number, number] => [r.positionLat * darjah, r.positionLong * darjah]);
+}
+export const fitRoute = async (bait: ArrayBuffer) => routeOf(await fitRecords(bait));
+
+/** Nadi ikut masa: [saat dari record pertama, bpm]. [] = fail tiada nadi. */
+export function heartSeries(rekod: any[]): [number, number][] {
+  const t0 = rekod.length ? +rekod[0].timestamp : 0;
+  return rekod
+    .filter((r) => typeof r.heartRate === "number" && r.heartRate > 0 && r.timestamp)
+    .map((r): [number, number] => [(+r.timestamp - t0) / 1000, r.heartRate]);
+}
+
+/**
+ * Bahagian masa dalam 5 zon ikut % nadi maks: Z1 < 60, Z2 60-70, Z3 70-80, Z4 80-90, Z5 >= 90.
+ * Setiap titik diberi berat masa ke titik seterusnya (had 10 s - jeda tak dikira, seperti runShare).
+ */
+export function hrZones(siri: [number, number][], maks: number): number[] {
+  const zon = [0, 0, 0, 0, 0];
+  let jumlah = 0;
+  for (let i = 0; i + 1 < siri.length; i++) {
+    const dt = Math.min(10, siri[i + 1][0] - siri[i][0]);
+    if (!(dt > 0)) continue;
+    zon[Math.min(4, Math.max(0, Math.floor((siri[i][1] / maks) * 10) - 5))] += dt;
+    jumlah += dt;
+  }
+  return zon.map((z) => (jumlah ? bulat(z / jumlah, 3) : 0));
 }
 
 /** Yang diperlukan dari GPX: masa mula (untuk padanan) dan nama. Regex cukup untuk 2 tag ini. */

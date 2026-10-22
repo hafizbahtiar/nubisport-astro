@@ -10,6 +10,7 @@ import DatePicker from "./ui/DatePicker.astro";
 import Checkbox from "./ui/Checkbox.astro";
 import Timer from "./Timer.astro";
 import RunCheck from "./RunCheck.astro";
+import RaceDateField from "./RaceDateField.astro";
 import { CONDITIONS, AGE_MAX, AGE_MIN } from "../lib/maf";
 import { DISTANCES } from "../lib/distance-plan";
 import "../styles/plan.css";
@@ -33,6 +34,7 @@ const tahun = new Date().getFullYear();
         { value: "21k", label: "21K (separuh maraton)" },
       ]}
     />
+    <RaceDateField jarak={["10K", "21K"]} />
     {
       (Object.keys(DISTANCES) as (keyof typeof DISTANCES)[]).map((j) => (
         <fieldset class="form-group" data-untuk={j} hidden disabled>
@@ -135,7 +137,8 @@ const tahun = new Date().getFullYear();
     <li>
       Pelan ini panduan umum, <strong>bukan nasihat perubatan</strong>. Rujuk
       doktor kalau ada masalah jantung, tekanan darah, sendi atau baru sembuh
-      daripada kecederaan. Berhenti kalau sakit (bukan sekadar penat). Pelan dibina ikut prinsip latihan umum (contoh pelan pemula Hal Higdon) dan <strong
+      daripada kecederaan. Berhenti kalau sakit (bukan sekadar penat). Pelan
+      dibina ikut prinsip latihan umum (contoh pelan pemula Hal Higdon) dan <strong
         >belum disemak jurulatih bertauliah</strong
       >.
     </li>
@@ -144,14 +147,15 @@ const tahun = new Date().getFullYear();
       pelan) supaya ia dan tanda siap ikut akaun anda ke peranti lain.
     </li>
     <li>
-      Bertangga: 10K perlukan masa 5K (boleh lari 5 km tanpa henti), 21K perlukan masa 10K. Belum sampai? Mula dengan
+      Bertangga: 10K perlukan masa 5K (boleh lari 5 km tanpa henti), 21K
+      perlukan masa 10K. Belum sampai? Mula dengan
       <a class="link" href="/account/plan-5k">Pelan 5K</a> atau pelan 10K dulu.
     </li>
     <li>
       Anggaran masa guna formula Riegel berdasarkan masa anda sekarang - <strong
         >anggaran kasar</strong
-      >. Jarak jauh biasanya lebih perlahan daripada ramalan bagi pelari yang belum
-      biasa.
+      >. Jarak jauh biasanya lebih perlahan daripada ramalan bagi pelari yang
+      belum biasa.
     </li>
     <li>
       Larian panjang naik sedikit demi sedikit, setiap minggu ke-4 lebih ringan,
@@ -168,18 +172,30 @@ const tahun = new Date().getFullYear();
 <Timer />
 <script>
   import { buildIcs, malaysiaTime } from "../lib/ics";
-  import { prefillForm } from "../lib/profile";
+  import { prefillForm, fillEmptyProfile } from "../lib/profile";
   import { calcMaf, type Condition } from "../lib/maf";
-  import { startMonday, sessionDate } from "../lib/plan-5k";
+  import {
+    startMonday,
+    racePlan,
+    earliestRaceDate,
+    isoDate,
+    formatPace,
+  } from "../lib/plan-5k";
   import {
     DISTANCES,
     analyzeDistancePlan,
     buildDistancePlan,
+    planDistancePaces,
+    distanceWeeksNeeded,
     formatTime,
     type Distance,
   } from "../lib/distance-plan";
   import {
     weekHtml,
+    pacesHtml,
+    mountPaceForm,
+    raceDayHtml,
+    loadBarHtml,
     ramadanNotice,
     analysisHtml,
     mountShare,
@@ -197,7 +213,11 @@ const tahun = new Date().getFullYear();
     writeParams,
   } from "../lib/saved-plans";
   import { removeFromCloud, mountCloudBox } from "../lib/cloud-sync";
-  import { mountActivePlanBox } from "../lib/plan-sync";
+  import {
+    mountActivePlanBox,
+    mountActuals,
+    planSessionDate,
+  } from "../lib/plan-sync";
   import { confirmDialog } from "../lib/confirm";
 
   const borang = document.getElementById("borang") as HTMLFormElement;
@@ -210,6 +230,14 @@ const tahun = new Date().getFullYear();
   const hasil = document.getElementById("hasil")!;
   const pelanEl = document.getElementById("pelan")!;
   mountTestForm(pelanEl);
+  mountPaceForm(pelanEl, ["sasaran"]); // pace sendiri ganti masa sasaran
+  const lumbaInput = el("lumba") as HTMLInputElement;
+  const PROFIL_LABEL: Record<string, string> = {
+    hari: "hari seminggu",
+    masa5k: "masa 5K",
+    masa10k: "masa 10K",
+    keadaan: "keadaan MAF",
+  };
 
   const q = new URLSearchParams(location.search);
   const ikutJarak = () => {
@@ -217,7 +245,10 @@ const tahun = new Date().getFullYear();
     const c = DISTANCES[j];
     borang
       .querySelectorAll<HTMLFieldSetElement>("[data-untuk]")
-      .forEach((f) => (f.hidden = f.disabled = f.dataset.untuk !== j));
+      .forEach(
+        (f) =>
+          (f.hidden = f.disabled = f.dataset.untuk !== j || !!lumbaInput.value),
+      ); // tarikh lumba = minggu dikira
     masaMedan.querySelector(".field-label")!.textContent =
       `Masa ${c.prasyarat.nama} sekarang (minit)`;
     masaInput.min = String(c.prasyarat.min);
@@ -253,18 +284,56 @@ const tahun = new Date().getFullYear();
   }
   borang.addEventListener("change", ikutJarak);
   ikutJarak();
+  // Tempoh lalai bila tiada tarikh lumba = pilihan tengah (10K 10, 21K 16 minggu) - checked dalam ChipGroup.
   if (q.has("jarak")) papar();
 
   function papar() {
     const jarak = (q.get("jarak") === "21k" ? "21k" : "10k") as Distance;
     const c = DISTANCES[jarak];
-    const minggu = Number(q.get("minggu"));
+    let minggu = Number(q.get("minggu"));
     const hari = Number(q.get("hari"));
     const masa = Number(q.get("masa"));
-    const sasaran = q.get("sasaran") ? Number(q.get("sasaran")) : undefined;
+    const pace = q.get("pace") ? Number(q.get("pace")) : undefined;
+    const sasaran = pace
+      ? undefined
+      : q.get("sasaran")
+        ? Number(q.get("sasaran"))
+        : undefined;
+    const ISO = /^\d{4}-\d{2}-\d{2}$/;
+    const tarikhPanjang = (d: Date) =>
+      d.toLocaleDateString("ms-MY", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+    // Ikut tarikh lumba: minggu dari mula (atau Isnin depan) ke minggu lumba, disimpan dalam URL.
+    const lumbaIso = ISO.test(q.get("lumba") ?? "") ? q.get("lumba")! : null;
+    const lumba = lumbaIso ? new Date(`${lumbaIso}T00:00:00`) : null;
+    if (lumba) {
+      const r = racePlan(
+        new Date(
+          `${ISO.test(q.get("mula") ?? "") ? q.get("mula") : isoDate(new Date())}T00:00:00`,
+        ),
+        lumba,
+        [c.minggu[0], c.minggu.at(-1)!],
+      );
+      minggu = r.minggu;
+      q.set("mula", isoDate(r.mula));
+      q.set("minggu", String(minggu));
+      history.replaceState(null, "", `?${q}`);
+    }
+    const awal = (n: number) =>
+      earliestRaceDate(new Date(`${q.get("mula")}T00:00:00`), n, hari);
+    const cubaLumba = (n: number) =>
+      `<p>Tarikh lumba paling awal yang munasabah: <strong>${tarikhPanjang(awal(n))}</strong>.</p>
+       <a class="btn btn-primary btn-sm" href="?${new URLSearchParams({ ...Object.fromEntries(q), lumba: isoDate(awal(n)) })}">Cuba tarikh itu</a>`;
+    const tempoh = lumba
+      ? `Lumba ${lumba.toLocaleDateString("ms-MY", { day: "numeric", month: "short", year: "numeric" })} · ${minggu} minggu`
+      : `${minggu} minggu`;
     hasil.hidden = false;
-    const amaran = (t: string) => {
-      pelanEl.innerHTML = `<div class="alert alert-warning"><p>${t}</p></div>`;
+    const amaran = (t: string, lagi = "") => {
+      pelanEl.innerHTML = `<div class="alert alert-warning"><p>${t}</p>${lagi}</div>`;
       hasil.scrollIntoView({ behavior: "smooth" });
     };
     let nadi: { maf: number; bawah: number } | undefined;
@@ -273,12 +342,26 @@ const tahun = new Date().getFullYear();
       if (!m.ok) return amaran(`Ikut nadi: ${m.sebab}`);
       nadi = { maf: m.maf, bawah: m.bawah };
     }
-    const input = { jarak, minggu, hari, masa, sasaran, nadi };
+    if (lumba && minggu < c.minggu[0])
+      return amaran(
+        `Lumba ${minggu} minggu lagi terlalu dekat untuk pelan ${c.nama} - perlu sekurang-kurangnya ${c.minggu[0]} minggu.`,
+        cubaLumba(c.minggu[0]),
+      );
+    const input = { jarak, minggu, hari, masa, sasaran, pace, nadi };
     const h = buildDistancePlan(input);
     if (!h.ok) return amaran(h.sebab);
     const a = analyzeDistancePlan(input);
 
-    const kunci = distancePlanKey(jarak, minggu, masa, sasaran, hari);
+    const kunci = distancePlanKey(
+      jarak,
+      minggu,
+      masa,
+      pace ? `p${pace}` : sasaran,
+      hari,
+    );
+    const paces = planDistancePaces(input);
+    const sasaranMinit = pace ? (pace * c.km) / 60 : sasaran;
+    const perlu = distanceWeeksNeeded(input);
     const dibuat = readList(CREATED_KEY);
     if (!dibuat.includes(kunci)) writeList(CREATED_KEY, [...dibuat, kunci]);
     writeParams(kunci, planParams(q));
@@ -288,14 +371,14 @@ const tahun = new Date().getFullYear();
       : null;
     const hariIni = new Date().toDateString();
     const jumlah = h.minggu.reduce((n, w) => n + w.sesi.length, 0);
-    const tajuk = `${c.nama} · ${minggu} minggu · ${hari} hari seminggu`;
+    const tajuk = `${c.nama} · ${tempoh} · ${hari} hari seminggu`;
 
     pelanEl.innerHTML = `
       <div class="ringkas">
         <div>
           <p class="eyebrow">Pelan anda</p>
           <h2 class="display section-title">${tajuk}</h2>
-          <p class="lead">${c.prasyarat.nama} ${masa} minit → ${c.nama} ${sasaran ? `bawah ${formatTime(sasaran)}` : `habis (anggaran ~${formatTime(h.ramalan)})`}.
+          <p class="lead">${c.prasyarat.nama} ${masa} minit → ${c.nama} ${sasaranMinit ? `bawah ${formatTime(sasaranMinit)}${pace ? ` (pace ${formatPace(pace)}/km)` : ""}` : `habis (anggaran ~${formatTime(h.ramalan)})`}.
             ${nadi ? `Ikut nadi: had MAF <strong>${nadi.maf}</strong>, julat ${nadi.bawah}-${nadi.maf} denyut/min.` : ""}
             ${isnin ? `Bermula Isnin, ${isnin.toLocaleDateString("ms-MY", { day: "numeric", month: "long", year: "numeric" })}.` : ""}
             <span id="kemajuan"></span></p>
@@ -308,8 +391,11 @@ const tahun = new Date().getFullYear();
       </div>
       <p class="awan-baris no-print" data-awan></p>
       <p class="awan-baris no-print" data-aktif></p>
-      ${h.amaran.map((t) => `<div class="alert alert-info"><p>${t}</p></div>`).join("")}
+      <p class="muted no-print" data-profil hidden></p>
+      ${h.amaran.map((t) => `<div class="alert alert-info"><p>${t}</p>${lumba && perlu <= c.minggu.at(-1)! ? cubaLumba(perlu) : ""}</div>`).join("")}
       ${a ? analysisHtml(a) : ""}
+      ${pacesHtml(paces, !!pace, `Lumba ${c.nama}`)}
+      ${lumba ? raceDayHtml(lumba, paces.lumba, c.nama) : ""}
       ${ramadanNotice(h.minggu, isnin)}
       <div class="kalendar no-print">
         <h3 class="display">Simpan ke kalendar</h3>
@@ -324,7 +410,7 @@ const tahun = new Date().getFullYear();
         }
       </div>
       <div class="no-print" data-sambung-slot></div>
-      <ol class="minggu">${h.minggu.map((w) => weekHtml(w, isnin, hariIni, jarak)).join("")}</ol>`;
+      <ol class="minggu">${h.minggu.map((w) => weekHtml(w, isnin, hariIni, jarak, lumba)).join("")}</ol>`;
 
     const kemajuan = document.getElementById("kemajuan")!;
     // Pelan 10K/21K = akaun: kawan perlu akaun percuma untuk membukanya.
@@ -333,14 +419,16 @@ const tahun = new Date().getFullYear();
       shareLink("/account/distance-plan", q),
       `Mari berlari bersama: pelan ${tajuk} dari Nubi Sport (perlu akaun percuma).`,
     );
-    const sambung = isnin
-      ? mountResume(
-          pelanEl.querySelector("[data-sambung-slot]")!,
-          h.minggu,
-          isnin,
-          siap,
-        )
-      : () => {};
+    // Pelan lumba tak dianjak - tarikh lumba tetap.
+    const sambung =
+      isnin && !lumba
+        ? mountResume(
+            pelanEl.querySelector("[data-sambung-slot]")!,
+            h.minggu,
+            isnin,
+            siap,
+          )
+        : () => {};
     const kira = () => {
       kemajuan.textContent = `${siap.size} / ${jumlah} sesi siap.`;
       sambung();
@@ -357,7 +445,25 @@ const tahun = new Date().getFullYear();
       siap,
       kemas,
     );
-    void mountActivePlanBox(pelanEl.querySelector("[data-aktif]")!, kunci, !!isnin, siap, kemas);
+    void mountActivePlanBox(
+      pelanEl.querySelector("[data-aktif]")!,
+      kunci,
+      !!isnin,
+      siap,
+      kemas,
+    );
+    void mountActuals(pelanEl, kunci, (w) => loadBarHtml(w, "Beban minggu: "));
+    // Profil kali pertama: isi medan kosong saja (lib/profile.ts).
+    void fillEmptyProfile({
+      hari: String(hari),
+      [jarak === "10k" ? "masa5k" : "masa10k"]: String(masa),
+      keadaan: nadi ? (q.get("keadaan") ?? undefined) : undefined,
+    }).then((k) => {
+      const p = pelanEl.querySelector<HTMLElement>("[data-profil]");
+      if (!p || !k.length) return;
+      p.innerHTML = `Disimpan ke profil: ${k.map((x) => PROFIL_LABEL[x] ?? x).join(", ")}. Ubah di <a class="link" href="/account/profile/training">Profil</a>.`;
+      p.hidden = false;
+    });
     kemas();
     kotak.forEach((cb) =>
       cb.addEventListener("change", () => {
@@ -391,13 +497,16 @@ const tahun = new Date().getFullYear();
           h.minggu.flatMap((w) =>
             w.sesi.map((s, i) => ({
               uid: `${kunci.replace(":", "-")}-m${w.no}s${i}`,
-              mula: malaysiaTime(sessionDate(isnin!, w.no, hari, i), pukul),
+              mula: malaysiaTime(
+                planSessionDate(isnin!, w.no, hari, i, s.jenis, lumbaIso),
+                pukul,
+              ),
               minit: s.minit,
               tajuk: `Nubi ${c.nama} · Minggu ${w.no}: ${s.tajuk} (${s.minit} min)`,
               keterangan: `${s.arahan}\n${s.usaha}`,
             })),
           ),
-          { nama: `Nubi ${c.nama} · ${minggu} minggu` },
+          { nama: `Nubi ${c.nama} · ${tempoh}` },
         );
         const link = document.createElement("a");
         link.href = URL.createObjectURL(

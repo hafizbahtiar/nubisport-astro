@@ -972,3 +972,43 @@ legend,
   background: var(--info-bg);
   color: var(--info-ink);
 }
+
+/* Bar beban mingguan (lib/plan-render.ts loadBarHtml): minit sebenar vs dirancang - page pelan + Dashboard. */
+.beban {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.6rem;
+  margin: -0.25rem 0 0.75rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.beban-trek {
+  flex: 1 1 6rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.beban-trek i {
+  display: block;
+  height: 100%;
+  background: var(--orange);
+  border-radius: 999px;
+}
+
+.beban-senarai {
+  justify-self: stretch;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.beban-senarai .beban {
+  margin: 0;
+}
+
+.beban-senarai .beban>span:first-child {
+  min-width: 5.5rem;
+}

@@ -1,7 +1,7 @@
 # Pelan latihan v2 (5K, 10K, 21K)
 
-Status: **rancangan** (2026-10-22), belum dibina. Bina selepas semakan kualiti sesi (`run_ratio`,
-[active-plan-sync.md](./active-plan-sync.md)) siap - kedua-duanya sentuh `lib/plan-sync.ts`.
+Status: **dibina** (2026-10-22) - item 1-5 + cadangan 1, 3, 4, 5. Cadangan 2 = TODO. Lihat "Dibina" di bawah. (Asal: bina selepas semakan kualiti sesi (`run_ratio`,
+[active-plan-sync.md](./active-plan-sync.md)) siap - kedua-duanya sentuh `lib/plan-sync.ts`.)
 
 ## Kenapa
 
@@ -62,3 +62,34 @@ buat (dari fail Strava), bukan sekadar tanda siap.
   `nubi_activities` kemudian jika perlu.
 - Skrip semakan: `check-plan-5k.ts` / `check-distance-plan.ts` - kes tarikh lumba (terlalu dekat, tepat,
   jauh), pace pilihan, pelan lama masih terbina sama.
+
+## Dibina (2026-10-22) + beza dari rancangan
+
+- **Tarikh lumba** (`lumba`): `racePlan` (`lib/plan-5k.ts`) - mula = Isnin pada/lepas tarikh mula, atau **Isnin depan**
+  bila kosong (bukan "Isnin minggu ini": sesi awal minggu dah lepas sebaik pelan dibuat, terus jadi "terlepas"). Minggu
+  akhir = minggu lumba (Isnin-Ahad), jadi tirus/ujian sentiasa betul-betul sebelum lumba (cadangan 5 = terbina sendiri).
+  `mula` + `minggu` yang dikira ditulis ke URL/param supaya pelan tak berubah bila dibuka kemudian.
+  Julat minggu = julat pelan sedia ada (5K 8-24, 10K 8-12, 21K 12-20) - enjin kekal dalam domain yang disemak. Terlalu dekat
+  = ditolak + "Tarikh lumba paling awal yang munasabah" (`earliestRaceDate`) + butang "Cuba tarikh itu"; lebih jauh = mula
+  dianjak lewat. Hari lumba di kad + `.ics` + padanan = tarikh lumba sebenar (`planSessionDate`) - sesi akhir pelan 3 hari
+  ialah Sabtu, lumba biasanya Ahad. Pilihan cepat dari `/races` (`RaceDateField.astro`, isi tarikh + jarak).
+  Tempoh lalai bila tiada tarikh lumba: 10K **10 minggu**, 21K **16 minggu** (pilihan tengah - ruang untuk minggu
+  terlepas atas minimum pemula Higdon 8 / 12), 5K **3 bulan** (= 12 minggu, minimum tahap "jalan"; tahap "sifar" kini
+  automatik **4 bulan** = minimum 16 minggu, dulu ditolak dengan butang "Cuba 4 bulan").
+- **Pace** (`pace`, s/km, 4:00-9:00): kotak "Pace pelan" (`pacesHtml`) - mudah/panjang, tempo dan interval (dari pace
+  sekarang -> sasaran), lumba/ujian. Pace sendiri: 5K ganti 6:00/km (teks "5K bawah 32:30"); 10K/21K = `sasaran` dalam
+  unit lain. **Beza**: mudah/panjang tak ikut pace sasaran - kekal dari masa sekarang (sasaran lebih laju tak patut
+  melajukan hari mudah). Pace 5K tak masuk kunci (minit sesi tak berubah); 10K/21K masuk sebagai `p<pace>`.
+- **Profil kali pertama**: `fillEmptyProfile` (`lib/profile.ts`) - hari, masa 5K (10K/5K pelan "5k"), masa 10K (21K),
+  keadaan MAF. **Beza**: umur tak disimpan - borang ada umur, profil simpan tarikh lahir. Gagal baca profil = tak tulis.
+- **Info sesi**: `mountActuals` (`lib/plan-sync.ts`) - pelan aktif saja, padanan sama dengan `sessionFor`. Belum: pace
+  bahagian laju (cadangan 2, TODO).
+- **Cadangan 1**: tiada minggu lepas ujian/lumba dalam pelan, jadi "kemas kini pace" = masa dari aktiviti yang padan
+  (skala ke jarak penuh) diisi ke borang hari ujian/lumba -> "Pelan seterusnya" (pace baru).
+- **Cadangan 3**: Dashboard tunjuk notis "Sambung dari Minggu N" (`resumePoint`, sama dengan page pelan). Pelan lumba
+  tiada "Sambung" (tarikh lumba tetap - anjak = minggu hilang).
+- **Cadangan 4**: `weeklyLoad` - bar minit sebenar (run/walk) vs dirancang di kad minggu (minggu yang dah bermula) dan
+  6 minggu terakhir di Dashboard.
+- **Keserasian**: pelan lama (`bulan` / pilihan `minggu`, tanpa `lumba`/`pace`) terbina sama - cincangan output dalam
+  `check-plan-5k.ts` / `check-distance-plan.ts` (sama dengan enjin sebelum v2). `ENGINE_VERSION` tak dinaikkan: sesi lama
+  tak berubah, pelan baru = kunci baru. Dashboard baca param tersimpan dahulu (`planFromParams`), kunci untuk pelan lama.

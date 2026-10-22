@@ -1,14 +1,70 @@
 ---
-// Detail satu aktiviti: peta laluan (MapLibre GL + OpenFreeMap) dan ringkasan. /account/activities/view?id=<id>.
-// Laluan dilukis di pelayar dari fail .fit asal (GET /me/apps/nubi/activities/:id/file - milik
-// sendiri sahaja); Worker tidak menghurai apa-apa. Peta hanya untuk ahli itu - tiada perkongsian.
-// Peta: maplibre-gl dimuat malas (JS + CSS hanya di page ini), gaya vektor OpenFreeMap (GAYA).
+// Detail satu aktiviti: peta laluan (MapLibre GL + OpenFreeMap), ringkasan dan nadi. /account/activities/view?id=<id>.
+// Laluan dan nadi dilukis di pelayar dari fail .fit asal (GET /me/apps/nubi/activities/:id/file - milik
+// sendiri sahaja, diurai sekali); Worker tidak menghurai apa-apa. Peta hanya untuk ahli itu - tiada perkongsian.
+// Peta: maplibre-gl dimuat malas (JS + CSS hanya di page ini), gaya vektor OpenFreeMap (GAYA di bawah).
 // Atribusi datang dari gaya dan wajib kelihatan. Tiada WebGL = mesej gagal.
-// Varian 2D / 3D / Terrain (docs/plans/map-3d.md): pilihan diingat dalam localStorage, lalai 2D.
+// Kawalan dalam kanvas (docs/plans/map-3d.md): 3D, gaya peta (popover / bottom sheet bawah 40rem),
+// skrin penuh, pusat semula, zum. Gaya + 3D diingat dalam localStorage, lalai Standard 2D.
 import AccountLayout from "../../../layouts/AccountLayout.astro";
 import Alert from "../../../components/ui/Alert.astro";
 import Icon from "../../../components/ui/Icon.astro";
-import ChipGroup from "../../../components/ui/ChipGroup.astro";
+import type { IconName } from "../../../lib/icon";
+
+// Semua URL disemak 200 (2026-10-22). OpenFreeMap: percuma, tiada kunci/had paparan, komersial dibenarkan.
+// Satelit sengaja tiada: tiada sumber percuma tanpa kunci yang jelas boleh guna komersial (EOX s2cloudless
+// 2018+ = CC BY-NC-SA; Esri perlu akaun).
+const OFM = "https://tiles.openfreemap.org/styles/";
+const GAYA: {
+  id: string;
+  label: string;
+  nota: string;
+  url: string;
+  ikon: IconName;
+}[] = [
+  {
+    id: "standard",
+    label: "Standard",
+    nota: "Kelabu lembut, laluan paling jelas",
+    url: `${OFM}positron`,
+    ikon: "peta",
+  },
+  {
+    id: "liberty",
+    label: "Terperinci",
+    nota: "Jalan, taman dan bangunan 3D",
+    url: `${OFM}liberty`,
+    ikon: "bangunan",
+  },
+  {
+    id: "bright",
+    label: "Cerah",
+    nota: "Warna penuh, macam peta biasa",
+    url: `${OFM}bright`,
+    ikon: "matahari",
+  },
+  {
+    id: "dark",
+    label: "Gelap",
+    nota: "Selesa untuk mata waktu malam",
+    url: `${OFM}dark`,
+    ikon: "bulan",
+  },
+  {
+    id: "fiord",
+    label: "Fiord",
+    nota: "Biru gelap, laluan menonjol",
+    url: `${OFM}fiord`,
+    ikon: "ombak",
+  },
+  {
+    id: "terrain",
+    label: "Terrain",
+    nota: "Bukit dan lembah - tekan 3D untuk relief",
+    url: `${OFM}positron`,
+    ikon: "gunung",
+  },
+];
 ---
 
 <AccountLayout title="Aktiviti">
@@ -36,19 +92,49 @@ import ChipGroup from "../../../components/ui/ChipGroup.astro";
         >
       </div>
 
-      <div id="varian" hidden>
-        <ChipGroup
-          legend="Jenis peta"
-          name="varian"
-          checked="2d"
-          options={[
-            { value: "2d", label: "2D" },
-            { value: "3d", label: "3D" },
-            { value: "terrain", label: "Terrain" },
-          ]}
-        />
+      <div class="peta" id="peta" aria-label="Peta laluan">
+        <!-- Dalam bekas peta supaya kekal kelihatan dalam skrin penuh. Desktop: show() = popover; telefon: showModal() = sheet. -->
+        <dialog class="gaya" id="pilih-gaya" aria-labelledby="gaya-tajuk">
+          <div class="gaya-isi">
+            <span class="pemegang" aria-hidden="true"></span>
+            <div class="gaya-kepala">
+              <h4 id="gaya-tajuk">Gaya peta</h4>
+              <button
+                class="gaya-tutup"
+                type="button"
+                aria-label="Tutup"
+                data-tutup><Icon name="tutup" /></button
+              >
+            </div>
+            <fieldset>
+              <legend class="sr-only">Pilih gaya peta</legend>
+              {
+                GAYA.map((g) => (
+                  <label class="gaya-pilihan">
+                    <input
+                      class="sr-only"
+                      type="radio"
+                      name="gaya"
+                      value={g.id}
+                      data-url={g.url}
+                    />
+                    <span class={`contoh contoh-${g.id}`} aria-hidden="true">
+                      <Icon name={g.ikon} />
+                    </span>
+                    <span class="gaya-teks">
+                      <strong>{g.label}</strong>
+                      <small>{g.nota}</small>
+                    </span>
+                    <span class="gaya-tanda" aria-hidden="true">
+                      <Icon name="tanda" />
+                    </span>
+                  </label>
+                ))
+              }
+            </fieldset>
+          </div>
+        </dialog>
       </div>
-      <div class="peta" id="peta" aria-label="Peta laluan"></div>
       <p class="muted" id="peta-status">Memuatkan laluan…</p>
       <p class="muted kecil">Laluan ini hanya kelihatan kepada anda.</p>
     </section>
@@ -64,36 +150,64 @@ import ChipGroup from "../../../components/ui/ChipGroup.astro";
         <span>Kadens lari</span><strong id="s-lari"></strong>
       </li>
     </ul>
+
+    <section class="panel" id="nadi" aria-labelledby="nadi-tajuk" hidden>
+      <h3 class="display" id="nadi-tajuk">Nadi</h3>
+      <figure class="carta">
+        <div class="carta-badan">
+          <span class="paksi-y" aria-hidden="true"
+            ><span id="nadi-hi"></span><span id="nadi-lo"></span></span
+          >
+          <svg
+            id="nadi-carta"
+            viewBox="0 0 600 160"
+            preserveAspectRatio="none"
+            role="img"
+          >
+            <polygon id="nadi-kawasan" class="kawasan"></polygon>
+            <polyline
+              id="nadi-garis"
+              class="garis"
+              vector-effect="non-scaling-stroke"></polyline>
+          </svg>
+        </div>
+        <figcaption class="paksi-x" aria-hidden="true">
+          <span>0m</span><span id="nadi-tempoh"></span>
+        </figcaption>
+      </figure>
+      <h4 class="sub">Masa dalam zon</h4>
+      <ul class="zon" id="nadi-zon"></ul>
+      <p class="muted kecil" id="nadi-asas"></p>
+    </section>
   </div>
 </AccountLayout>
 
 <script>
   import { api, json, currentUser } from "../../../lib/api";
   import { confirmDialog } from "../../../lib/confirm";
+  import { icon } from "../../../lib/icon";
   import {
     SPORT_LABELS,
     formatKm,
-    fitRoute,
+    fitRecords,
+    routeOf,
+    heartSeries,
+    hrZones,
     paceFromDistance,
     formatDuration,
     type Sport,
   } from "../../../lib/activity-file";
   import { sessionLabel, sessionFor, walkedNote } from "../../../lib/plan-sync";
-  import type { RasterDEMSourceSpecification } from "maplibre-gl";
+  import type {
+    IControl,
+    LngLatBoundsLike,
+    RasterDEMSourceSpecification,
+  } from "maplibre-gl";
 
   const $ = (id: string) => document.getElementById(id)!;
   const BASE = "/me/apps/nubi/activities";
-  // OpenFreeMap (openfreemap.org): percuma, tiada kunci API/had paparan, guna komersial dibenarkan.
-  // Positron = asas kelabu supaya laluan oren menonjol. Tukar penyedia / hos sendiri = tukar URL ini.
-  // Liberty = gaya OpenFreeMap yang ada bangunan 3D (lapisan fill-extrusion "building-3d").
-  const GAYA = {
-    "2d": "https://tiles.openfreemap.org/styles/positron",
-    "3d": "https://tiles.openfreemap.org/styles/liberty",
-    terrain: "https://tiles.openfreemap.org/styles/positron",
-  };
-  type Varian = keyof typeof GAYA;
   // DEM Terrarium percuma tanpa kunci (Copernicus GLO-30 dll., global sehingga z12, tiada SLA).
-  // Gagal muat = kembali 2D. Ganti: AWS https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png (256, maxzoom 15).
+  // Gagal muat = kembali Standard. Ganti: AWS https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png (256, maxzoom 15).
   const DEM: RasterDEMSourceSpecification = {
     type: "raster-dem",
     tiles: ["https://tiles.mapterhorn.com/{z}/{x}/{y}.webp"],
@@ -103,7 +217,13 @@ import ChipGroup from "../../../components/ui/ChipGroup.astro";
     attribution:
       '<a href="https://mapterhorn.com/attribution">© Mapterhorn</a>',
   };
-  const SIMPAN = "nubi/peta-varian";
+  const SIMPAN_GAYA = "nubi/peta-gaya";
+  const SIMPAN_3D = "nubi/peta-3d";
+  const simpan = (k: string, v: string) => {
+    try {
+      localStorage.setItem(k, v);
+    } catch {}
+  };
 
   interface Aktiviti {
     id: number;
@@ -185,21 +305,81 @@ import ChipGroup from "../../../components/ui/ChipGroup.astro";
           "Aktiviti tak dapat dipadam. Semak sambungan dan cuba lagi.";
     });
 
-    await peta(a.id);
+    let rekod: any[];
+    try {
+      const f = await api(`${BASE}/${a.id}/file`);
+      if (!f.ok) throw new Error();
+      rekod = await fitRecords(await f.arrayBuffer());
+    } catch {
+      $("peta").hidden = true;
+      $("peta-status").textContent =
+        "Laluan tak dapat dimuatkan. Muat semula halaman untuk cuba lagi.";
+      return;
+    }
+    nadi(heartSeries(rekod), a.maxHr);
+    await peta(routeOf(rekod));
   }
 
-  async function peta(id: number) {
+  const ZON = ["Ringan", "Aerobik asas", "Tempo", "Ambang", "Maksimum"];
+
+  /** Carta nadi (SVG sebaris) + masa dalam 5 zon. Tiada nadi = seksyen kekal tersembunyi. */
+  function nadi(siri: [number, number][], maksSesi: number | null) {
+    if (siri.length < 2) return;
+    let lo = Infinity,
+      hi = 0; // reduce, bukan Math.min(...) - larian panjang = puluhan ribu titik
+    for (const [, b] of siri) ((lo = Math.min(lo, b)), (hi = Math.max(hi, b)));
+    const maks = Math.round(Math.max(maksSesi ?? 0, hi));
+    const T = siri.at(-1)![0] || 1,
+      julat = hi - lo || 1,
+      langkah = Math.ceil(siri.length / 600); // ~600 titik cukup untuk lebar carta
+    const titik = siri
+      .filter((_, i) => i % langkah === 0 || i === siri.length - 1)
+      .map(
+        ([t, b]) =>
+          `${((t / T) * 600).toFixed(1)},${(155 - ((b - lo) / julat) * 150).toFixed(1)}`,
+      )
+      .join(" ");
+    $("nadi-garis").setAttribute("points", titik);
+    $("nadi-kawasan").setAttribute("points", `0,160 ${titik} 600,160`);
+    $("nadi-hi").textContent = `${hi}`;
+    $("nadi-lo").textContent = `${lo}`;
+    $("nadi-tempoh").textContent = formatDuration(Math.round(T));
+    $("nadi-carta").setAttribute(
+      "aria-label",
+      `Carta nadi: ${lo} hingga ${hi} bpm sepanjang ${formatDuration(Math.round(T))}`,
+    );
+    const had = [0.6, 0.7, 0.8, 0.9].map((p) => Math.round(maks * p));
+    $("nadi-zon").innerHTML = hrZones(siri, maks) // nombor dan label tetap sahaja -> selamat untuk innerHTML
+      .map((z, i) => {
+        const bpm =
+          i === 0
+            ? `< ${had[0]}`
+            : i === 4
+              ? `≥ ${had[3]}`
+              : `${had[i - 1]}-${had[i] - 1}`;
+        const pct = Math.round(z * 100);
+        return `<li style="--k:${25 + i * 18.75}%">
+          <span class="zon-nama"><strong>Z${i + 1}</strong> ${ZON[i]}</span>
+          <span class="zon-bpm">${bpm} bpm</span>
+          <span class="zon-bar" aria-hidden="true"><i style="width:${pct}%"></i></span>
+          <strong class="zon-pct">${pct}%</strong>
+        </li>`;
+      })
+      .join("");
+    $("nadi-asas").textContent =
+      `Zon ikut % nadi maks aktiviti ini (${maks} bpm): Z1 bawah 60%, Z2 60-70%, Z3 70-80%, Z4 80-90%, Z5 90% ke atas. Nadi maks sebenar anda mungkin lebih tinggi - anggap ini panduan kasar.`;
+    $("nadi").hidden = false;
+  }
+
+  async function peta(titik: [number, number][]) {
     const status = $("peta-status");
+    if (titik.length < 2) {
+      $("peta").hidden = true;
+      status.textContent =
+        "Tiada laluan GPS dalam fail ini (contoh larian treadmill).";
+      return;
+    }
     try {
-      const f = await api(`${BASE}/${id}/file`);
-      if (!f.ok) throw new Error();
-      const titik = await fitRoute(await f.arrayBuffer());
-      if (titik.length < 2) {
-        $("peta").hidden = true;
-        status.textContent =
-          "Tiada laluan GPS dalam fail ini (contoh larian treadmill).";
-        return;
-      }
       const [ml, pekerja] = await Promise.all([
         import("maplibre-gl"),
         // Vite tidak nampak URL worker maplibre (dikira masa jalan) -> emit sendiri dan beritahu.
@@ -213,24 +393,34 @@ import ChipGroup from "../../../components/ui/ChipGroup.astro";
       const lonLat = titik.map(([lat, lon]) => [lon, lat] as [number, number]);
       const lon = lonLat.map((t) => t[0]),
         lat = lonLat.map((t) => t[1]);
-      let varian: Varian = "2d";
+      const sempadan: LngLatBoundsLike = [
+        Math.min(...lon),
+        Math.min(...lat),
+        Math.max(...lon),
+        Math.max(...lat),
+      ];
+
+      const pilihan = [
+        ...document.querySelectorAll<HTMLInputElement>('input[name="gaya"]'),
+      ];
+      const urlGaya = (g: string) =>
+        pilihan.find((p) => p.value === g)?.dataset.url;
+      let gaya = "standard",
+        tigaD = false;
       try {
-        const v = localStorage.getItem(SIMPAN);
-        if (v && v in GAYA) varian = v as Varian;
+        const g = localStorage.getItem(SIMPAN_GAYA);
+        if (g && urlGaya(g)) gaya = g;
+        tigaD = localStorage.getItem(SIMPAN_3D) === "1";
       } catch {}
-      const pitch = (v: Varian) => (v === "2d" ? 0 : 60);
+      const sudut = () => (tigaD ? 60 : 0);
+
       // Tiada WebGL = konstruktor melontar -> catch di bawah.
       const map = new ml.Map({
         container: "peta",
-        style: GAYA[varian],
-        bounds: [
-          Math.min(...lon),
-          Math.min(...lat),
-          Math.max(...lon),
-          Math.max(...lat),
-        ],
+        style: urlGaya(gaya)!,
+        bounds: sempadan,
         fitBoundsOptions: { padding: 24 },
-        pitch: pitch(varian),
+        pitch: sudut(),
         // Page tetap boleh skrol: zum dalam peta = Ctrl/⌘ + skrol (desktop), dua jari (telefon).
         cooperativeGestures: true,
         locale: {
@@ -244,15 +434,96 @@ import ChipGroup from "../../../components/ui/ChipGroup.astro";
           "FullscreenControl.Exit": "Keluar skrin penuh",
           "NavigationControl.ZoomIn": "Zum masuk",
           "NavigationControl.ZoomOut": "Zum keluar",
-          "NavigationControl.ResetBearing": "Hala ke utara",
         },
       });
-      map.addControl(new ml.NavigationControl({ visualizePitch: true }));
-      map.addControl(new ml.FullscreenControl());
+
+      // Kawalan sendiri = butang biasa dalam kumpulan kawalan MapLibre -> gaya sama dengan zum/skrin penuh.
+      const butang = (label: string, isi: string, klik: () => void) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "kawal";
+        b.title = label;
+        b.setAttribute("aria-label", label);
+        b.innerHTML = isi; // ikon / teks tetap sahaja
+        b.addEventListener("click", klik);
+        return b;
+      };
+      const kumpulan = (...b: HTMLElement[]): IControl => ({
+        onAdd: () => {
+          const d = document.createElement("div");
+          d.className = "maplibregl-ctrl maplibregl-ctrl-group";
+          d.append(...b);
+          return d;
+        },
+        onRemove: () => {},
+      });
+
+      const set3d = (on: boolean) => {
+        tigaD = on;
+        b3d.setAttribute("aria-pressed", String(on));
+        map.easeTo({ pitch: sudut(), ...(on ? {} : { bearing: 0 }) });
+      };
+      const b3d = butang("Paparan 3D", "3D", () => {
+        set3d(!tigaD);
+        simpan(SIMPAN_3D, tigaD ? "1" : "0");
+      });
+      b3d.classList.add("kawal-teks");
+      b3d.setAttribute("aria-pressed", String(tigaD));
+
+      const dlg = $("pilih-gaya") as HTMLDialogElement;
+      const telefon = matchMedia("(max-width: 40rem)");
+      const bGaya = butang("Gaya peta", icon("lapisan"), () => {
+        if (dlg.open) return dlg.close();
+        for (const p of pilihan) p.checked = p.value === gaya;
+        if (telefon.matches)
+          dlg.showModal(); // sheet: fokus terperangkap, Esc, latar (native)
+        else dlg.show(); // popover dalam kanvas
+        bGaya.setAttribute("aria-expanded", "true");
+        pilihan.find((p) => p.checked)?.focus();
+      });
+      bGaya.setAttribute("aria-haspopup", "dialog");
+      bGaya.setAttribute("aria-controls", dlg.id);
+      bGaya.setAttribute("aria-expanded", "false");
+      const bPusat = butang("Pusat semula", icon("pusat"), () =>
+        map.fitBounds(sempadan, { padding: 24, pitch: sudut(), bearing: 0 }),
+      );
+
+      map.addControl(kumpulan(b3d, bGaya), "top-right");
+      map.addControl(new ml.FullscreenControl(), "top-right");
+      // Bawah-kanan: kawalan baru masuk di atas -> susunan (atas ke bawah) pusat semula, zum, atribusi.
+      map.addControl(
+        new ml.NavigationControl({ showCompass: false }),
+        "bottom-right",
+      );
+      map.addControl(kumpulan(bPusat), "bottom-right");
+
+      dlg.addEventListener("close", () => {
+        bGaya.setAttribute("aria-expanded", "false");
+        if (
+          !document.activeElement ||
+          document.activeElement === document.body ||
+          dlg.contains(document.activeElement)
+        )
+          bGaya.focus();
+      });
+      // Popover bukan modal: Esc dan klik di luar tutup sendiri. Modal: klik pada latar = target dialog.
+      dlg.addEventListener("keydown", (e) => e.key === "Escape" && dlg.close());
+      dlg.addEventListener("click", (e) => {
+        const t = e.target as Element;
+        if (t === dlg || t.closest("[data-tutup]")) dlg.close();
+        // Klik tetikus/sentuh pada pilihan = pilih dan tutup; anak panah papan kekunci = pratonton, kekal buka.
+        else if ((e as MouseEvent).detail && t.closest(".gaya-pilihan"))
+          dlg.close();
+      });
+      document.addEventListener("pointerdown", (e) => {
+        const t = e.target as Node;
+        if (dlg.open && !dlg.contains(t) && !bGaya.contains(t)) dlg.close();
+      });
+
       // setStyle buang semua lapisan sendiri -> lukis semula laluan (dan DEM) setiap kali gaya siap.
       const garis = { "line-join": "round", "line-cap": "round" } as const;
       map.on("style.load", () => {
-        if (varian === "terrain") {
+        if (gaya === "terrain") {
           map.addSource("dem", DEM);
           map.addSource("dem-bukit", DEM); // MapLibre: hillshade + terrain lebih cantik dengan sumber berasingan
           const label = map
@@ -292,48 +563,32 @@ import ChipGroup from "../../../components/ui/ChipGroup.astro";
           paint: { "line-color": oren, "line-width": 4 },
         });
       });
-      let jatuh = false; // dah kembali ke 2D sebab 3D/terrain gagal -> mesej kekal kelihatan
-      const tukar = (v: Varian) => {
-        varian = v;
-        (
-          document.querySelector(
-            `input[name="varian"][value="${v}"]`,
-          ) as HTMLInputElement
-        ).checked = true;
-        map.setStyle(GAYA[v], { diff: false }); // diff:false = gaya baru penuh -> style.load pasti berbunyi
-        map.easeTo({
-          pitch: pitch(v),
-          bearing: v === "2d" ? 0 : map.getBearing(),
-        });
+      let jatuh = false; // dah kembali ke Standard sebab gaya/DEM gagal -> mesej kekal kelihatan
+      const tukarGaya = (g: string) => {
+        gaya = g;
+        for (const p of pilihan) p.checked = p.value === g;
+        map.setStyle(urlGaya(g)!, { diff: false }); // diff:false = gaya baru penuh -> style.load pasti berbunyi
       };
+      dlg.addEventListener("change", (e) => {
+        const g = (e.target as HTMLInputElement).value;
+        status.hidden = true;
+        jatuh = false;
+        tukarGaya(g);
+        simpan(SIMPAN_GAYA, g);
+      });
       await new Promise((ok, gagal) => {
         map.once("load", ok);
         map.on("error", (e) => {
           const sid = (e as { sourceId?: string }).sourceId;
-          // Gaya 3D atau DEM gagal = kembali ke 2D; ralat jubin biasa (ada sourceId lain) diabaikan.
-          if (varian !== "2d" && (!sid || sid.startsWith("dem"))) {
-            tukar("2d");
+          // Gaya lain atau DEM gagal = kembali Standard; ralat jubin biasa (ada sourceId lain) diabaikan.
+          if (gaya !== "standard" && (!sid || sid.startsWith("dem"))) {
+            tukarGaya("standard");
             jatuh = true;
             status.textContent =
-              "Peta 3D / terrain tak dapat dimuatkan sekarang. Kami tunjuk 2D dulu.";
+              "Gaya peta ini tak dapat dimuatkan sekarang. Kami tunjuk Standard dulu.";
             status.hidden = false;
           } else if (!map.loaded() && !sid) gagal(e.error);
         });
-      });
-      $("varian").hidden = false;
-      (
-        document.querySelector(
-          `input[name="varian"][value="${varian}"]`,
-        ) as HTMLInputElement
-      ).checked = true;
-      $("varian").addEventListener("change", (e) => {
-        const v = (e.target as HTMLInputElement).value as Varian;
-        status.hidden = true;
-        jatuh = false;
-        tukar(v);
-        try {
-          localStorage.setItem(SIMPAN, v);
-        } catch {}
       });
       for (const [label, isi, titikNya] of [
         ["Mula", navy, lonLat[0]],
@@ -461,12 +716,282 @@ import ChipGroup from "../../../components/ui/ChipGroup.astro";
     z-index: 0; /* kawalan peta (z-index 2) jangan atasi laci sidebar */
     isolation: isolate;
   }
-  /* Penanda dicipta dalam skrip -> perlu :global */
+  /* Penanda dan kawalan dicipta dalam skrip/MapLibre -> perlu :global */
   .peta :global(.penanda) {
     width: 14px;
     height: 14px;
     border: 2px solid #fff;
     border-radius: 50%;
     box-shadow: 0 0 0 1px rgb(0 0 0 / 0.25);
+  }
+  /* Semua butang kawalan 44px (sasaran sentuh), satu gaya. */
+  .peta :global(.maplibregl-ctrl-group button) {
+    width: 44px;
+    height: 44px;
+  }
+  .peta :global(.maplibregl-ctrl-group button:focus-visible) {
+    outline: 3px solid var(--orange);
+    outline-offset: -3px;
+    box-shadow: none;
+  }
+  .peta :global(.kawal) {
+    display: grid;
+    place-items: center;
+    color: var(--ink);
+  }
+  .peta :global(.kawal-teks) {
+    font: 700 0.95rem / 1 var(--body);
+  }
+  .peta :global(.kawal[aria-pressed="true"]),
+  .peta :global(.kawal[aria-expanded="true"]) {
+    background: var(--navy);
+    color: #fff;
+  }
+
+  /* Pilih gaya: popover dalam kanvas (desktop) / bottom sheet (telefon, :modal). */
+  .gaya {
+    position: absolute;
+    top: 10px;
+    right: 64px; /* kiri lajur kawalan atas-kanan (44px + jidar) */
+    left: auto;
+    z-index: 3;
+    width: min(21rem, calc(100% - 80px));
+    max-height: calc(100% - 20px);
+    margin: 0;
+    padding: 0;
+    overflow: auto;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: 0 0.75rem 1.5rem rgb(10 26 51 / 0.2);
+  }
+  .gaya:modal {
+    position: fixed;
+    inset: auto 0 0;
+    width: 100%;
+    max-width: none;
+    max-height: 85dvh;
+    border: 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .gaya::backdrop {
+    background: rgb(10 26 51 / 0.55); /* sama dengan .confirm-dialog */
+  }
+  .gaya-isi {
+    display: grid;
+    gap: 0.25rem;
+    padding: 0.5rem;
+  }
+  .pemegang {
+    display: none;
+    justify-self: center;
+    width: 2.5rem;
+    height: 0.25rem;
+    margin: 0.25rem 0;
+    border-radius: 999px;
+    background: var(--line);
+  }
+  .gaya:modal .pemegang {
+    display: block;
+  }
+  .gaya:modal .gaya-isi {
+    padding: 0.5rem 1rem 1rem;
+  }
+  .gaya-kepala {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-left: 0.5rem;
+  }
+  .gaya-kepala h4 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--navy);
+  }
+  .gaya-tutup {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: var(--radius);
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .gaya-tutup:hover {
+    background: var(--paper-2);
+  }
+  .gaya fieldset {
+    display: grid;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .gaya-pilihan {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 44px;
+    padding: 0.4rem 0.5rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    cursor: pointer;
+  }
+  .gaya-pilihan:hover {
+    background: var(--paper-2);
+  }
+  .gaya-pilihan:has(input:checked) {
+    border-color: var(--navy);
+    background: var(--paper-2);
+  }
+  .gaya-pilihan:has(input:focus-visible) {
+    outline: 3px solid var(--orange);
+    outline-offset: 1px;
+  }
+  .contoh {
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+  }
+  .contoh-standard {
+    background: var(--paper-2);
+    color: var(--muted);
+  }
+  .contoh-liberty {
+    background: var(--success-bg);
+    color: var(--success-ink);
+  }
+  .contoh-bright {
+    background: var(--warning-bg);
+    color: var(--orange-ink);
+  }
+  .contoh-dark {
+    background: var(--ink);
+    color: var(--on-dark);
+  }
+  .contoh-fiord {
+    background: var(--navy-2);
+    color: var(--on-dark);
+  }
+  .contoh-terrain {
+    background: var(--info-bg);
+    color: var(--info-ink);
+  }
+  .gaya-teks {
+    display: grid;
+    min-width: 0;
+  }
+  .gaya-teks strong {
+    color: var(--navy);
+  }
+  .gaya-teks small {
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+  .gaya-tanda {
+    visibility: hidden;
+    color: var(--navy);
+  }
+  .gaya-pilihan:has(input:checked) .gaya-tanda {
+    visibility: visible;
+  }
+
+  /* Nadi */
+  .sub {
+    margin: 0.25rem 0 0;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .carta {
+    margin: 0;
+  }
+  .carta-badan {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.5rem;
+    height: 9rem;
+  }
+  .carta svg {
+    width: 100%;
+    height: 100%;
+    border-bottom: 1px solid var(--line);
+  }
+  .carta .garis {
+    fill: none;
+    stroke: var(--orange);
+    stroke-width: 2;
+    stroke-linejoin: round;
+  }
+  .carta .kawasan {
+    fill: color-mix(in srgb, var(--orange) 12%, transparent);
+  }
+  .paksi-y,
+  .paksi-x {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .paksi-y {
+    flex-direction: column;
+    text-align: right;
+  }
+  .paksi-x {
+    padding-left: 2rem;
+    margin-top: 0.25rem;
+  }
+  .zon {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.5rem;
+  }
+  .zon :global(li) {
+    display: grid;
+    grid-template-columns: 9rem 6.5rem 1fr 3rem;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.9rem;
+  }
+  .zon :global(.zon-bpm) {
+    color: var(--muted);
+  }
+  .zon :global(.zon-bar) {
+    height: 0.6rem;
+    border-radius: 999px;
+    background: var(--line);
+    overflow: hidden;
+  }
+  .zon :global(.zon-bar i) {
+    display: block;
+    height: 100%;
+    background: color-mix(in srgb, var(--orange) var(--k), var(--paper));
+  }
+  .zon :global(.zon-pct) {
+    text-align: right;
+    color: var(--navy);
+  }
+  @media (max-width: 36rem) {
+    .zon :global(li) {
+      grid-template-columns: 1fr auto auto;
+      gap: 0.25rem 0.75rem;
+    }
+    .zon :global(.zon-bar) {
+      grid-column: 1 / -1;
+      order: 3;
+    }
   }
 </style>

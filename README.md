@@ -30,18 +30,22 @@ oleh owner, **sebelum** Nubi bila Nubi bergantung pada endpoint baru.
 | `/races` | awam | Kalendar lumba Malaysia (susun tangan dari laman rasmi penganjur) + `.ics` per acara |
 | `/privacy`, `/terms` | awam | Dasar Privasi (PDPA 2010) dan Terma Penggunaan, ikut data yang betul-betul disimpan |
 | `/login`, `/register`, `/verify` | awam | Akaun dikongsi dengan hafizbahtiar.com (Turnstile) |
-| `/account` | akaun | Dashboard: pelan aktif (sesi seterusnya, minggu ini X/Y, minit dirancang vs sebenar), pelan saya (lencana **Awan** / **Peranti ini**, meter slot, Ganti), profil, MAF |
+| `/account` | akaun | Dashboard: pelan aktif (sesi seterusnya, minggu ini X/Y, minit dirancang vs sebenar, bar beban 6 minggu, "Sambung dari Minggu N"), pelan saya (lencana **Awan** / **Peranti ini**, meter slot, Ganti), profil, MAF |
 | `/account/activities` | ahli | Import aktiviti Strava (`.fit` wajib + `.gpx` pilihan, seret & lepas), jadual cari / tapis sukan / halaman, padanan ke pelan aktif |
 | `/account/activities/view?id=` | ahli | Detail aktiviti: peta laluan 2D / 3D / Terrain, ringkasan, % lari, sesi pelan yang dipadankan |
 | `/account/plan-5k` | akaun | Pelan 5K penuh: pecahan analisis, ikut nadi, kalendar `.ics`, simpan ke awan, jadikan pelan aktif |
-| `/account/distance-plan` | akaun | Pelan 10K / 21K (bertangga dari masa 5K / 10K, masa sasaran pilihan) + kad "Sesuai lari hari ini?" |
+| `/account/distance-plan` | akaun | Pelan 10K / 21K (bertangga dari masa 5K / 10K, masa sasaran pilihan, tempoh lalai 10 / 16 minggu) + kad "Sesuai lari hari ini?" |
 | `/account/maf` | akaun | MAF + butang buat Pelan 5K ikut nadi |
 | `/account/pricing` | akaun | Harga: Percuma + Ahli aktif, tier lain "Akan datang" |
 | `/account/profile`, `/account/profile/training`, `/account/profile/password` | akaun | Maklumat (nama), Latihan (tarikh lahir, keadaan MAF, hari, masa 5K/10K - isi borang MAF/pelan) dan tukar kata laluan - card navigasi `ProfileShell` |
 
 Dalam semua pelan: **pemasa jalan-lari** skrin penuh (bunyi, getar, Wake Lock), **"Terlepas sesi? Sambung
 dari Minggu N"** (anjak tarikh, tanda siap kekal), kad hari ujian/lumba dengan **pelan seterusnya**
-(5K -> 10K -> 21K), dan sesi Ramadan bertag "Puasa".
+(5K -> 10K -> 21K), dan sesi Ramadan bertag "Puasa". Pelan v2: **tarikh lumba** sebagai input utama (atau pilih dari
+kalendar `/races`; minggu dikira, tirus + minggu lumba betul-betul sebelum lumba, nota hari lumba), kotak **Pace pelan**
+(pace setiap jenis sesi + pace sasaran sendiri), profil latihan diisi kali pertama dari borang. Pelan aktif (ahli):
+setiap sesi tunjuk data Strava yang padan (jarak, masa, pace, nadi, % lari, pautan), bar beban mingguan dirancang vs
+sebenar (page pelan + Dashboard), masa ujian/lumba diisi ke "Pelan seterusnya", dan Dashboard cadang "Sambung dari Minggu N".
 
 Akaun: sidebar berkumpulan (Utama / Latihan / Akaun), item ahli disorok bagi bukan ahli; menu avatar
 (`UserMenu`) di bawah sidebar, navbar akaun dan Header awam - Dashboard, Profil & tetapan, Log keluar.

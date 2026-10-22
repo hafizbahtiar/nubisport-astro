@@ -1,6 +1,7 @@
 // HTML pelan latihan yang dikongsi Plan5k.astro dan DistancePlan.astro (gaya: src/styles/plan.css).
 import { icon } from "./icon";
 import { parseTime, nextPlan, type TestDistance } from "./pace";
+import { formatPace } from "./plan-5k";
 import { inRamadan } from "./ramadan";
 import {
   SESSION_DAYS,
@@ -37,10 +38,14 @@ export function analysisHtml(a: Analysis, ganti?: string) {
   </section>`;
 }
 
-/** `ujian` = pelan apa (kad hari ujian/lumba dapat borang "masa anda" -> pelan seterusnya). */
-export function weekHtml(w: Week, isnin: Date | null, hariIni: string, ujian?: TestDistance) {
+/**
+ * `ujian` = pelan apa (kad hari ujian/lumba dapat borang "masa anda" -> pelan seterusnya).
+ * `lumba` = tarikh lumba sebenar: kad hari lumba ikut tarikh itu (sesi akhir pelan 3 hari = Sabtu).
+ * Slot `data-beban` / `data-sebenar` diisi oleh mountActuals (lib/plan-sync.ts) untuk pelan aktif.
+ */
+export function weekHtml(w: Week, isnin: Date | null, hariIni: string, ujian?: TestDistance, lumba?: Date | null) {
   const hari = w.sesi.length;
-  const tarikh = (i: number) => isnin && sessionDate(isnin, w.no, hari, i);
+  const tarikh = (i: number) => (lumba && w.sesi[i].jenis === "ujian" ? lumba : isnin && sessionDate(isnin, w.no, hari, i));
   const isninIni = tarikh(0)?.getTime(); // sesi pertama = Isnin minggu itu
   const kini =
     isninIni !== undefined &&
@@ -52,11 +57,12 @@ export function weekHtml(w: Week, isnin: Date | null, hariIni: string, ujian?: T
       <span class="tag">${kini ? "Minggu ini · " : ""}${w.fasa}${w.ringan && w.fasa !== "Ujian" && w.fasa !== "Tirus" ? " · ringan" : ""}</span>
       <span class="minit">${w.minit} min</span>
     </header>
+    <p class="beban" data-beban="${w.no}" hidden></p>
     <ol>${w.sesi
       .map((s, i) => {
         const d = tarikh(i);
         const label =
-          DAY_NAMES[SESSION_DAYS[hari][i]] +
+          (d && lumba && s.jenis === "ujian" ? DAY_NAMES[(d.getDay() + 6) % 7] : DAY_NAMES[SESSION_DAYS[hari][i]]) +
           (d
             ? ` ${d.toLocaleDateString("ms-MY", { day: "numeric", month: "short" })}`
             : "");
@@ -70,7 +76,8 @@ export function weekHtml(w: Week, isnin: Date | null, hariIni: string, ujian?: T
               <span class="arahan">${s.arahan}</span>
               <span class="usaha">${s.usaha.replace(/~\S+\/km/g, (m) => `<span class="nw">${m}</span>`)}${puasa ? " · Hari puasa: ringankan sesi ini, hidrasi lepas berbuka." : ""}</span>
             </span>
-          </label>${s.segmen
+          </label>
+          <p class="sebenar" data-sebenar="${w.no}.${i}" hidden></p>${s.segmen
             ? `<button class="btn-mula no-print" type="button" data-mula="${w.no}.${i}" data-tajuk="${s.tajuk}" data-usaha="${s.usaha.replace(/"/g, "&quot;")}" data-segmen='${JSON.stringify(s.segmen)}'>${icon("main")}Mula pemasa</button>`
             : ""
           }${s.jenis === "ujian" && ujian
@@ -87,6 +94,68 @@ export function weekHtml(w: Week, isnin: Date | null, hariIni: string, ujian?: T
       .join("")}</ol>
   </li>`;
 }
+
+type Paces = { mudah?: [number, number]; tempo?: [number, number]; interval?: [number, number]; lumba: number };
+const julat = ([a, b]: [number, number]) => `<span class="nw">~${formatPace(a)}-${formatPace(b)}/km</span>`;
+const arah = ([a, b]: [number, number]) => `<span class="nw">~${formatPace(a)} → ${formatPace(b)}/km</span>`;
+
+/**
+ * Kotak "Pace pelan" (lalai dari masa semasa / sasaran) + borang pace sasaran sendiri (param `pace`, s/km).
+ * Mudah/panjang kekal dari masa sekarang - pace sasaran yang lebih laju tak patut melajukan hari mudah.
+ */
+export function pacesHtml(p: Paces, sendiri: boolean, lumbaLabel: string) {
+  const baris = [
+    ["Mudah + larian panjang", p.mudah ? julat(p.mudah) : "Ikut rasa - boleh bercakap ayat penuh"],
+    ...(p.tempo ? [["Tempo", `${arah(p.tempo)} <small>beransur setiap minggu</small>`]] : []),
+    ...(p.interval ? [["Interval", `${arah(p.interval)} <small>beransur setiap minggu</small>`]] : []),
+    [lumbaLabel, `<span class="nw">~${formatPace(p.lumba)}/km</span>${sendiri ? " <small>pilihan anda</small>" : ""}`],
+  ];
+  return `<section class="pace-pelan" aria-labelledby="pace-tajuk">
+    <h3 class="display" id="pace-tajuk">Pace pelan</h3>
+    <dl>${baris.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
+    <form class="pace-ubah no-print" data-pace-borang>
+      <label class="field"><span class="field-label">Pace sasaran sendiri (min:saat /km)</span>
+        <input class="input" name="pace" inputmode="numeric" autocomplete="off" placeholder="cth. 6:30" value="${sendiri ? formatPace(p.lumba) : ""}" required /></label>
+      <button class="btn btn-outline btn-sm" type="submit">Kira semula</button>
+      ${sendiri ? `<button class="btn btn-outline btn-sm" type="button" data-pace-asal>Guna pace lalai</button>` : ""}
+      <p class="ralat" data-pace-ralat hidden>Format pace: min:saat, contoh 6:30.</p>
+    </form>
+  </section>`;
+}
+
+/** Borang pace: set / buang `pace` dan buka semula pelan. `buang` = param yang diganti pace (10K/21K: `sasaran`). */
+export function mountPaceForm(akar: HTMLElement, buang: string[] = []) {
+  const buka = (pace: number | null) => {
+    const q = new URLSearchParams(location.search);
+    pace ? q.set("pace", String(pace)) : q.delete("pace");
+    if (pace) buang.forEach((k) => q.delete(k));
+    location.search = q.toString();
+  };
+  akar.addEventListener("submit", (e) => {
+    const f = (e.target as Element).closest<HTMLFormElement>("form[data-pace-borang]");
+    if (!f) return;
+    e.preventDefault();
+    const minit = parseTime(String(f.pace.value)); // "6:30" -> 6.5 minit = 390 s/km
+    if (!minit) return void (f.querySelector<HTMLElement>("[data-pace-ralat]")!.hidden = false);
+    buka(Math.round(minit * 60));
+  });
+  akar.addEventListener("click", (e) => {
+    if ((e.target as Element).closest("[data-pace-asal]")) buka(null);
+  });
+}
+
+/** Nota hari lumba (pelan ikut tarikh lumba): pemanasan + pace km pertama. */
+export function raceDayHtml(lumba: Date, pace: number, nama: string) {
+  return `<div class="alert alert-info">
+    <p class="alert-title">Hari lumba ${nama} · ${lumba.toLocaleDateString("ms-MY", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
+    <p>Minggu tirus dan minggu lumba dikira ke belakang dari tarikh ini. Pagi lumba: sampai awal, jalan 5 min + joging santai 5-10 min + 4 × 20 saat langkah laju, siap ~15 min sebelum mula.
+      Km pertama ~<span class="nw">${formatPace(pace + 10)}/km</span> (sedikit perlahan daripada pace sasaran <span class="nw">${formatPace(pace)}/km</span>), lepas itu ikut pace sasaran. Minum di setiap stesen air. Malam sebelum: makan biasa, tidur awal, siapkan bib dan kasut.</p>
+  </div>`;
+}
+
+/** Bar beban satu minggu: minit sebenar (run/walk) vs dirancang. */
+export const loadBarHtml = (w: { no: number; rancang: number; sebenar: number }, label = "") =>
+  `${label}<span class="beban-trek" role="img" aria-label="${w.sebenar} daripada ${w.rancang} minit"><i style="width:${Math.min(100, Math.round((w.sebenar / Math.max(1, w.rancang)) * 100))}%"></i></span><small>${w.sebenar} / ${w.rancang} min sebenar</small>`;
 
 /**
  * Banner bulan puasa: bilangan sesi yang jatuh dalam Hijri bulan 9. "" bila pelan tiada tarikh

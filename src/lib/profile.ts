@@ -37,6 +37,24 @@ export async function saveProfile(p: TrainingProfile): Promise<boolean> {
   }
 }
 
+/** Medan dari `isi` yang masih kosong dalam profil `p` (nilai sedia ada tak pernah ditulis ganti). */
+export const emptyOnly = (p: TrainingProfile, isi: TrainingProfile): TrainingProfile =>
+  Object.fromEntries(Object.entries(isi).filter(([k, v]) => v && !p[k as keyof TrainingProfile]));
+
+/**
+ * Isi profil kali pertama dari borang pelan: tambah medan yang kosong saja. Profil dibaca terus (bukan
+ * readProfile, yang pulang {} bila gagal) - gagal baca = tak tulis apa-apa, supaya profil tak terpadam.
+ * Pulang kunci yang disimpan.
+ */
+export async function fillEmptyProfile(isi: TrainingProfile): Promise<string[]> {
+  const r = await api(LALUAN).catch(() => null);
+  if (!r?.ok) return [];
+  const p: TrainingProfile = (await json(r)).data?.items?.[0]?.data ?? {};
+  const baru = emptyOnly(p, isi);
+  const k = Object.keys(baru);
+  return k.length && (await saveProfile({ ...p, ...baru })) ? k : [];
+}
+
 /** Umur penuh (tahun) pada `hariIni` dari tarikh lahir "YYYY-MM-DD"; null jika tidak sah. */
 export function ageOn(lahir: string, hariIni = todayMY()): number | null {
   const l = /^(\d{4})-(\d{2})-(\d{2})$/.exec(lahir);

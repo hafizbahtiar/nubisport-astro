@@ -37,6 +37,10 @@ export interface Week {
 
 export interface PlanInput {
   bulan: number;
+  /** Ikut tarikh lumba: bilangan minggu (RACE_WEEKS) - ganti `bulan`. Tiada = pelan lama ikut bulan. */
+  minggu?: number;
+  /** Pace sasaran sendiri (s/km, PACE_RANGE). Tiada = 6:00/km (5K bawah 30 minit). */
+  pace?: number;
   tahap: Level;
   hari: number;
   masa5k?: number; // minit - wajib untuk tahap "5k", pilihan untuk "jalan" (masa jalan-lari 5K)
@@ -44,10 +48,14 @@ export interface PlanInput {
 }
 
 export type PlanResult =
-  | { ok: false; sebab: string; cadanganBulan?: number }
+  | { ok: false; sebab: string; cadanganBulan?: number; cadanganMinggu?: number }
   | { ok: true; minggu: Week[]; amaran: string[] };
 
 export const PLAN_MONTHS = [2, 3, 4, 6] as const;
+/** Julat minggu bila ikut tarikh lumba = julat pelan bulan (2-6 bulan), supaya enjin kekal dalam domain yang disemak. */
+export const RACE_WEEKS = [8, 24] as const;
+/** Julat pace sasaran sendiri, s/km (4:00-9:00). */
+export const PACE_RANGE = [240, 540] as const;
 export const DAYS_PER_WEEK = [3, 4] as const;
 export const LEVELS: Record<Level, string> = {
   sifar: "Belum boleh lari 1 km tanpa henti",
@@ -116,6 +124,25 @@ export function resumePoint(
 export const isoDate = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
+/**
+ * Pelan ikut tarikh lumba: mula Isnin pada/lepas `mula`, minggu akhir = minggu lumba (Isnin-Ahad), jadi
+ * tirus + minggu lumba sentiasa betul-betul sebelum lumba. Lebih jauh dari had = mula dianjak lewat.
+ * `minggu` bawah had[0] = terlalu dekat (pemanggil tolak + earliestRaceDate).
+ */
+export function racePlan(mula: Date, lumba: Date, had: readonly [number, number]): { mula: Date; minggu: number } {
+  let isnin = startMonday(mula);
+  const isninLumba = new Date(lumba.getFullYear(), lumba.getMonth(), lumba.getDate() - ((lumba.getDay() + 6) % 7));
+  let minggu = Math.round((isninLumba.getTime() - isnin.getTime()) / (7 * 864e5)) + 1;
+  if (minggu > had[1]) {
+    isnin = new Date(isninLumba.getFullYear(), isninLumba.getMonth(), isninLumba.getDate() - (had[1] - 1) * 7);
+    minggu = had[1];
+  }
+  return { mula: isnin, minggu };
+}
+
+/** Tarikh lumba paling awal untuk `minggu` minggu latihan dari `mula` (sesi akhir minggu itu). */
+export const earliestRaceDate = (mula: Date, minggu: number, hari: number) => sessionDate(startMonday(mula), minggu, hari, hari - 1);
+
 /** Isnin pada atau selepas `d` - pelan bermula Isnin supaya hari sesi kekal sama setiap minggu. */
 export function startMonday(d: Date): Date {
   const r = new Date(d);
@@ -135,8 +162,8 @@ const bulanUntuk = (minggu: number) => PLAN_MONTHS.find((b) => b * 4 >= minggu);
 const PACE_SASARAN = (TARGET_MINUTES * 60) / 5; // 360 s/km
 
 /** Anggaran minggu latihan sebelum 5K bawah 30 minit munasabah, ikut tahap + masa sekarang. */
-export function weeksNeeded(tahap: Level, masa5k?: number): number {
-  const ikutMasa = masa5k ? Math.ceil((masa5k - TARGET_MINUTES) * WEEKS_PER_MINUTE) : 0;
+export function weeksNeeded(tahap: Level, masa5k?: number, sasaranMinit = TARGET_MINUTES): number {
+  const ikutMasa = masa5k ? Math.ceil((masa5k - sasaranMinit) * WEEKS_PER_MINUTE) : 0;
   return tahap === "5k" ? ikutMasa : Math.max(MIN_WEEKS[tahap], ikutMasa);
 }
 
@@ -152,6 +179,26 @@ export function phaseWeeks(tahap: Level, jumlahMinggu: number) {
 }
 
 
+// Pace sasaran (s/km) + teks sasaran: lalai 6:00/km = "30 minit" (teks pelan lama tidak berubah).
+const sasaranOf = (pace?: number) => {
+  const p = pace ?? PACE_SASARAN;
+  return { p, minit: (p * 5) / 60, teks: pace ? formatPace(p * 5) : `${TARGET_MINUTES} minit` };
+};
+const paceSah = (pace?: number) => pace === undefined || (Number.isInteger(pace) && pace >= PACE_RANGE[0] && pace <= PACE_RANGE[1]);
+const mingguSah = (minggu: number) => Number.isInteger(minggu) && minggu >= RACE_WEEKS[0] && minggu <= RACE_WEEKS[1];
+
+/**
+ * Pace pelan untuk setiap jenis sesi (s/km): mudah/panjang dari masa 5K sekarang; tempo/interval bergerak
+ * dari pace sekarang ke pace sasaran; lumba = sasaran. Tiada masa 5K = pace sasaran saja (sesi lain ikut rasa).
+ */
+export function planPaces({ tahap, masa5k, pace }: PlanInput): { mudah?: [number, number]; tempo?: [number, number]; interval?: [number, number]; lumba: number } {
+  const { p } = sasaranOf(pace);
+  const p0 = masa5k && tahap !== "sifar" ? (masa5k * 60) / 5 : undefined;
+  return p0
+    ? { mudah: [p0 + 75, p0 + 105], tempo: [p0 + 10, p + 10], interval: [p0 - 15, p - 15], lumba: p }
+    : { lumba: p };
+}
+
 export type Verdict = "munasabah" | "mencabar" | "tak-realistik";
 export interface Analysis {
   penilaian: Verdict;
@@ -164,14 +211,17 @@ const KADAR_BIASA = 1 / WEEKS_PER_MINUTE; // minit dipotong seminggu (anggaran k
 /** Kenapa sasaran munasabah atau tidak untuk input ini. Input mesti sudah lulus buildPlan's semakan
  *  asas (bulan/hari/tahap/masa sah) - selain itu null. */
 export function analyzePlan(input: PlanInput): Analysis | null {
-  const { bulan, tahap, hari, masa5k, nadi } = input;
-  if (!(PLAN_MONTHS as readonly number[]).includes(bulan) || !(DAYS_PER_WEEK as readonly number[]).includes(hari) || !(tahap in LEVELS)) return null;
+  const { bulan, minggu, tahap, hari, masa5k, nadi, pace } = input;
+  if (minggu === undefined ? !(PLAN_MONTHS as readonly number[]).includes(bulan) : !mingguSah(minggu)) return null;
+  if (!(DAYS_PER_WEEK as readonly number[]).includes(hari) || !(tahap in LEVELS) || !paceSah(pace)) return null;
+  const S = sasaranOf(pace);
   const adaMasa = masa5k !== undefined && tahap !== "sifar";
-  if (adaMasa && (!Number.isInteger(masa5k) || masa5k < TIME_MIN || masa5k > TIME_MAX || masa5k <= TARGET_MINUTES)) return null;
+  if (adaMasa && (!Number.isInteger(masa5k) || masa5k < TIME_MIN || masa5k > TIME_MAX || masa5k <= S.minit)) return null;
   if (tahap === "5k" && !adaMasa) return null;
 
-  const ada = bulan * 4;
-  const perlu = weeksNeeded(tahap, adaMasa ? masa5k : undefined);
+  const ada = minggu ?? bulan * 4;
+  const tempoh = minggu ? `${minggu} minggu` : `${bulan} bulan`;
+  const perlu = weeksNeeded(tahap, adaMasa ? masa5k : undefined, S.minit);
   const nisbah = ada / perlu;
   const penilaian: Verdict = nisbah >= 1 ? "munasabah" : nisbah >= 0.75 ? "mencabar" : "tak-realistik";
   const f = phaseWeeks(tahap, ada);
@@ -179,11 +229,11 @@ export function analyzePlan(input: PlanInput): Analysis | null {
 
   if (adaMasa) {
     const p0 = (masa5k * 60) / 5;
-    const potong = masa5k - TARGET_MINUTES;
+    const potong = masa5k - S.minit;
     butiran.push({
       label: "Jurang",
-      nilai: `${masa5k} → bawah ${TARGET_MINUTES} minit`,
-      nota: `Pace sekarang ~${formatPace(p0)}/km, sasaran ${formatPace(PACE_SASARAN)}/km: setiap km perlu ${Math.round(p0 - PACE_SASARAN)} saat lebih cepat (${Math.round((potong / masa5k) * 100)}% lebih laju).`,
+      nilai: `${masa5k} → bawah ${S.teks}`,
+      nota: `Pace sekarang ~${formatPace(p0)}/km, sasaran ${formatPace(S.p)}/km: setiap km perlu ${Math.round(p0 - S.p)} saat lebih cepat (${Math.round((potong / masa5k) * 100)}% lebih laju).`,
     });
     const kadar = potong / f.bina;
     butiran.push({
@@ -211,7 +261,7 @@ export function analyzePlan(input: PlanInput): Analysis | null {
     nota:
       nisbah >= 1
         ? "Cukup, termasuk minggu ringan setiap minggu ke-4."
-        : `Kurang ${perlu - ada} minggu daripada anggaran. ${bulanUntuk(perlu) ? `${bulanUntuk(perlu)} bulan dah cukup.` : "Lebih daripada 6 bulan - pecahkan kepada dua sasaran."}`,
+        : `Kurang ${perlu - ada} minggu daripada anggaran. ${minggu && perlu <= RACE_WEEKS[1] ? `Lumba ${perlu} minggu lagi atau lebih lewat dah cukup.` : !minggu && bulanUntuk(perlu) ? `${bulanUntuk(perlu)} bulan dah cukup.` : "Lebih daripada 6 bulan - pecahkan kepada dua sasaran."}`,
   });
   butiran.push({
     label: "Pecahan pelan",
@@ -219,7 +269,7 @@ export function analyzePlan(input: PlanInput): Analysis | null {
     nota:
       f.kualiti >= 4
         ? `${f.kualiti} sesi laju (interval/tempo) - cukup untuk biasakan kaki dengan pace sasaran.`
-        : `Hanya ${f.kualiti} sesi laju - sedikit untuk biasakan kaki dengan pace ${formatPace(PACE_SASARAN)}/km. Tempoh lebih panjang = lebih banyak sesi laju.`,
+        : `Hanya ${f.kualiti} sesi laju - sedikit untuk biasakan kaki dengan pace ${formatPace(S.p)}/km. Tempoh lebih panjang = lebih banyak sesi laju.`,
   });
   butiran.push({
     label: "Hari seminggu",
@@ -242,7 +292,7 @@ export function analyzePlan(input: PlanInput): Analysis | null {
       ? "Sasaran munasabah untuk situasi anda. Kuncinya konsisten - ikut sesi, jangan kejar laju pada hari mudah."
       : penilaian === "mencabar"
         ? "Boleh, tapi ketat - hampir tiada ruang untuk minggu terlepas, sakit atau cedera."
-        : `5K bawah ${TARGET_MINUTES} minit dalam ${bulan} bulan tak realistik bagi situasi anda. ${b ? `Pilih ${b} bulan.` : `Sasarkan bawah ${masa5k! - Math.floor((6 * 4 - 1) * KADAR_BIASA)} minit dulu, kemudian ulang pelan.`
+        : `5K bawah ${S.teks} dalam ${tempoh} tak realistik bagi situasi anda. ${minggu && perlu <= RACE_WEEKS[1] ? `Pilih lumba sekurang-kurangnya ${perlu} minggu lagi.` : !minggu && b ? `Pilih ${b} bulan.` : `Sasarkan bawah ${masa5k! - Math.floor((6 * 4 - 1) * KADAR_BIASA)} minit dulu, kemudian ulang pelan.`
         }`;
   return { penilaian, ringkas, butiran };
 }
@@ -254,12 +304,17 @@ export function formatPace(saat: number): string {
 }
 
 export function buildPlan(input: PlanInput): PlanResult {
-  const { bulan, tahap, hari, masa5k, nadi } = input;
-  if (!(PLAN_MONTHS as readonly number[]).includes(bulan)) return { ok: false, sebab: "Pilih tempoh 2, 3, 4 atau 6 bulan." };
+  const { bulan, minggu: mingguLumba, tahap, hari, masa5k, nadi, pace } = input;
+  if (mingguLumba !== undefined && !mingguSah(mingguLumba))
+    return { ok: false, sebab: `Tarikh lumba perlu ${RACE_WEEKS[0]}-${RACE_WEEKS[1]} minggu dari tarikh mula.`, cadanganMinggu: RACE_WEEKS[0] };
+  if (mingguLumba === undefined && !(PLAN_MONTHS as readonly number[]).includes(bulan)) return { ok: false, sebab: "Pilih tempoh 2, 3, 4 atau 6 bulan." };
+  if (!paceSah(pace)) return { ok: false, sebab: `Pace sasaran ${formatPace(PACE_RANGE[0])}-${formatPace(PACE_RANGE[1])}/km.` };
   if (!(DAYS_PER_WEEK as readonly number[]).includes(hari)) return { ok: false, sebab: "Pilih 3 atau 4 hari seminggu." };
   if (!(tahap in LEVELS)) return { ok: false, sebab: "Pilih tahap sekarang." };
 
-  const jumlahMinggu = bulan * 4;
+  const jumlahMinggu = mingguLumba ?? bulan * 4;
+  const tempoh = mingguLumba ? `${mingguLumba} minggu` : `${bulan} bulan`;
+  const S = sasaranOf(pace);
   const amaran: string[] = [];
   let paceMudah = "";
 
@@ -267,12 +322,23 @@ export function buildPlan(input: PlanInput): PlanResult {
   if (adaMasa) {
     if (!Number.isInteger(masa5k) || masa5k! < TIME_MIN || masa5k! > TIME_MAX)
       return { ok: false, sebab: `Masukkan masa 5K sekarang dalam minit (${TIME_MIN}-${TIME_MAX}).` };
-    if (masa5k! <= TARGET_MINUTES)
-      return { ok: false, sebab: "Anda dah lari 5K dalam 30 minit atau kurang - tahniah! Pelan ini untuk yang belum sampai ke situ." };
+    if (masa5k! <= S.minit)
+      return {
+        ok: false,
+        sebab: pace
+          ? `Anda dah lari 5K dalam ${S.teks} atau kurang - pilih pace sasaran lebih laju daripada ${formatPace((masa5k! * 60) / 5)}/km.`
+          : "Anda dah lari 5K dalam 30 minit atau kurang - tahniah! Pelan ini untuk yang belum sampai ke situ.",
+      };
   }
   // Pace 5K sekarang (s/km) - asas pace peribadi. Tiada = pace sasaran tetap + ikut rasa.
   const p0 = adaMasa ? (masa5k! * 60) / 5 : undefined;
   if (tahap !== "5k" && jumlahMinggu < MIN_WEEKS[tahap]) {
+    if (mingguLumba)
+      return {
+        ok: false,
+        sebab: `${mingguLumba} minggu terlalu singkat untuk 5K bawah ${S.teks} dari tahap ini - cukup untuk habiskan 5K, tapi bukan dalam ${S.teks}. Perlu sekurang-kurangnya ${MIN_WEEKS[tahap]} minggu.`,
+        cadanganMinggu: MIN_WEEKS[tahap],
+      };
     const b = bulanUntuk(MIN_WEEKS[tahap])!;
     return {
       ok: false,
@@ -280,13 +346,15 @@ export function buildPlan(input: PlanInput): PlanResult {
       cadanganBulan: b,
     };
   }
-  const perlu = weeksNeeded(tahap, adaMasa ? masa5k : undefined);
+  const perlu = weeksNeeded(tahap, adaMasa ? masa5k : undefined, S.minit);
   if (jumlahMinggu < perlu) {
     const b = bulanUntuk(perlu);
     amaran.push(
-      b
-        ? `Dari ${masa5k ? `${masa5k} minit` : "tahap ini"}, ${bulan} bulan memang mencabar. Cadangan: ${b} bulan.`
-        : `Dari ${masa5k} minit, 6 bulan pun mencabar. Sasarkan 5K bawah ${masa5k! - 16} minit dulu, kemudian ulang pelan.`,
+      mingguLumba
+        ? `Dari ${masa5k ? `${masa5k} minit` : "tahap ini"}, ${tempoh} memang mencabar - perlu ~${perlu} minggu.`
+        : b
+          ? `Dari ${masa5k ? `${masa5k} minit` : "tahap ini"}, ${bulan} bulan memang mencabar. Cadangan: ${b} bulan.`
+          : `Dari ${masa5k} minit, 6 bulan pun mencabar. Sasarkan 5K bawah ${masa5k! - 16} minit dulu, kemudian ulang pelan.`,
     );
   }
   // Pace mudah dari pace 5K sekarang + 75-105 s/km (perbualan selesa).
@@ -300,7 +368,7 @@ export function buildPlan(input: PlanInput): PlanResult {
   // Sesi kualiti = minggu Kelajuan bukan ringan. Pace sasaran minggu ke-k turun beransur dari
   // pace sekarang ke 6:00/km pada sesi kualiti terakhir.
   const bilKualiti = phaseWeeks(tahap, jumlahMinggu).kualiti;
-  const paceMinggu = (k: number) => (p0 ? p0 + ((PACE_SASARAN - p0) * (k + 1)) / bilKualiti : PACE_SASARAN);
+  const paceMinggu = (k: number) => (p0 ? p0 + ((S.p - p0) * (k + 1)) / bilKualiti : S.p);
 
   const mudah = (minit: number, tambah = ""): Session => ({
     jenis: "mudah",
@@ -364,8 +432,8 @@ export function buildPlan(input: PlanInput): PlanResult {
       const sasaran = paceMinggu(k);
       const q =
         k % 2 === 0
-          ? interval(Math.min(8, 4 + Math.floor(k / 2)), sasaran - 15, !!p0)
-          : tempo(Math.min(20, 10 + 2 * Math.floor(k / 2)), sasaran + 10, !!p0);
+          ? interval(Math.min(8, 4 + Math.floor(k / 2)), sasaran - 15, !!p0, S.p)
+          : tempo(Math.min(20, 10 + 2 * Math.floor(k / 2)), sasaran + 10, !!p0, S.p);
       sesi = mudahDanPanjang(minit, hari - 1, [q]);
     } else {
       sesi = mudahDanPanjang(minit, hari, [], fasa === "Daya tahan" && !ringan);
@@ -378,7 +446,7 @@ export function buildPlan(input: PlanInput): PlanResult {
     minit: 45,
     tajuk: "Hari ujian 5K",
     arahan: "Panas badan jalan + lari santai 10 min. Lari 5 km - mula terkawal, km pertama jangan laju. Sejuk badan 5 min.",
-    usaha: `Sasaran ${formatPace((TARGET_MINUTES * 60) / 5)}/km rata = bawah 30 minit`,
+    usaha: `Sasaran ${formatPace(S.p)}/km rata = bawah ${pace ? S.teks : "30 minit"}`,
   };
   const minitAkhir = Math.max(turun5(beban * 0.6), 45 + 20 * (hari - 1));
   const m = Math.round((minitAkhir - 45) / (hari - 1));
@@ -436,7 +504,7 @@ function jalanLari(minit: number, [lari, jalan]: [number, number], usaha: string
 }
 
 // `peribadi` = pace dikira dari masa 5K pengguna (turun setiap minggu); tanpa itu = pace sasaran akhir.
-function interval(ulang: number, saat: number, peribadi: boolean): Session {
+function interval(ulang: number, saat: number, peribadi: boolean, sasaran: number): Session {
   const minit = 15 + ulang * 4;
   return {
     jenis: "interval",
@@ -446,11 +514,11 @@ function interval(ulang: number, saat: number, peribadi: boolean): Session {
     segmen: [segment("lari", 10), ...repeatSegments(ulang, segment("laju", 2), segment("rehat", 1.5)), segment("jalan", 5)],
     usaha: peribadi
       ? `Laju tapi terkawal · ~${formatPace(saat)}/km minggu ini`
-      : `Laju tapi terkawal · sasaran akhir ~${formatPace(PACE_SASARAN - 30)}/km. Belum mampu? Ikut rasa: sukar bercakap.`,
+      : `Laju tapi terkawal · sasaran akhir ~${formatPace(sasaran - 30)}/km. Belum mampu? Ikut rasa: sukar bercakap.`,
   };
 }
 
-function tempo(minitTempo: number, saat: number, peribadi: boolean): Session {
+function tempo(minitTempo: number, saat: number, peribadi: boolean, sasaran: number): Session {
   return {
     jenis: "tempo",
     minit: 20 + minitTempo,
@@ -459,7 +527,7 @@ function tempo(minitTempo: number, saat: number, peribadi: boolean): Session {
     segmen: [segment("lari", 10), segment("laju", minitTempo), segment("lari", 10)],
     usaha: peribadi
       ? `Sukar bercakap, tetap terkawal · ~${formatPace(saat)}/km minggu ini`
-      : `Sukar bercakap, tetap terkawal · sasaran akhir ~${formatPace(PACE_SASARAN)}/km`,
+      : `Sukar bercakap, tetap terkawal · sasaran akhir ~${formatPace(sasaran)}/km`,
   };
 }
 

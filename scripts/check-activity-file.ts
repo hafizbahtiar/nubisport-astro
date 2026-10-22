@@ -2,7 +2,7 @@
 // FIT dijana di sini dengan Encoder SDK Garmin (koordinat rekaan di tengah laut, 0°N 0°E) - tiada
 // fail larian sebenar dalam repo. Nilai meniru larian contoh owner: 2,663 m, 1,876 s, nadi purata 140 / maks 164.
 import { Encoder, Profile } from "@garmin/fitsdk";
-import { readGpx, buildUploadForm, fitRoute, nameFromFile, paceFromDistance, pairFiles, isoSeconds, toSport, formatDuration } from "../src/lib/activity-file";
+import { readGpx, buildUploadForm, fitRoute, fitRecords, heartSeries, hrZones, nameFromFile, paceFromDistance, pairFiles, isoSeconds, toSport, formatDuration } from "../src/lib/activity-file";
 
 let gagal = 0;
 const ok = (c: unknown, msg: string) => {
@@ -96,7 +96,7 @@ ok(readGpx(gpx("2026-10-21T13:12:07.000Z")).startedAt === "2026-10-21T13:12:07Z"
 try {
   readGpx("<html></html>");
   ok(false, "bukan GPX patut ditolak");
-} catch {}
+} catch { }
 ok(isoSeconds("bukan masa") === null, "saat rosak");
 ok(toSport("cycling") === "ride" && toSport("swimming") === "other", "peta sukan");
 ok(nameFromFile("Morning_Run.fit") === "Morning Run", "nama fail");
@@ -110,6 +110,18 @@ ok(formatDuration(1876) === "31m 16s" && formatDuration(3700) === "1j 1m", "temp
   ok(p.length === 82, `titik laluan ${p.length}`);
   ok(Math.abs(p[0][0] - 0.001) < 1e-6 && p[0][1] === 0, `titik pertama ${p[0]}`);
   ok(Math.abs(p.at(-1)![0] - 0.082) < 1e-6, `titik akhir ${p.at(-1)}`);
+}
+
+// Nadi untuk page detail: siri ikut masa + zon % nadi maks (164). Nadi 116 -> 164 sesaat:
+// <=131 = Z3 (titik 0-26), 132-147 = Z4 (27-53), >=148 = Z5 (54-81); titik akhir tiada selang.
+{
+  const siri = heartSeries(await fitRecords(fit().buffer));
+  ok(siri.length === 83 && siri[0][0] === 0 && siri[0][1] === 116 && siri[82][0] === 82, `siri nadi ${siri.length}`);
+  const z = hrZones(siri, 164);
+  const b = (n: number) => Math.round((n / 82) * 1000) / 1000;
+  ok(z.join() === [0, 0, b(27), b(27), b(28)].join(), `zon ${z}`);
+  ok(hrZones([], 164).join() === "0,0,0,0,0", "tiada nadi = zon kosong");
+  ok(hrZones([[0, 200], [5, 200], [400, 200]], 164).join() === "0,0,0,0,1", "atas maks = Z5, jeda dihadkan 10 s");
 }
 
 if (gagal) {

@@ -1,9 +1,15 @@
 // bun scripts/check-plan-5k.ts - semak src/lib/plan-5k.ts untuk setiap gabungan input.
 import {
-  analyzePlan, PLAN_MONTHS, isoDate, resumePoint, GUEST_PLAN_LIMIT, DAYS_PER_WEEK, SESSION_DAYS, canBuildPlan, TIME_MAX, TIME_MIN, MIN_WEEKS, buildPlan, startMonday, formatPace, sessionDate, type Level
+  analyzePlan, PLAN_MONTHS, RACE_WEEKS, racePlan, earliestRaceDate, planPaces, isoDate, resumePoint, GUEST_PLAN_LIMIT, DAYS_PER_WEEK, SESSION_DAYS, canBuildPlan, TIME_MAX, TIME_MIN, MIN_WEEKS, buildPlan, startMonday, formatPace, sessionDate, type Level
 } from "../src/lib/plan-5k";
 
 let gagal = 0;
+// FNV-1a 32-bit - cincangan output pelan lama (tiada jenis Bun/Node dalam program tsc).
+const fnv = (t: string) => {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < t.length; i++) h = Math.imul(h ^ t.charCodeAt(i), 0x01000193);
+  return (h >>> 0).toString(16);
+};
 const ok = (c: unknown, msg: string) => {
   if (!c) {
     gagal++;
@@ -21,13 +27,19 @@ const kes: { tahap: Level; masa5k?: number }[] = [
 
 const ORDER = ["Asas", "Daya tahan", "Kelajuan", "Ujian"];
 let pelan = 0;
-for (const bulan of PLAN_MONTHS)
+// Tempoh: bulan (pelan lama) + setiap minggu dari tarikh lumba (RACE_WEEKS).
+const tempoh: { bulan: number; minggu?: number; n: number }[] = [
+  ...PLAN_MONTHS.map((bulan) => ({ bulan, n: bulan * 4 })),
+  ...Array.from({ length: RACE_WEEKS[1] - RACE_WEEKS[0] + 1 }, (_, i) => ({ bulan: 0, minggu: RACE_WEEKS[0] + i, n: RACE_WEEKS[0] + i })),
+];
+for (const { n, ...t } of tempoh)
   for (const hari of DAYS_PER_WEEK)
     for (const k of kes) {
-      const nama = `${bulan} bulan, ${hari} hari, ${k.tahap}${k.masa5k ? ` ${k.masa5k} min` : ""}`;
-      const h = buildPlan({ bulan, hari, ...k });
-      if (k.tahap !== "5k" && bulan * 4 < MIN_WEEKS[k.tahap]) {
-        ok(!h.ok && h.cadanganBulan && h.cadanganBulan * 4 >= MIN_WEEKS[k.tahap], `${nama}: patut ditolak dengan cadangan`);
+      const bulan = n / 4;
+      const nama = `${t.minggu ? `${n} minggu` : `${bulan} bulan`}, ${hari} hari, ${k.tahap}${k.masa5k ? ` ${k.masa5k} min` : ""}`;
+      const h = buildPlan({ ...t, hari, ...k });
+      if (k.tahap !== "5k" && n < MIN_WEEKS[k.tahap]) {
+        ok(!h.ok && (t.minggu ? h.cadanganMinggu === MIN_WEEKS[k.tahap] : h.cadanganBulan && h.cadanganBulan * 4 >= MIN_WEEKS[k.tahap]), `${nama}: patut ditolak dengan cadangan`);
         continue;
       }
       if (!h.ok) {
@@ -36,7 +48,7 @@ for (const bulan of PLAN_MONTHS)
       }
       pelan++;
       const m = h.minggu;
-      ok(m.length === bulan * 4, `${nama}: ${m.length} minggu`);
+      ok(m.length === n, `${nama}: ${m.length} minggu`);
       ok(m.at(-1)!.fasa === "Ujian" && m.at(-1)!.sesi.at(-1)!.jenis === "ujian", `${nama}: minggu akhir = ujian`);
       ok(m.every((w, i) => w.no === i + 1), `${nama}: nombor minggu`);
 
@@ -152,6 +164,66 @@ ok(canBuildPlan("c", ["a", "a", "b"], false), "kunci berulang dikira sekali");
     ok(r && resumePoint(h.minggu, r.mula, m1, rabu3) === null, "selepas anjak = tiada");
     ok(resumePoint(h.minggu, isnin, new Set(), new Date(2026, 9, 7, 18)) === null, "minggu pertama = tiada");
   }
+}
+
+// Pelan lama (bulan, tanpa lumba/pace) mesti terbina sama seperti sebelum v2 (cincangan output 2026-10-22).
+{
+  const out: unknown[] = [];
+  for (const bulan of PLAN_MONTHS)
+    for (const hari of [3, 4])
+      for (const [tahap, masa5k] of [["sifar"], ["jalan"], ["jalan", 50], ["5k", 31], ["5k", 36], ["5k", 45], ["5k", 60]] as [Level, number?][])
+        for (const nadi of [undefined, { maf: 143, bawah: 133 }])
+          out.push(buildPlan({ bulan, hari, tahap, masa5k, nadi }), analyzePlan({ bulan, hari, tahap, masa5k, nadi }));
+  const cincang = fnv(JSON.stringify(out));
+  ok(cincang === "94454265", `pelan lama berubah (${cincang})`);
+}
+
+// Ikut minggu (tarikh lumba): had, cadangan, analisis.
+ok(!buildPlan({ bulan: 0, minggu: RACE_WEEKS[0] - 1, hari: 3, tahap: "5k", masa5k: 33 }).ok, "minggu bawah had ditolak");
+ok(!buildPlan({ bulan: 0, minggu: RACE_WEEKS[1] + 1, hari: 3, tahap: "5k", masa5k: 33 }).ok, "minggu atas had ditolak");
+{
+  const b = buildPlan({ bulan: 0, minggu: 9, hari: 3, tahap: "5k", masa5k: 45 });
+  ok(b.ok && b.amaran.length === 1 && b.amaran[0].includes("minggu"), `9 minggu dari 45 min = amaran ikut minggu: ${b.ok && b.amaran}`);
+  const a9 = analyzePlan({ bulan: 0, minggu: 9, hari: 3, tahap: "5k", masa5k: 36 });
+  ok(a9?.penilaian === "munasabah" && a9.butiran.some((x) => x.nilai.startsWith("9 minggu")), "analisis ikut minggu");
+  ok(analyzePlan({ bulan: 0, minggu: 9, hari: 3, tahap: "sifar" })?.penilaian === "tak-realistik", "analisis sifar 9 minggu");
+}
+
+// Pace sasaran sendiri: ujian + sesi laju ikut pace itu, minit sesi tidak berubah (tanda siap sama).
+{
+  const asal = buildPlan({ bulan: 4, hari: 3, tahap: "5k", masa5k: 40 });
+  const p = buildPlan({ bulan: 4, hari: 3, tahap: "5k", masa5k: 40, pace: 390 });
+  if (!asal.ok || !p.ok) ok(false, "pace 6:30 ditolak");
+  else {
+    const sesi = p.minggu.flatMap((w) => w.sesi);
+    ok(sesi.at(-1)!.usaha.includes("6:30/km") && sesi.at(-1)!.usaha.includes("32:30"), `ujian ikut pace: ${sesi.at(-1)!.usaha}`);
+    const laju = sesi.filter((s) => s.jenis === "interval").at(-1)!;
+    ok(laju.usaha.includes("~6:15/km"), `interval akhir = pace - 15: ${laju.usaha}`);
+    ok(JSON.stringify(p.minggu.map((w) => w.sesi.map((s) => s.minit))) === JSON.stringify(asal.minggu.map((w) => w.sesi.map((s) => s.minit))), "pace: minit sesi sama");
+    ok(analyzePlan({ bulan: 4, hari: 3, tahap: "5k", masa5k: 40, pace: 390 })!.butiran[0].nilai.includes("32:30"), "analisis ikut pace");
+  }
+  ok(!buildPlan({ bulan: 4, hari: 3, tahap: "5k", masa5k: 40, pace: 480 }).ok, "pace sasaran = pace sekarang ditolak");
+  ok(!buildPlan({ bulan: 4, hari: 3, tahap: "5k", masa5k: 40, pace: 100 }).ok, "pace di luar julat ditolak");
+  ok(buildPlan({ bulan: 3, hari: 3, tahap: "5k", masa5k: 30, pace: 330 }).ok, "30 min, sasaran 5:30 = boleh");
+  const pp = planPaces({ bulan: 4, hari: 3, tahap: "5k", masa5k: 40, pace: 390 });
+  ok(pp.lumba === 390 && pp.mudah?.[0] === 555 && pp.tempo?.[1] === 400 && pp.interval?.[1] === 375, `planPaces 5K: ${JSON.stringify(pp)}`);
+  const ps = planPaces({ bulan: 4, hari: 3, tahap: "sifar" });
+  ok(ps.lumba === 360 && !ps.mudah && !ps.tempo, `planPaces tanpa masa: ${JSON.stringify(ps)}`);
+}
+
+// Tarikh lumba -> minggu: mula Isnin pada/lepas mula, minggu akhir = minggu lumba.
+{
+  const d = (s: string) => new Date(`${s}T00:00:00`);
+  const tepat = racePlan(d("2026-10-21"), d("2026-12-20"), RACE_WEEKS); // Rabu -> Isnin 26 Okt; Ahad 20 Dis = minggu 8
+  ok(isoDate(tepat.mula) === "2026-10-26" && tepat.minggu === 8, `tepat: ${JSON.stringify(tepat)}`);
+  ok(isoDate(sessionDate(tepat.mula, tepat.minggu, 4, 3)) === "2026-12-20", "sesi akhir 4 hari = hari lumba");
+  const dekat = racePlan(d("2026-10-21"), d("2026-11-29"), RACE_WEEKS);
+  ok(dekat.minggu === 5, `terlalu dekat: ${dekat.minggu} minggu`);
+  ok(isoDate(earliestRaceDate(dekat.mula, 8, 4)) === "2026-12-20" && isoDate(earliestRaceDate(dekat.mula, 8, 3)) === "2026-12-19", "tarikh lumba paling awal");
+  const jauh = racePlan(d("2026-10-21"), d("2027-06-27"), RACE_WEEKS); // Ahad 27 Jun 2027
+  ok(jauh.minggu === RACE_WEEKS[1] && isoDate(sessionDate(jauh.mula, jauh.minggu, 4, 3)) === "2027-06-27", `jauh: ${JSON.stringify(jauh)}`);
+  const sabtu = racePlan(d("2026-10-26"), d("2026-12-19"), RACE_WEEKS);
+  ok(sabtu.minggu === 8, "lumba Sabtu = minggu sama");
 }
 
 if (gagal) throw new Error(`${gagal} semakan gagal`);

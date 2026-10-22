@@ -1,5 +1,5 @@
 // bun scripts/check-plan-sync.ts - semak padankan() dalam src/lib/plan-sync.ts (docs/plans/active-plan-sync.md).
-import { matchActivities, planSessions, walkedNote } from "../src/lib/plan-sync";
+import { matchActivities, planSessions, walkedNote, weeklyLoad, planFromParams } from "../src/lib/plan-sync";
 
 let gagal = 0;
 const ok = (c: unknown, msg: string) => {
@@ -97,6 +97,30 @@ ok(j && j.length > 0, "pelan 10K dibina");
   const kurang = a(hari, "run", 99999, 9400);
   ok(id(matchActivities(j, [cukupJarak], []), cukupJarak) === lumba.id, "lumba 95% jarak padan (masa tidak dikira)");
   ok(id(matchActivities(j, [kurang], []), kurang) !== lumba.id, "lumba < 95% jarak tidak padan");
+}
+
+// v2: pelan ikut tarikh lumba (minggu + lumba) dan pace sendiri.
+{
+  const p = { minggu: "8", lumba: "2026-12-20", mula: "2026-10-26", hari: "3", tahap: "5k", masa: "33", pace: "350" };
+  const s5 = planSessions("pelan-5k:8w-5k-33-3", p)!;
+  ok(s5 && s5.length === 24 && s5.at(-1)!.jenis === "ujian", "5K lumba: 8 minggu × 3 sesi");
+  ok(s5.at(-1)!.tarikh === "2026-12-20" && s5.at(-2)!.tarikh === "2026-12-16", `hari lumba = tarikh lumba (Ahad), bukan Sabtu: ${s5.at(-1)!.tarikh}`);
+  ok(planFromParams("pelan-5k:8w-5k-33-3", p)?.minggu.length === 8, "planFromParams 5K minggu");
+  const s10 = planSessions("pelan-10k:9-30-p360-3", { jarak: "10k", minggu: "9", hari: "3", masa: "30", pace: "360", mula: "2026-10-26" });
+  ok(s10?.length === 27 && s10.some((x) => x.jenis === "interval"), "10K pace = ada sasaran, 9 minggu");
+  ok(planSessions("pelan-5k:3-jalan--3", { bulan: "3", tahap: "jalan", hari: "3", mula: "2026-11-02", lumba: "bukan-tarikh" })?.at(-1)!.tarikh === sesi.at(-1)!.tarikh, "lumba rosak diabaikan");
+}
+// Beban mingguan: minit dirancang vs minit run/walk sebenar setiap minggu pelan (Isnin-Ahad, waktu Malaysia).
+{
+  const w = weeklyLoad(sesi, [
+    a("2026-11-01T22:30:00Z", "run", 1800), // Isnin 2 Nov MY = minggu 1
+    a("2026-11-08T15:00:00Z", "walk", 600), // Ahad 8 Nov 23:00 MY = minggu 1
+    a("2026-11-08T22:30:00Z", "run", 1200), // Isnin 9 Nov MY = minggu 2
+    a("2026-11-03T00:00:00Z", "ride", 9999), // bukan lari/jalan
+  ]);
+  const rancang1 = sesi.filter((x) => x.minggu === 1).reduce((n, x) => n + x.minit, 0);
+  ok(w.length === 12 && w[0].no === 1 && w[0].rancang === rancang1, `weeklyLoad rancang: ${JSON.stringify(w[0])}`);
+  ok(w[0].sebenar === 40 && w[1].sebenar === 20 && w[2].sebenar === 0, `weeklyLoad sebenar: ${w.slice(0, 3).map((x) => x.sebenar)}`);
 }
 
 if (gagal) throw new Error(`${gagal} semakan gagal`);

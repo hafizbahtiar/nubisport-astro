@@ -1,5 +1,5 @@
 // Pelan yang tersimpan di pelayar (localStorage). Satu pelan = kunci
-// "pelan-5k:<bulan>-<tahap>-<masa>-<hari>" atau "pelan-10k|21k:<minggu>-<masa>-<sasaran>-<hari>": senarai tanda siap ("minggu.sesi") disimpan di bawahnya,
+// "pelan-5k:<bulan atau Nw>-<tahap>-<masa>-<hari>" atau "pelan-10k|21k:<minggu>-<masa>-<sasaran atau pPace>-<hari>": senarai tanda siap ("minggu.sesi") disimpan di bawahnya,
 // dan kunci itu tercatat dalam CREATED_KEY (had 3 pelan tanpa akaun + senarai dashboard).
 // Storan boleh tiada (mod peribadi) - setiap baca/tulis selamat.
 
@@ -8,7 +8,7 @@ export const CREATED_KEY = "pelan-5k:dibuat";
 export const planKey = (bulan: number | string, tahap: string, masa: number | string | undefined, hari: number | string) =>
   `pelan-5k:${bulan}-${tahap}-${masa ?? ""}-${hari}`;
 
-export const distancePlanKey = (jarak: string, minggu: number, masa: number, sasaran: number | undefined, hari: number) =>
+export const distancePlanKey = (jarak: string, minggu: number, masa: number, sasaran: number | string | undefined, hari: number) =>
   `pelan-${jarak}:${minggu}-${masa}-${sasaran ?? ""}-${hari}`;
 
 export function readList(k: string): string[] {
@@ -30,7 +30,7 @@ export function writeList(k: string, v: string[]) {
 
 // Parameter URL pelan (tarikh mula, MAF...) disimpan di "<kunci>#p" supaya dashboard dan awan
 // buka semula pelan yang sama, bukan hanya input dalam kunci.
-const PARAM = /^(bulan|tahap|hari|masa|mula|maf|umur|keadaan|jarak|minggu|sasaran)$/;
+const PARAM = /^(bulan|tahap|hari|masa|mula|maf|umur|keadaan|jarak|minggu|sasaran|lumba|pace)$/;
 export const planParams = (q: URLSearchParams): Record<string, string> =>
   Object.fromEntries([...q].filter(([k, v]) => PARAM.test(k) && v && v.length <= 100));
 

@@ -40,6 +40,7 @@ export interface DistanceInput {
   hari: number; // 3 | 4
   masa: number; // minit, masa prasyarat (5K untuk 10K, 10K untuk 21K)
   sasaran?: number; // minit, pilihan
+  pace?: number; // pace sasaran sendiri, s/km - ganti `sasaran` (sasaran = pace × km)
   nadi?: { maf: number; bawah: number };
 }
 
@@ -62,22 +63,31 @@ export const formatTime = (minit: number) => {
 const bundar5 = (n: number) => Math.max(5, Math.round(n / 5) * 5);
 const separuh = (n: number) => Math.round(n * 2) / 2;
 
+/** `pace` -> `sasaran` (minit) supaya enjin hanya kenal satu sasaran. */
+const withPace = (i: DistanceInput): DistanceInput =>
+  i.pace !== undefined && DISTANCES[i.jarak] ? { ...i, sasaran: (i.pace * DISTANCES[i.jarak].km) / 60 } : i;
+
 /** Semakan input yang dikongsi buildDistancePlan dan analyzeDistancePlan. null = sah. */
-export function validateDistanceInput({ jarak, minggu, hari, masa, sasaran }: DistanceInput): string | null {
+export function validateDistanceInput(input: DistanceInput): string | null {
+  const { jarak, minggu, hari, masa, sasaran, pace } = withPace(input);
   const c = DISTANCES[jarak];
   if (!c) return "Pilih jarak 10K atau 21K.";
-  if (!(c.minggu as readonly number[]).includes(minggu)) return `Pilih tempoh ${c.minggu.join(", ")} minggu.`;
+  // Julat = pilihan pertama-terakhir (tarikh lumba boleh beri mana-mana minggu di antaranya).
+  if (!Number.isInteger(minggu) || minggu < c.minggu[0] || minggu > c.minggu.at(-1)!) return `Pilih tempoh ${c.minggu[0]}-${c.minggu.at(-1)} minggu.`;
   if (hari !== 3 && hari !== 4) return "Pilih 3 atau 4 hari seminggu.";
   const p = c.prasyarat;
   if (!Number.isInteger(masa) || masa < p.min || masa > p.max)
     return `Masukkan masa ${p.nama} sekarang dalam minit (${p.min}-${p.max}). Belum boleh lari ${p.nama} tanpa henti? Mula dengan pelan ${p.nama} dulu.`;
-  if (sasaran !== undefined && (!Number.isInteger(sasaran) || sasaran < c.sasaran.min || sasaran > c.sasaran.max))
+  if (pace !== undefined && (!Number.isInteger(pace) || sasaran! < c.sasaran.min || sasaran! > c.sasaran.max))
+    return `Pace sasaran ${c.nama} ${formatPace((c.sasaran.min * 60) / c.km)}-${formatPace((c.sasaran.max * 60) / c.km)}/km.`;
+  if (pace === undefined && sasaran !== undefined && (!Number.isInteger(sasaran) || sasaran < c.sasaran.min || sasaran > c.sasaran.max))
     return `Masa sasaran ${c.nama} dalam minit (${c.sasaran.min}-${c.sasaran.max}), atau kosongkan untuk sasaran habis.`;
   return null;
 }
 
 /** Minggu latihan yang dianggarkan untuk sasaran ini (0 = sudah dalam kemampuan). */
-export function distanceWeeksNeeded(input: DistanceInput): number {
+export function distanceWeeksNeeded(i: DistanceInput): number {
+  const input = withPace(i);
   const c = DISTANCES[input.jarak];
   if (input.sasaran === undefined) return 0;
   const ramalan = riegel(input.masa, c.prasyarat.km, c.km);
@@ -85,9 +95,23 @@ export function distanceWeeksNeeded(input: DistanceInput): number {
   return peratus <= 0 ? 0 : Math.ceil(peratus / WEEKLY_GAIN);
 }
 
-export function buildDistancePlan(input: DistanceInput): DistanceResult {
-  const salah = validateDistanceInput(input);
+/** Pace pelan setiap jenis sesi (s/km) - sama formula dengan buildDistancePlan. tempo/interval hanya bila ada sasaran. */
+export function planDistancePaces(i: DistanceInput): { mudah: [number, number]; tempo?: [number, number]; interval?: [number, number]; lumba: number } {
+  const { jarak, masa, sasaran } = withPace(i);
+  const c = DISTANCES[jarak];
+  const ramalan = riegel(masa, c.prasyarat.km, c.km);
+  const p5 = (riegel(masa, c.prasyarat.km, 5) * 60) / 5;
+  const pr = (ramalan * 60) / c.km;
+  const pl = ((sasaran ?? ramalan) * 60) / c.km;
+  return sasaran === undefined
+    ? { mudah: [p5 + 75, p5 + 105], lumba: pl }
+    : { mudah: [p5 + 75, p5 + 105], tempo: [pr + 10, pl + 5], interval: [pr - 20, pl - 20], lumba: pl };
+}
+
+export function buildDistancePlan(i: DistanceInput): DistanceResult {
+  const salah = validateDistanceInput(i);
   if (salah) return { ok: false, sebab: salah };
+  const input = withPace(i);
   const { jarak, minggu: jumlah, hari, masa, sasaran, nadi } = input;
   const c = DISTANCES[jarak];
   const ramalan = riegel(masa, c.prasyarat.km, c.km);
@@ -217,7 +241,8 @@ export function buildDistancePlan(input: DistanceInput): DistanceResult {
 }
 
 /** "Realistik tak?" untuk masa sasaran. Tiada sasaran / input tidak sah = null. */
-export function analyzeDistancePlan(input: DistanceInput): Analysis | null {
+export function analyzeDistancePlan(i: DistanceInput): Analysis | null {
+  const input = withPace(i);
   if (validateDistanceInput(input) || input.sasaran === undefined) return null;
   const { jarak, minggu, hari, masa, sasaran } = input;
   const c = DISTANCES[jarak];

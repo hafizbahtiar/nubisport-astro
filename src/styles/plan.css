@@ -297,6 +297,7 @@
   margin: 1rem 0 0;
   min-height: 2rem;
 }
+
 /* Baris pelan aktif (lib/plan-sync.ts) kosong untuk bukan ahli. */
 .awan-baris[data-aktif]:empty {
   display: none;
@@ -368,4 +369,77 @@
 
 .ujian-hasil .ralat {
   color: var(--danger-ink);
+}
+
+/* Data sebenar dari aktiviti Strava di kad sesi (lib/plan-sync.ts mountActuals). */
+.sebenar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.35rem 0 0 1.85rem;
+  font-size: 0.85rem;
+  color: var(--success-ink);
+}
+
+/* Kotak "Pace pelan" (lib/plan-render.ts pacesHtml). */
+.pace-pelan {
+  margin: 1.5rem 0 0;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+  display: grid;
+  gap: 0.75rem;
+}
+
+.pace-pelan h3 {
+  margin: 0;
+  font-size: 1.6rem;
+  color: var(--navy);
+}
+
+.pace-pelan dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: 0.75rem 1.5rem;
+}
+
+.pace-pelan dt {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.pace-pelan dd {
+  margin: 0.15rem 0 0;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.pace-pelan small {
+  display: block;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.pace-ubah {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.5rem 0.75rem;
+}
+
+.pace-ubah .input {
+  max-width: 9rem;
+}
+
+.pace-ubah .ralat {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--danger-ink);
+  font-size: 0.85rem;
 }

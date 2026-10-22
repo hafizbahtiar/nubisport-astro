@@ -1,0 +1,85 @@
+---
+// Tarikh lumba (input utama pelan v2) + pilihan cepat dari kalendar /races (src/data/races.ts).
+// Pilih lumba = isi tarikh (+ jarak bila borang ada radio `jarak`). Lumba lepas disembunyikan di pelayar.
+import Field from "./ui/Field.astro";
+import DatePicker from "./ui/DatePicker.astro";
+import Dropdown from "./ui/Dropdown.astro";
+import { RACES } from "../data/races";
+
+interface Props {
+  /** Label jarak dalam RACES[].jarak, contoh ["5K"] atau ["10K", "21K"]. */
+  jarak: string[];
+}
+const { jarak } = Astro.props;
+const tahun = new Date().getFullYear();
+const pilihan = RACES.flatMap((r) =>
+  jarak.filter((j) => r.jarak.includes(j)).map((j) => ({ r, j })),
+);
+const tarikh = (iso: string) =>
+  new Date(`${iso}T00:00:00`).toLocaleDateString("ms-MY", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+---
+
+<Field
+  label="Tarikh lumba (pilihan)"
+  for="lumba-text"
+  hint="Pelan dikira dari tarikh mula hingga hari lumba - minggu tirus betul-betul sebelum lumba. Kosongkan untuk pilih tempoh sendiri."
+>
+  <DatePicker
+    id="lumba"
+    name="lumba"
+    min={`${tahun - 1}-01-01`}
+    max={`${tahun + 2}-12-31`}
+  />
+</Field>
+{
+  pilihan.length > 0 && (
+    <Field label="Atau pilih dari kalendar lumba" for="pilih-lumba-butang">
+      {/* Nilai "tarikh|jarak"; tiada `name`, jadi tak dihantar dengan borang. */}
+      <Dropdown
+        id="pilih-lumba"
+        placeholder="Pilih lumba…"
+        options={pilihan.map(({ r, j }) => ({
+          value: `${r.tarikh}|${j.toLowerCase()}`,
+          label: `${r.nama} · ${j} · ${tarikh(r.tarikh)}`,
+        }))}
+      />
+    </Field>
+  )
+}
+
+<script>
+  import { todayMY } from "../lib/date";
+
+  const pilih = document.getElementById(
+    "pilih-lumba",
+  ) as HTMLSelectElement | null;
+  const lumba = document.getElementById("lumba") as HTMLInputElement | null;
+  if (pilih && lumba) {
+    // Lumba lepas: buang dari select dan menu Dropdown.
+    const hariIni = todayMY();
+    const lepas = (v?: string) => !!v && v.slice(0, 10) <= hariIni;
+    [...pilih.options].forEach((o) => lepas(o.value) && o.remove());
+    document
+      .querySelectorAll<HTMLElement>("#pilih-lumba-menu [data-value]")
+      .forEach((li) => lepas(li.dataset.value) && li.remove());
+    if (pilih.options.length < 2)
+      pilih.closest(".field")!.setAttribute("hidden", "");
+    pilih.addEventListener("change", () => {
+      const [tarikh, j] = pilih.value.split("|");
+      if (!tarikh) return;
+      const jarak = pilih.form?.elements.namedItem("jarak");
+      if (jarak instanceof RadioNodeList) {
+        jarak.value = j;
+        (jarak[0] as HTMLInputElement).dispatchEvent(
+          new Event("change", { bubbles: true }),
+        );
+      }
+      lumba.value = tarikh;
+      lumba.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+  }
+</script>

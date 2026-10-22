@@ -100,6 +100,9 @@ Item yang dah siap dibuang (lihat git history).
   dalaman saja) atau `/account`. Sidebar berkumpulan (`NAV`: Utama / Latihan / Akaun); item `members: true`
   (contoh Aktiviti) tersembunyi bagi bukan ahli. Profil + log keluar dalam `components/ui/UserMenu.astro`
   (bawah sidebar `up`, navbar akaun, Header awam) - satu komponen, jangan buat menu lain. `<head>` dikongsi = `Head.astro`.
+- **CSP ketat** (`scripts/security-headers.ts`, jalan dalam `bun run build`): skrip sebaris di-hash automatik, tapi
+  sumber luar baru (skrip, `fetch`, tile, font) dan handler sebaris baru (`onclick=` selain `print()`) DISEKAT
+  sampai ditambah dalam skrip itu. Guna `addEventListener`, bukan atribut `on*`.
   Item yang dijana skrip perlu `:global(...)` dalam `<style>` halaman (tiada atribut skop Astro).
 - **Pelan 5K awam vs penuh**: `components/Plan5k.astro` (kandungan saja; halaman pilih layout).
   `/plan-5k` = pelan + label "Realistik tak?" + kotak promosi; log masuk -> lencong ke `/account/plan-5k`
@@ -126,6 +129,13 @@ Item yang dah siap dibuang (lihat git history).
   belum siap dalam minggu pelan sama (Isnin-Ahad, hari sama dahulu, kemudian paling hampir); `runRatio` (kadens >= 140
   langkah/min, dari `.fit`, migration 033) mesti >= 0.7 untuk sesi lari, >= 0.15 untuk jalan-lari - kalau gagal sebab
   itu saja, mesej `walkedNote` ("kebanyakannya jalan"). Spec: `docs/plans/active-plan-sync.md`.
+- **Pelan v2** (2026-10-22, `docs/plans/training-plan-v2.md`): param `lumba` (tarikh lumba) -> `racePlan` kira
+  `minggu` + `mula` dan tulis ke URL (pelan tak berubah bila dibuka minggu lain); 5K `minggu` 8-24 (kunci `pelan-5k:<N>w-...`),
+  10K/21K mana-mana minggu dalam julat pilihan (8-12 / 12-20). `pace` (s/km) = sasaran sendiri (5K ganti 6:00/km; 10K/21K
+  ganti `sasaran`, kunci `p<pace>`); mudah/panjang kekal dari masa sekarang. Pelan lama (tanpa `lumba`/`pace`) terbina
+  sama - `check-plan-5k` / `check-distance-plan` semak cincangan output, jadi `ENGINE_VERSION` tak dinaikkan. Pelan lumba
+  tak ada "Sambung" (tarikh lumba tetap). Data sebenar di kad sesi + bar beban = `mountActuals` (pelan aktif saja).
+  Profil kali pertama = `fillEmptyProfile` (medan kosong saja; gagal baca = tak tulis).
 - **Jadual data**: `<Table id columns empty variant>` (`components/ui/Table.astro`) + `createTable(id, { columns, search? })`
   (`lib/table.ts`), di pelayar atas data dimuat. `variant`: `compact` (padat, tiada cari/kaki, `limit` baris pertama,
   lalai 5 - panel kecil), `standard` (lalai: cari + halaman, 10 sehalaman), `full` (cari, slot `filters` (`.filter(fn)`),
@@ -213,6 +223,12 @@ Item yang dah siap dibuang (lihat git history).
   SEBELUM push `hono-workers` (commit `b850960`), kemudian push repo ini. Lepas itu uji dengan fail Strava
   sebenar: padanan pelan aktif, % lari, peta 2D/3D/Terrain, zoom dua jari di telefon.
 - [ ] Isi `CONTACT` juga untuk permintaan akses/padam data (PDPA) - `/privacy` kini rujuk "kumpulan larian".
+- [ ] **Header keselamatan** (pentest 2026-10-22 F-02 - dah dibuat): `bun run build` kini jalankan
+  `scripts/security-headers.ts` -> HSTS, `X-Frame-Options: DENY`, nosniff, Referrer/Permissions-Policy dan CSP
+  ber-hash (tiada `unsafe-inline` skrip) dalam `dist/_headers`. Lepas deploy: `curl -sI
+  https://nubisport.hafizbahtiar.com/login/` mesti tunjuk header ini; buka Dashboard, aktiviti (peta semua gaya),
+  login (Turnstile) - Console tiada "Content Security Policy". Sumber luar baru (skrip/tile/API) = tambah dalam
+  skrip itu, kalau tak ia disekat. Isu DNS/TLS (DMARC, TLS 1.2, SPF, CAA) = `hono-workers/TODO.md` Security.
 
 ## 🛠 Frontend - seterusnya
 
@@ -223,11 +239,9 @@ Item yang dah siap dibuang (lihat git history).
 - [ ] `robots.txt` + `sitemap` (bila ada lebih dari satu halaman).
 - [ ] Analitik ringkas tanpa cookie (Cloudflare Web Analytics) - kalau perlu.
 - [ ] Mod gelap? Laman kini sengaja terang + navy; buat hanya kalau diminta.
-- [ ] **Pelan latihan v2** (berat - rancangan [docs/plans/training-plan-v2.md](docs/plans/training-plan-v2.md)):
-  pace lalai + pilih pace sendiri, pelan ikut tarikh lumba (minggu dikira dari hari ini), profil disimpan
-  kali pertama diisi dalam borang pelan, setiap sesi tunjuk data sebenar dari FIT/GPX. Cadangan: pace
-  dikemas kini dari ujian/lumba, semakan blok laju interval/tempo, "Sambung" automatik di Dashboard,
-  carta beban mingguan, taper ikut tarikh lumba. Naikkan `ENGINE_VERSION`.
+- [ ] **Semakan blok laju interval/tempo** (cadangan 2, [docs/plans/training-plan-v2.md](docs/plans/training-plan-v2.md)):
+  dari record `.fit` (`GET …/:id/file`, muat bila sesi dibuka), cari blok pace < sasaran + 15 s dan banding
+  dengan `Session.segmen` - "6/6 interval, purata 5:42 (sasaran 5:45)". Tanpa AI.
 - [ ] Uji pemasa pada telefon sebenar: bunyi iOS (suis senyap mematikan Web Audio), getaran (iOS tiada
   `navigator.vibrate`), Wake Lock Safari 16.4+.
 - [ ] Fail `.ics` lama tak berubah sendiri lepas "Sambung dari Minggu N" - langganan `webcal` (IDEA.md).
