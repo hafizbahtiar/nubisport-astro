@@ -126,7 +126,7 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
           aria-controls="sidebar"
           aria-expanded="false"
           aria-label="Buka menu"
-          data-menu
+          data-buka-sidebar
         >
           <Icon name="menu" />
         </button>
@@ -197,7 +197,9 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
   // Bawah 64rem sidebar = laci (body.menu-buka); atas 64rem ia boleh dilipat (body.sidebar-tutup,
   // diingat dalam localStorage). Butang menu di navbar membuka, butang X di sidebar menutup.
   const desktop = matchMedia("(min-width: 64rem)");
-  const menu = document.querySelector<HTMLButtonElement>("[data-menu]")!;
+  const menu = document.querySelector<HTMLButtonElement>(
+    "[data-buka-sidebar]",
+  )!;
   const tutup = document.querySelector<HTMLButtonElement>(
     "[data-tutup-sidebar]",
   )!;

@@ -7,3 +7,8 @@
 - Prefers responses in Malay / Bahasa Melayu. Confidence: 0.5
 - Expects new code to follow each repo's own established conventions rather than importing another project's style - e.g. the `hono-workers` backend is entirely English (filenames, identifiers, comments, error messages), while the Nubi/Astro app uses Malay. Confidence: 0.55
 - Maintains a written backlog (IDEA.md / TODO.md) and directs work from it (e.g. asks to "proceed" on specific IDEA.md items). Confidence: 0.5
+- Expects the agent to front-load context on its own before starting: read the project's taste file and the most recent Command Code session transcript (search past sessions if needed) and summarize carried-over state, rather than asking the user to re-explain. Confidence: 0.55
+- Works across a set of related repos (portfolio-astro, nubisport-astro, hono-workers) and expects the agent to know which repo a given file/IDE context belongs to, calling out mismatches (e.g. "this path is in hono-workers, not nubisport"). Confidence: 0.45
+- Prefers decluttered UI: removes redundant cards/sections that duplicate entry points available elsewhere (e.g. dropped the profile and MAF cards from the account dashboard because UserMenu/sidebar already link there) instead of keeping parallel shortcuts. Confidence: 0.5
+- Expects "standard" / conventional best-practice UX for security-related flows (e.g. password field with a weak→very strong strength meter plus a live checklist: min length, uppercase, lowercase, number). Confidence: 0.45
+- Reports bugs as regressions against an earlier fix ("sebelum ni kau ada fix bug yang sama") and expects the agent to trace the real root cause (git history, built DOM/bundle) instead of patching the reported symptom. Confidence: 0.45

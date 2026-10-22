@@ -38,64 +38,40 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
     <div id="aktif-sambung" hidden></div>
   </section>
 
-  <div class="grid">
-    <section class="panel">
-      <div class="panel-kepala">
-        <h3 class="display">Pelan saya</h3>
-        <div class="actions">
-          <a class="btn btn-primary btn-sm" href="/account/plan-5k">Pelan 5K</a>
-          <a class="btn btn-outline btn-sm" href="/account/distance-plan"
-            >Pelan 10K / 21K</a
-          >
-        </div>
-      </div>
-      <div class="awan-meter" id="awan">
-        <p id="awan-teks" class="muted">Menyemak awan…</p>
-        <span class="awan-slot" id="awan-slot" aria-hidden="true"></span>
-      </div>
-      <p class="muted awan-nota">
-        Pelan <strong>Awan</strong> ikut akaun anda ke peranti lain. Pelan{" "}
-        <strong>Peranti ini</strong> hanya dalam pelayar ini - hilang kalau data pelayar
-        dikosongkan.
-      </p>
-      <div class="alert alert-info tukar" id="tukar" hidden>
-        <p>
-          Awan penuh. Pilih pelan awan untuk diganti dengan
-          <strong id="tukar-nama"></strong> - pelan yang diganti kekal di peranti
-          ini.
-        </p>
-        <button class="btn btn-outline btn-sm" type="button" id="tukar-batal"
-          >Batal</button
+  <section class="panel">
+    <div class="panel-kepala">
+      <h3 class="display">Pelan saya</h3>
+      <div class="actions">
+        <a class="btn btn-primary btn-sm" href="/account/plan-5k">Pelan 5K</a>
+        <a class="btn btn-outline btn-sm" href="/account/distance-plan"
+          >Pelan 10K / 21K</a
         >
       </div>
-      <ol class="senarai" id="pelan"></ol>
-      <p class="muted" id="tiada-pelan" hidden>
-        Belum ada pelan di pelayar ini. Buat satu - nanti ia muncul di sini
-        dengan kemajuannya.
-      </p>
-    </section>
-
-    <div class="sisi">
-      <section class="panel">
-        <h3 class="display">Profil</h3>
-        <p>
-          <strong data-saya-nama></strong><br /><span
-            class="muted"
-            data-saya-emel></span>
-        </p>
-        <p class="muted" id="peranan"></p>
-        <a class="btn btn-outline btn-sm" href="/account/profile">Urus profil</a
-        >
-      </section>
-      <section class="panel">
-        <h3 class="display">Lari ikut nadi</h3>
-        <p class="muted" id="maf-terakhir">
-          Kira had kadar nadi MAF, kemudian tanda "Ikut nadi" dalam pelan.
-        </p>
-        <a class="btn btn-outline btn-sm" href="/account/maf">Kira MAF</a>
-      </section>
     </div>
-  </div>
+    <div class="awan-meter" id="awan">
+      <p id="awan-teks" class="muted">Menyemak awan…</p>
+      <span class="awan-slot" id="awan-slot" aria-hidden="true"></span>
+    </div>
+    <p class="muted awan-nota">
+      Pelan <strong>Awan</strong> ikut akaun anda ke peranti lain. Pelan{" "}
+      <strong>Peranti ini</strong> hanya dalam pelayar ini - hilang kalau data pelayar
+      dikosongkan.
+    </p>
+    <div class="alert alert-info tukar" id="tukar" hidden>
+      <p>
+        Awan penuh. Pilih pelan awan untuk diganti dengan
+        <strong id="tukar-nama"></strong> - pelan yang diganti kekal di peranti ini.
+      </p>
+      <button class="btn btn-outline btn-sm" type="button" id="tukar-batal"
+        >Batal</button
+      >
+    </div>
+    <ol class="senarai" id="pelan"></ol>
+    <p class="muted" id="tiada-pelan" hidden>
+      Belum ada pelan di pelayar ini. Buat satu - nanti ia muncul di sini dengan
+      kemajuannya.
+    </p>
+  </section>
 </AccountLayout>
 
 <script>
@@ -155,10 +131,6 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
           : nubi === "ahli"
             ? "Ahli"
             : "Belum ahli";
-    $("peranan").textContent =
-      nubi === "ahli" || nubi === "admin" || s.role === "owner"
-        ? "Ahli Nubi Sport."
-        : "Pengguna berdaftar - keahlian Nubi Sport diluluskan pentadbir.";
   }
 
   // Pelan tersimpan (lib/saved-plans.ts): parameter "<kunci>#p" (v2: lumba, pace, minggu 5K), atau - pelan
@@ -470,16 +442,6 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
       }
     }
   }
-
-  // Had MAF terakhir (Maf.astro versi akaun).
-  try {
-    const m = JSON.parse(localStorage.getItem("maf:terakhir") ?? "null");
-    if (m && Number.isInteger(m.maf) && Number.isInteger(m.bawah))
-      $("maf-terakhir").textContent =
-        `Had MAF anda: ${m.maf} denyut/min (julat ${m.bawah}-${m.maf}) - disimpan dalam pelayar ini.`;
-  } catch {
-    /* tiada / rosak */
-  }
 </script>
 
 <style>
@@ -545,22 +507,6 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
     }
   }
 
-  /* Pelan lebar di kiri, profil/alat di kanan; satu lajur bila sempit. */
-  .grid {
-    display: grid;
-    grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr);
-    gap: 1rem;
-    align-items: start;
-  }
-  @media (max-width: 56rem) {
-    .grid {
-      grid-template-columns: minmax(0, 1fr);
-    }
-  }
-  .sisi {
-    display: grid;
-    gap: 1rem;
-  }
   .panel {
     display: grid;
     gap: 0.75rem;
