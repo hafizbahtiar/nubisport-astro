@@ -1,66 +1,138 @@
 ---
 // Penggunaan vs had setiap ciri (hono-workers GET /me/apps/nubi/usage). Had + jadual tier datang dari
-// backend (pemalar yang sama dengan laluan tulis), jadi page ini tiada nombor had sendiri.
-// Pricing nanti = tambah tier di backend; page ini ikut.
+// backend (pemalar yang sama dengan laluan tulis), jadi page ini tiada nombor had sendiri - cuma
+// nama ciri. Ciri baru = satu entri CIRI di sini + satu item dalam services/nubi-usage.ts.
 import AccountLayout from "../../layouts/AccountLayout.astro";
+import Alert from "../../components/ui/Alert.astro";
+import Table from "../../components/ui/Table.astro";
 import "../../styles/panel.css";
+
+const CIRI = [
+  {
+    key: "plan",
+    nama: "Pelan di awan",
+    sub: "Pelan yang ikut akaun anda ke peranti lain.",
+  },
+  {
+    key: "activities",
+    nama: "Aktiviti Strava",
+    sub: "Larian dari fail .fit yang dimuat naik.",
+  },
+  {
+    key: "rsvp",
+    nama: "RSVP larian",
+    sub: "Larian kumpulan akan datang yang anda sertai.",
+  },
+];
 ---
 
 <AccountLayout
   title="Penggunaan"
   description="Penggunaan dan had setiap ciri akaun Nubi Sport anda."
 >
+  <ul class="stat" aria-label="Ringkasan penggunaan">
+    <li><span>Tier</span><strong data-saya-peranan>…</strong></li>
+    <li><span>Pelan di awan</span><strong id="stat-plan">…</strong></li>
+    <li><span>Aktiviti</span><strong id="stat-activities">…</strong></li>
+  </ul>
+
+  <Alert variant="danger" id="ralat" hidden>
+    <p>
+      Tak dapat muat penggunaan sekarang. Semak internet dan muat semula page.
+    </p>
+  </Alert>
+
   <section class="panel" aria-labelledby="t-guna">
     <div class="panel-kepala">
-      <h2 class="display" id="t-guna">Penggunaan anda</h2>
-      <span class="muted">Tier: <strong data-saya-peranan>…</strong></span>
-    </div>
-    <p class="muted" id="nota">Memuatkan penggunaan…</p>
-    <ul class="meter-senarai" id="meter"></ul>
-  </section>
-
-  <section class="panel" aria-labelledby="t-tier" id="tier" hidden>
-    <div class="panel-kepala">
-      <h2 class="display" id="t-tier">Had ikut tier</h2>
+      <h3 class="display" id="t-guna">Had ciri</h3>
       <a class="btn btn-outline btn-sm" href="/account/pricing">Lihat harga</a>
     </div>
-    <div class="jadual-skrol">
-      <table class="jadual">
-        <thead>
-          <tr>
-            <th scope="col">Ciri</th>
-            <th scope="col" data-t="free">Percuma</th>
-            <th scope="col" data-t="ahli">Ahli</th>
-            <th scope="col" data-t="admin">Pentadbir</th>
-          </tr>
-        </thead>
-        <tbody id="tier-isi"></tbody>
-      </table>
+    <p class="muted">Dikira dari akaun anda setiap kali page ini dibuka.</p>
+    <ul class="had">
+      {
+        CIRI.map((c) => (
+          <li data-k={c.key}>
+            <div class="had-teks">
+              <strong>{c.nama}</strong>
+              <span class="muted">{c.sub}</span>
+            </div>
+            <span class="had-angka" data-angka>
+              …
+            </span>
+            <div
+              class="had-bar"
+              role="progressbar"
+              aria-label={c.nama}
+              aria-valuemin="0"
+              data-bar
+              hidden
+            >
+              <i />
+            </div>
+            <p class="had-nota" data-nota hidden />
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+
+  <section class="panel" aria-labelledby="t-tier">
+    <div class="panel-kepala">
+      <h3 class="display" id="t-tier">Had ikut tier</h3>
     </div>
-    <p class="muted kecil">Pemilik guna had Pentadbir.</p>
+    <p class="muted">
+      Tier anda ditebalkan. Pemilik guna had Pentadbir. "-" = tiada pada tier
+      itu.
+    </p>
+    <Table
+      id="tier"
+      variant="compact"
+      columns={[
+        { label: "Ciri" },
+        { label: "Percuma", numeric: true },
+        { label: "Ahli", numeric: true },
+        { label: "Pentadbir", numeric: true },
+      ]}
+      empty="Tiada data had."
+    />
   </section>
 </AccountLayout>
 
 <script>
   import { api, json } from "../../lib/api";
+  import { createTable } from "../../lib/table";
 
   type Had = number | null; // null = tiada had; 0 = tiada pada tier itu
+  type Tier = "free" | "ahli" | "admin";
   type Item = {
     key: string;
     used: number;
     limit: Had;
-    tiers: Record<"free" | "ahli" | "admin", Had>;
+    tiers: Record<Tier, Had>;
   };
 
-  const NAMA: Record<string, [string, string]> = {
-    plan: ["Pelan di awan", "Pelan peranti ini tidak dikira."],
-    activities: ["Aktiviti Strava", "Fail .fit yang dimuat naik."],
-    rsvp: ["RSVP larian akan datang", "Larian yang belum tamat."],
-  };
   const nombor = (n: number) => n.toLocaleString("ms-MY");
   const had = (h: Had) =>
     h === null ? "Tiada had" : h === 0 ? "-" : nombor(h);
-  const $ = (id: string) => document.getElementById(id)!;
+  const nama = (k: string) =>
+    document.querySelector(`[data-k="${k}"] .had-teks strong`)?.textContent ??
+    k;
+
+  const jadual = createTable<Item>("tier", {
+    columns: [
+      (i) => nama(i.key),
+      (i) => sel(i, "free"),
+      (i) => sel(i, "ahli"),
+      (i) => sel(i, "admin"),
+    ],
+  });
+  let semasa: Tier = "free";
+  const sel = (i: Item, t: Tier) =>
+    t === semasa
+      ? Object.assign(document.createElement("strong"), {
+          textContent: had(i.tiers[t]),
+        })
+      : had(i.tiers[t]);
 
   const res = await api("/me/apps/nubi/usage", { cache: "no-store" }).catch(
     () => null,
@@ -68,137 +140,121 @@ import "../../styles/panel.css";
   const data: { tier: string; items: Item[] } | null = res?.ok
     ? (await json(res)).data
     : null;
-  if (!data)
-    $("nota").textContent =
-      "Tak dapat muat penggunaan sekarang. Cuba lagi sekejap.";
-  else {
-    $("nota").hidden = true;
-    $("meter").replaceChildren(
-      ...data.items.map((i) => {
-        const [nama, sub] = NAMA[i.key] ?? [i.key, ""];
-        const li = document.createElement("li");
-        const kepala = document.createElement("p");
-        kepala.className = "meter-kepala";
-        const b = Object.assign(document.createElement("strong"), {
-          textContent: nama,
-        });
-        const angka = document.createElement("span");
-        li.append(kepala);
-        kepala.append(b, angka);
-        if (i.limit === 0) {
-          // Tiada pada tier ini: pautan ke harga, bukan bar kosong.
-          angka.textContent = "Untuk ahli";
-          const a = Object.assign(document.createElement("a"), {
-            className: "link",
-            href: "/account/pricing",
-            textContent: "Lihat cara jadi ahli",
-          });
-          const p = Object.assign(document.createElement("p"), {
-            className: "muted kecil",
-          });
-          p.append(`${sub} `, a);
-          li.append(p);
-          return li;
-        }
-        angka.textContent =
-          i.limit === null
-            ? `${nombor(i.used)} · tiada had`
-            : `${nombor(i.used)} / ${nombor(i.limit)}`;
-        if (i.limit !== null) {
-          const bar = Object.assign(document.createElement("progress"), {
-            max: i.limit,
-            value: Math.min(i.used, i.limit),
-          });
-          bar.setAttribute("aria-label", `${nama}: ${angka.textContent}`);
-          if (i.used >= i.limit) li.classList.add("penuh");
-          li.append(bar);
-        }
-        li.append(
-          Object.assign(document.createElement("p"), {
-            className: "muted kecil",
-            textContent:
-              i.limit !== null && i.used >= i.limit ? `Had penuh. ${sub}` : sub,
-          }),
-        );
-        return li;
-      }),
-    );
-    // Lajur tier semasa ditanda (owner = admin).
-    const semasa = data.tier === "owner" ? "admin" : data.tier;
+
+  if (!data) {
+    document.getElementById("ralat")!.hidden = false;
     document
-      .querySelectorAll<HTMLElement>(`[data-t="${semasa}"]`)
-      .forEach((th) => th.classList.add("tier-ini"));
-    $("tier-isi").replaceChildren(
-      ...data.items.map((i) => {
-        const tr = document.createElement("tr");
-        tr.append(
-          Object.assign(document.createElement("th"), {
-            scope: "row",
-            textContent: NAMA[i.key]?.[0] ?? i.key,
-          }),
-        );
-        for (const t of ["free", "ahli", "admin"] as const)
-          tr.append(
-            Object.assign(document.createElement("td"), {
-              textContent: had(i.tiers[t]),
-              className: t === semasa ? "tier-ini" : "",
-            }),
-          );
-        return tr;
-      }),
-    );
-    $("tier").hidden = false;
+      .querySelectorAll("[data-angka], .stat strong[id]")
+      .forEach((e) => (e.textContent = "-"));
+    jadual.data([]);
+  } else {
+    semasa = data.tier === "owner" ? "admin" : (data.tier as Tier);
+    for (const i of data.items) {
+      const li = document.querySelector<HTMLElement>(`[data-k="${i.key}"]`);
+      const stat = document.getElementById(`stat-${i.key}`);
+      if (stat)
+        stat.textContent =
+          i.limit === 0
+            ? "-"
+            : i.limit === null
+              ? nombor(i.used)
+              : `${nombor(i.used)}/${nombor(i.limit)}`;
+      if (!li) continue;
+      const angka = li.querySelector<HTMLElement>("[data-angka]")!;
+      const bar = li.querySelector<HTMLElement>("[data-bar]")!;
+      const nota = li.querySelector<HTMLElement>("[data-nota]")!;
+      if (i.limit === 0) {
+        // Tiada pada tier ini: lencana + pautan, bukan bar kosong.
+        angka.innerHTML = `<span class="lencana">Untuk ahli</span>`;
+        nota.innerHTML = `<a class="link" href="/account/pricing">Lihat cara jadi ahli</a>`;
+        nota.hidden = false;
+        continue;
+      }
+      if (i.limit === null) {
+        angka.textContent = `${nombor(i.used)} · tiada had`;
+        continue;
+      }
+      const peratus = Math.min(100, Math.round((i.used / i.limit) * 100));
+      angka.textContent = `${nombor(i.used)} / ${nombor(i.limit)}`;
+      bar.setAttribute("aria-valuemax", String(i.limit));
+      bar.setAttribute("aria-valuenow", String(Math.min(i.used, i.limit)));
+      bar.querySelector("i")!.style.width = `${peratus}%`;
+      bar.hidden = false;
+      if (i.used >= i.limit) {
+        li.classList.add("penuh");
+        nota.textContent = "Had penuh. Buang satu untuk tambah yang baru.";
+        nota.hidden = false;
+      } else if (peratus >= 80) {
+        li.classList.add("hampir");
+      }
+    }
+    jadual.data(data.items);
   }
 </script>
 
 <style>
-  .meter-senarai {
+  .had {
+    justify-self: stretch;
     list-style: none;
     margin: 0;
     padding: 0;
+  }
+  .had li {
     display: grid;
-    gap: 1.25rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    padding: 1rem 0;
+    border-top: 1px solid var(--line);
   }
-  .meter-senarai li {
+  .had li:last-child {
+    padding-bottom: 0;
+  }
+  .had-teks {
     display: grid;
-    gap: 0.4rem;
+    gap: 0.15rem;
   }
-  .meter-senarai :global(.meter-kepala) {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    margin: 0;
-  }
-  .meter-senarai :global(progress) {
-    width: 100%;
-    height: 0.6rem;
-    accent-color: var(--orange);
-  }
-  .meter-senarai :global(li.penuh progress) {
-    accent-color: var(--danger-ink);
-  }
-  .meter-senarai :global(p) {
-    margin: 0;
-  }
-  .kecil,
-  .meter-senarai :global(.kecil) {
+  .had-teks .muted {
     font-size: 0.88rem;
   }
-  .jadual-skrol {
-    overflow-x: auto;
-  }
-  .jadual {
-    width: 100%;
-    border-collapse: collapse;
-  }
-  .jadual :is(th, td) {
-    padding: 0.6rem 0.75rem;
-    border-bottom: 1px solid var(--line);
-    text-align: left;
+  .had-angka {
+    font-weight: 700;
+    color: var(--navy);
+    font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
-  .jadual :global(.tier-ini) {
-    background: var(--paper-2);
-    font-weight: 700;
+  .had-bar,
+  .had-nota {
+    grid-column: 1 / -1;
+  }
+  .had-bar {
+    height: 0.5rem;
+    border-radius: 999px;
+    background: var(--line);
+    overflow: hidden;
+  }
+  .had-bar i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--info-ink);
+    transition: width 0.4s ease;
+  }
+  .hampir .had-bar i {
+    background: var(--orange);
+  }
+  .penuh .had-bar i {
+    background: var(--danger-ink);
+  }
+  .had-nota {
+    font-size: 0.88rem;
+  }
+  .penuh .had-nota {
+    color: var(--danger-ink);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .had-bar i {
+      transition: none;
+    }
   }
 </style>
