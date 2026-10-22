@@ -83,7 +83,7 @@ export function weekHtml(w: Week, isnin: Date | null, hariIni: string, ujian?: T
           }${s.jenis === "ujian" && ujian
             ? `<form class="ujian-masa no-print" data-ujian="${ujian}" data-sesi-ujian="${w.no}.${i}">
                   <label class="field"><span class="field-label">Masa sebenar anda</span>
-                    <input class="input" name="masa" inputmode="numeric" autocomplete="off" placeholder="cth. 29:40" required /></label>
+                    <input class="input" name="masa" data-mask="duration" inputmode="numeric" autocomplete="off" placeholder="cth. 29:40" required /></label>
                   <button class="btn btn-primary btn-sm" type="submit">Pelan seterusnya</button>
                   <div class="ujian-hasil" data-ujian-hasil aria-live="polite"></div>
                 </form>`
@@ -115,7 +115,7 @@ export function pacesHtml(p: Paces, sendiri: boolean, lumbaLabel: string) {
     <dl>${baris.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
     <form class="pace-ubah no-print" data-pace-borang>
       <label class="field"><span class="field-label">Pace sasaran sendiri (min:saat /km)</span>
-        <input class="input" name="pace" inputmode="numeric" autocomplete="off" placeholder="cth. 6:30" value="${sendiri ? formatPace(p.lumba) : ""}" required /></label>
+        <input class="input" name="pace" data-mask="pace" inputmode="numeric" autocomplete="off" placeholder="cth. 6:30" value="${sendiri ? formatPace(p.lumba) : ""}" required /></label>
       <button class="btn btn-outline btn-sm" type="submit">Kira semula</button>
       ${sendiri ? `<button class="btn btn-outline btn-sm" type="button" data-pace-asal>Guna pace lalai</button>` : ""}
       <p class="ralat" data-pace-ralat hidden>Format pace: min:saat, contoh 6:30.</p>

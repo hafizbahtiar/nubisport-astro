@@ -2,7 +2,8 @@
 /**
  * Medan tarikh format Malaysia (dd/mm/yyyy) + kalendar timbul. Tiada library.
  *
- * - Kotak teks papar/terima dd/mm/yyyy (juga 8/2/2027, 08-02-2027, 08022027).
+ * - Kotak teks bermask dd/mm/yyyy (lib/mask.ts): digit sahaja, "/" diletak sendiri; taip "8/" = 08/,
+ *   tampal 8/2/2027 atau 08-02-2027 pun difahami. Edit dari mana-mana kedudukan.
  * - Borang dapat ISO yyyy-mm-dd dari input tersembunyi yang membawa `id` + `name`, jadi
  *   `?mula=2027-02-08` dan `form.elements[name].value = "..."` kekal berfungsi: set nilai,
  *   hantar event `change`, kotak teks ikut sendiri.
@@ -48,6 +49,7 @@ const tahun = Array.from(
       type="text"
       id={`${id}-text`}
       data-text
+      data-mask="date"
       inputmode="numeric"
       autocomplete="off"
       placeholder="dd/mm/yyyy"
@@ -120,6 +122,7 @@ const tahun = Array.from(
     addMonths,
     addDays,
   } from "../../lib/date";
+  import { installMasks } from "../../lib/mask";
 
   function pasang(root: HTMLElement) {
     if (root.dataset.bound === "1") return;
@@ -208,15 +211,8 @@ const tahun = Array.from(
       close();
     };
 
-    // Menaip: "dd" -> "dd/", "dd/mm" -> "dd/mm/"; disemak bila change / Enter.
-    text.addEventListener("input", (e) => {
-      if (
-        (e as InputEvent).inputType === "insertText" &&
-        /^\d{2}(\/\d{2})?$/.test(text.value)
-      )
-        text.value += "/";
-      if (error.textContent) showError("");
-    });
+    // Menaip: mask (lib/mask.ts) jaga bentuk dd/mm/yyyy; disemak bila change / Enter.
+    text.addEventListener("input", () => error.textContent && showError(""));
     const commit = () => {
       const raw = text.value.trim();
       if (!raw) return setValue("");
@@ -305,5 +301,6 @@ const tahun = Array.from(
     if (hidden.value) text.value = isoToDmy(hidden.value);
   }
 
+  installMasks();
   document.querySelectorAll<HTMLElement>("[data-datepicker]").forEach(pasang);
 </script>

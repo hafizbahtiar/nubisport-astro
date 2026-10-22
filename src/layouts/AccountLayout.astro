@@ -137,8 +137,14 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
           <UserMenu id="menu-navbar" />
         </span>
       </header>
+      <main class="app-kandungan" id="kandungan">
+        <slot />
+      </main>
       <script is:inline>
-        // Lukis nama/e-mel (+ menu ahli) dari salinan /me (lib/api.ts ME_CACHE_KEY) sebelum lukisan pertama.
+        // Lukis dari salinan /me (lib/api.ts ME_CACHE_KEY, sessionStorage) sebelum lukisan pertama:
+        // nama/e-mel/awalan/peranan + bahagian ikut peranan, di sidebar DAN dalam page (sebab itu
+        // skrip ini selepas <main>). Skrip modul di bawah lukis semula dari /me baharu - logik sama.
+        //   [data-ahli]  ahli Nubi / admin Nubi / owner   [data-admin] admin Nubi / owner   [data-owner] owner
         try {
           const s = JSON.parse(
             sessionStorage.getItem("nubi:saya") || "null",
@@ -146,23 +152,32 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
           if (s && /(?:^|; )session_active=1/.test(document.cookie)) {
             const isi = (a, v) =>
               document.querySelectorAll(a).forEach((e) => (e.textContent = v));
+            const n = s.apps && s.apps.nubi;
+            const owner = s.role === "owner";
             isi("[data-saya-nama]", s.name);
             isi("[data-saya-emel]", s.email);
             isi(
               "[data-saya-awal]",
               s.name.trim().charAt(0).toUpperCase() || "?",
             );
-            const n = s.apps && s.apps.nubi;
-            if (s.role === "owner" || n === "ahli" || n === "admin")
-              document
-                .querySelectorAll("[data-ahli]")
-                .forEach((e) => (e.hidden = false));
+            isi(
+              "[data-saya-peranan]",
+              owner
+                ? "Pemilik"
+                : n === "admin"
+                  ? "Pentadbir"
+                  : n === "ahli"
+                    ? "Ahli"
+                    : "Belum ahli",
+            );
+            const buka = (a, ok) =>
+              document.querySelectorAll(a).forEach((e) => (e.hidden = !ok));
+            buka("[data-ahli]", owner || n === "ahli" || n === "admin");
+            buka("[data-admin]", owner || n === "admin");
+            buka("[data-owner]", owner);
           }
         } catch {}
       </script>
-      <main class="app-kandungan" id="kandungan">
-        <slot />
-      </main>
     </div>
     <ConfirmDialog />
     <ConnectionNotice />
@@ -193,12 +208,28 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
     document
       .querySelectorAll("[data-saya-awal]")
       .forEach((e) => (e.textContent = awal));
-    // Sama seperti activities/index.astro; backend tetap menyemak peranan pada setiap panggilan.
+    // Sama dengan skrip inline (selepas <main>); backend tetap menyemak peranan pada setiap panggilan.
     const nubi = s.apps?.nubi;
-    const ahli = s.role === "owner" || nubi === "ahli" || nubi === "admin";
+    const owner = s.role === "owner";
     document
-      .querySelectorAll<HTMLElement>("[data-ahli]")
-      .forEach((e) => (e.hidden = !ahli));
+      .querySelectorAll("[data-saya-peranan]")
+      .forEach(
+        (e) =>
+          (e.textContent = owner
+            ? "Pemilik"
+            : nubi === "admin"
+              ? "Pentadbir"
+              : nubi === "ahli"
+                ? "Ahli"
+                : "Belum ahli"),
+      );
+    const buka = (sel: string, ok: boolean) =>
+      document
+        .querySelectorAll<HTMLElement>(sel)
+        .forEach((e) => (e.hidden = !ok));
+    buka("[data-ahli]", owner || nubi === "ahli" || nubi === "admin");
+    buka("[data-admin]", owner || nubi === "admin");
+    buka("[data-owner]", owner);
   }
 
   // Bawah 64rem sidebar = laci (body.menu-buka); atas 64rem ia boleh dilipat (body.sidebar-tutup,

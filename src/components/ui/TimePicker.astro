@@ -1,8 +1,9 @@
 ---
 /**
- * Medan masa standard: dropdown jam + minit, 24 jam. Markup dan logik dalam src/lib/time-picker.ts
- * (dikongsi dengan HTML yang dijana skrip - panggil mountTimePickers selepas innerHTML).
- *   <Field label="Masa mula" for="jam-jam"><TimePicker id="jam" name="jam" value="07:00" /></Field>
+ * Medan masa standard (adik DatePicker): teks hh:mm bermask + panel Jam / Minit, 24 jam. Markup dan
+ * logik dalam src/lib/time-picker.ts (dikongsi dengan HTML yang dijana skrip - panggil
+ * mountTimePickers selepas innerHTML). Contoh: /account/ui.
+ *   <Field label="Masa mula" for="jam-text"><TimePicker id="jam" name="jam" value="07:00" /></Field>
  */
 import { timePickerHtml } from "../../lib/time-picker";
 
@@ -11,8 +12,9 @@ interface Props {
   name?: string;
   /** "HH:MM". */
   value?: string;
-  /** Langkah minit (pembahagi 60). */
+  /** Langkah minit dalam panel (pembahagi 60). */
   step?: number;
+  required?: boolean;
 }
 ---
 

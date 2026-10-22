@@ -8,6 +8,7 @@ import {
   BookOpen,
   Building,
   Calendar,
+  Clock,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -41,7 +42,7 @@ import {
   X,
 } from "lucide-static";
 
-const ICONS = {
+export const ICONS = {
   aktiviti: Activity,
   awan: Cloud,
   bangunan: Building,
@@ -59,6 +60,7 @@ const ICONS = {
   harga: Tag,
   laju: Gauge,
   kalendar: Calendar,
+  jam: Clock,
   kanan: ChevronRight,
   keluar: LogOut,
   jeda: Pause,

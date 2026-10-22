@@ -44,7 +44,7 @@ const tahun = new Date().getFullYear();
       max={`${tahun + 3}-12-31`}
     />
   </Field>
-  <Field label="Masa mula (waktu Malaysia)" for={`${id}-jam-jam`}>
+  <Field label="Masa mula (waktu Malaysia)" for={`${id}-jam-text`}>
     <TimePicker id={`${id}-jam`} name="jam" value="07:00" />
   </Field>
   <Field label="Jarak (km, pilihan)">
@@ -101,8 +101,8 @@ const tahun = new Date().getFullYear();
       grid-column: 1 / -1;
     }
   }
-  .borang-larian :global(.input:not(.tp .input)),
-  .borang-larian :global(.dp) {
+  .borang-larian :global(.input:not(.dp-teks)),
+  .borang-larian :global(.dp:not(.tp)) {
     width: 100%;
   }
 </style>

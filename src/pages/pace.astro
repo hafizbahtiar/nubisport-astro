@@ -48,6 +48,7 @@ import { KM_MAX, KM_MIN, RACE_DISTANCES } from "../lib/pace";
             class="input"
             type="text"
             name="masa"
+            data-mask="duration"
             inputmode="numeric"
             autocomplete="off"
             placeholder="mm:ss"
@@ -58,6 +59,7 @@ import { KM_MAX, KM_MIN, RACE_DISTANCES } from "../lib/pace";
             class="input"
             type="text"
             name="pace"
+            data-mask="pace"
             inputmode="numeric"
             autocomplete="off"
             placeholder="mm:ss"
@@ -110,9 +112,12 @@ import { KM_MAX, KM_MIN, RACE_DISTANCES } from "../lib/pace";
 </Layout>
 
 <script>
+  import { installMasks } from "../lib/mask";
   import { parseTime, calcPace, RACE_DISTANCES } from "../lib/pace";
   import { formatPace } from "../lib/plan-5k";
   import { formatTime } from "../lib/distance-plan";
+
+  installMasks(); // masa (h:mm:ss) dan pace (m:ss)
 
   const borang = document.getElementById("borang") as HTMLFormElement;
   const medanKm = document.getElementById("medan-km")!;

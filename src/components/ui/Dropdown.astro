@@ -115,13 +115,19 @@ const pilihan = options.find((o) => o.value === value);
     };
     const buka = () => {
       // Default bawah; flip ke atas bila ruang bawah tak cukup dan atas lebih lapang.
-      menu.classList.remove("dd-atas");
+      // Lebar ikut item: jajar kanan bila menu akan terkeluar tepi kanan skrin (gutter 16px).
+      menu.classList.remove("dd-atas", "dd-kanan");
       menu.hidden = false;
       const rect = butang.getBoundingClientRect();
       const ruangBawah = window.innerHeight - rect.bottom;
       const ruangAtas = rect.top;
       if (menu.offsetHeight + 8 > ruangBawah && ruangAtas > ruangBawah)
         menu.classList.add("dd-atas");
+      if (
+        rect.left + menu.offsetWidth >
+        document.documentElement.clientWidth - 16
+      )
+        menu.classList.add("dd-kanan");
       butang.setAttribute("aria-expanded", "true");
       tanda(
         Math.max(

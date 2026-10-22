@@ -450,20 +450,34 @@ legend,
   border-color: var(--orange);
 }
 
-/* ---------- Masa (TimePicker.astro, lib/time-picker.ts) ---------- */
+/* ---------- Masa (TimePicker.astro, lib/time-picker.ts) ----------
+   Guna kelas Tarikh (dp-*) untuk medan, panel, butang dan kaki - di sini hanya grid Jam / Minit. */
 .tp {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
+  width: min(100%, 12rem);
 }
 
-.tp .input {
-  width: auto;
-  font-variant-numeric: tabular-nums;
+.tp-panel {
+  width: 18rem;
 }
 
-.tp-titik {
-  font-weight: 700;
+.tp-lajur+.tp-lajur {
+  margin-top: 0.6rem;
+}
+
+.tp-tajuk {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.tp-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 2px;
+  justify-items: center;
 }
 
 /* ---------- Tarikh (DatePicker.astro) ---------- */
@@ -736,12 +750,16 @@ legend,
   color: var(--muted);
 }
 
+/* Lebar menu ikut item terpanjang (bukan lebar medan): min 10rem, max 20rem atau skrin tolak gutter
+   16px. Label lebih panjang dibalut. Terlalu dekat tepi kanan: JS tambah .dd-kanan (jajar kanan). */
 .dd-menu {
   position: absolute;
   z-index: 30;
   top: calc(100% + 0.5rem);
   left: 0;
-  right: 0;
+  width: max-content;
+  min-width: 10rem;
+  max-width: min(20rem, calc(100vw - 2rem));
   max-height: min(20rem, 60vh);
   overflow-y: auto;
   margin: 0;
@@ -755,6 +773,11 @@ legend,
     0 1px 2px rgb(10 26 51 / 0.06),
     0 24px 48px -16px rgb(10 26 51 / 0.35);
   animation: dp-masuk 0.14s ease-out;
+}
+
+.dd-menu.dd-kanan {
+  left: auto;
+  right: 0;
 }
 
 /* Dropdown dekat hujung bawah skrin: menu naik ke atas (JS tambah semasa buka). */

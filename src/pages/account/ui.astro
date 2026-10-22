@@ -1,0 +1,461 @@
+---
+// Panduan UI standard Nubi (usage page): setiap komponen dalam src/components/ui + kelas global,
+// dengan contoh hidup dan kod. Untuk pembangun - tiada dalam nav, noindex (AccountLayout), di bawah
+// /account/ (robots Disallow). Tambah komponen baharu = tambah satu seksyen di sini.
+import AccountLayout from "../../layouts/AccountLayout.astro";
+import Field from "../../components/ui/Field.astro";
+import Alert from "../../components/ui/Alert.astro";
+import Checkbox from "../../components/ui/Checkbox.astro";
+import ChipGroup from "../../components/ui/ChipGroup.astro";
+import DatePicker from "../../components/ui/DatePicker.astro";
+import TimePicker from "../../components/ui/TimePicker.astro";
+import Dropdown from "../../components/ui/Dropdown.astro";
+import Icon from "../../components/ui/Icon.astro";
+import Table from "../../components/ui/Table.astro";
+import { ICONS, type IconName } from "../../lib/icon";
+import "../../styles/panel.css";
+
+const KOD = {
+  field: `<Field label="Nama" hint="Petunjuk pilihan.">
+  <input class="input" name="nama" />
+</Field>`,
+  tarikh: `<Field label="Tarikh mula" for="mula-text">
+  <DatePicker id="mula" name="mula" min="2026-01-01" max="2030-12-31" />
+</Field>
+// nilai: form.elements.mula.value === "2026-11-07"
+// set dari kod: el.value = "..."; el.dispatchEvent(new Event("change"))`,
+  masa: `<Field label="Masa mula" for="jam-text">
+  <TimePicker id="jam" name="jam" value="07:00" step={5} />
+</Field>
+// HTML dari skrip: timePickerHtml({ id, name, value }) + mountTimePickers(akar)`,
+  mask: `<input class="input" data-mask="duration" inputmode="numeric" placeholder="mm:ss" />
+<input class="input" data-mask="pace" inputmode="numeric" placeholder="m:ss" />
+// date (dd/mm/yyyy) dan time (hh:mm) sudah ada dalam DatePicker / TimePicker
+<script> import { installMasks } from "../lib/mask"; installMasks(); </script>`,
+  chip: `<ChipGroup legend="Hari seminggu" name="hari" checked={3}
+  options={[3, 4, 5].map((h) => ({ value: h, label: \`\${h} hari\` }))} />`,
+  checkbox: `<Checkbox name="setuju" label="Saya setuju" hint="Petunjuk pilihan." />`,
+  dropdown: `<label class="sr-only" for="sukan-butang">Sukan</label>
+<Dropdown id="sukan" value="run" options={[{ value: "run", label: "Larian" }, ...]} />
+// select.value + "change" seperti <select> biasa`,
+  alert: `<Alert variant="info|warning|danger|success" title="Tajuk pilihan">
+  <p>Isi.</p>
+</Alert>
+// skrip: <div class="alert alert-warning">...</div>`,
+  butang: `<button class="btn btn-primary">Utama</button>
+<button class="btn btn-outline">Kedua</button>
+<button class="btn btn-bahaya">Bahaya</button>
+<button class="btn btn-primary btn-sm">Kecil</button>
+<div class="actions">...</div>   <!-- deretan butang -->`,
+  panel: `import "../styles/panel.css";
+<ul class="stat"><li><span>Label</span><strong>12</strong></li>...</ul>
+<section class="panel">
+  <div class="panel-kepala"><h3 class="display">Tajuk</h3> <a class="btn btn-sm">…</a></div>
+  ...
+</section>`,
+  jadual: `<Table id="contoh" variant="compact|standard|full" empty="Tiada rekod."
+  columns={[{ label: "Nama" }, { label: "Jarak", numeric: true }, { label: "Tindakan", srOnly: true }]} />
+// skrip:
+const j = createTable<Baris>("contoh", { columns: [r => r.nama, r => \`\${r.km} km\`, r => butang], search: r => r.nama });
+j.data(baris);`,
+  sahkan: `import { confirmDialog } from "../lib/confirm";
+if (await confirmDialog({ title: "Padam?", message: "...", confirmLabel: "Padam", danger: true })) { ... }`,
+  ikon: `<Icon name="kalendar" />        // Astro
+icon("kalendar")                 // HTML dari skrip (lib/icon.ts)`,
+};
+const ikon = Object.keys(ICONS) as IconName[];
+---
+
+<AccountLayout title="Panduan UI">
+  <section class="panel pengenalan">
+    <h3 class="display">Panduan UI standard</h3>
+    <p class="muted">
+      Komponen dalam <code>src/components/ui</code> dan kelas global. Guna ini dahulu
+      sebelum membina kawalan baharu - rupa, papan kekunci dan kebolehcapaian sudah
+      diuruskan. Setiap seksyen: bila guna, contoh hidup, kod.
+    </p>
+    <nav aria-label="Kandungan" class="isi">
+      {
+        [
+          ["field", "Field + input"],
+          ["tarikh", "DatePicker"],
+          ["masa", "TimePicker"],
+          ["mask", "Medan bermask"],
+          ["chip", "ChipGroup"],
+          ["checkbox", "Checkbox"],
+          ["dropdown", "Dropdown"],
+          ["alert", "Alert"],
+          ["butang", "Butang"],
+          ["panel", "Panel + stat"],
+          ["jadual", "Table"],
+          ["sahkan", "Dialog pengesahan"],
+          ["ikon", "Ikon"],
+        ].map(([id, nama]) => (
+          <a class="chip-pautan" href={`#ui-${id}`}>
+            {nama}
+          </a>
+        ))
+      }
+    </nav>
+  </section>
+
+  <div class="susun">
+    <section class="panel" id="ui-field">
+      <h3 class="display">Field + input</h3>
+      <p class="muted">
+        Setiap kawalan borang dalam <code>Field</code> (label + petunjuk). Kawalan
+        berbilang elemen (DatePicker, TimePicker) guna prop
+        <code>for</code>.
+      </p>
+      <div class="demo">
+        <Field label="Nama" hint="Petunjuk pilihan.">
+          <input class="input" name="nama" placeholder="cth. Aminah" />
+        </Field>
+        <Field label="Umur">
+          <input class="input" type="number" name="umur" inputmode="numeric" />
+        </Field>
+      </div>
+      <pre><code>{KOD.field}</code></pre>
+    </section>
+
+    <section class="panel" id="ui-tarikh">
+      <h3 class="display">DatePicker</h3>
+      <p class="muted">
+        Tarikh format Malaysia dd/mm/yyyy, bermask, + kalendar timbul. Nilai
+        borang = ISO dalam input tersembunyi. Papan kekunci: Alt+↓ buka, anak
+        panah, PageUp/PageDown, Esc.
+      </p>
+      <div class="demo">
+        <Field label="Tarikh" for="demo-tarikh-text">
+          <DatePicker
+            id="demo-tarikh"
+            name="tarikh"
+            min="2026-01-01"
+            max="2030-12-31"
+          />
+        </Field>
+        <p class="muted nilai" data-nilai="demo-tarikh">Nilai: -</p>
+      </div>
+      <pre><code>{KOD.tarikh}</code></pre>
+    </section>
+
+    <section class="panel" id="ui-masa">
+      <h3 class="display">TimePicker</h3>
+      <p class="muted">
+        Masa 24 jam hh:mm, bermask, + panel Jam / Minit (gaya sama DatePicker).
+        Pilih jam, kemudian minit. Masa ditaip boleh apa-apa minit; panel ikut
+        langkah (<code>step</code>, lalai 5).
+      </p>
+      <div class="demo">
+        <Field label="Masa mula" for="demo-jam-text">
+          <TimePicker id="demo-jam" name="jam" value="07:00" />
+        </Field>
+        <p class="muted nilai" data-nilai="demo-jam">Nilai: 07:00</p>
+      </div>
+      <pre><code>{KOD.masa}</code></pre>
+    </section>
+
+    <section class="panel" id="ui-mask">
+      <h3 class="display">Medan bermask</h3>
+      <p class="muted">
+        <code>data-mask</code> pada input teks: hanya digit, pemisah diletak sendiri.
+        Edit dari mana-mana kedudukan - kursor kekal; Backspace pada pemisah buang
+        digit sebelahnya; tampal "1:05:30" atau "8/2/2027" pun difahami. Mask hanya
+        bentuk: semak julat sendiri bila hantar.
+      </p>
+      <div class="demo">
+        <Field
+          label="Tempoh (duration)"
+          hint="Dari kanan: 2845 -> 28:45, 13045 -> 1:30:45"
+        >
+          <input
+            class="input"
+            data-mask="duration"
+            inputmode="numeric"
+            autocomplete="off"
+            placeholder="mm:ss"
+          />
+        </Field>
+        <Field label="Pace (pace)" hint="630 -> 6:30">
+          <input
+            class="input"
+            data-mask="pace"
+            inputmode="numeric"
+            autocomplete="off"
+            placeholder="m:ss"
+          />
+        </Field>
+      </div>
+      <pre><code>{KOD.mask}</code></pre>
+    </section>
+
+    <section class="panel" id="ui-chip">
+      <h3 class="display">ChipGroup</h3>
+      <p class="muted">
+        Pilihan tunggal 2-6 nilai pendek, semua kelihatan. Label panjang:
+        <code>stacked</code>. Lebih banyak pilihan: Dropdown.
+      </p>
+      <div class="demo">
+        <ChipGroup
+          legend="Hari seminggu"
+          name="hari"
+          checked={3}
+          options={[3, 4, 5].map((h) => ({ value: h, label: `${h} hari` }))}
+        />
+      </div>
+      <pre><code>{KOD.chip}</code></pre>
+    </section>
+
+    <section class="panel" id="ui-checkbox">
+      <h3 class="display">Checkbox</h3>
+      <p class="muted">
+        Ya/tidak, persetujuan, atau bahagian borang yang terbuka bila ditanda.
+      </p>
+      <div class="demo">
+        <Checkbox name="setuju" label="Saya setuju" hint="Petunjuk pilihan." />
+      </div>
+      <pre><code>{KOD.checkbox}</code></pre>
+    </section>
+
+    <section class="panel" id="ui-dropdown">
+      <h3 class="display">Dropdown</h3>
+      <p class="muted">
+        Pilihan tunggal dari senarai (menu bergaya, &lt;select&gt; asli di
+        belakang). Penapis jadual guna ini.
+      </p>
+      <div class="demo">
+        <div>
+          <label class="sr-only" for="demo-sukan-butang">Sukan</label>
+          <Dropdown
+            id="demo-sukan"
+            value="run"
+            options={[
+              { value: "run", label: "Larian" },
+              { value: "walk", label: "Jalan" },
+              { value: "ride", label: "Berbasikal" },
+            ]}
+          />
+        </div>
+      </div>
+      <pre><code>{KOD.dropdown}</code></pre>
+    </section>
+
+    <section class="panel" id="ui-alert">
+      <h3 class="display">Alert</h3>
+      <p class="muted">
+        Info = penerangan; warning = perlu perhatian; danger = ralat (role
+        alert); success = berjaya.
+      </p>
+      <div class="demo satu">
+        <Alert variant="info" title="Info"><p>Penerangan atau nota.</p></Alert>
+        <Alert variant="warning" title="Amaran"><p>Perlu perhatian.</p></Alert>
+        <Alert variant="danger"><p>Tak dapat simpan sekarang.</p></Alert>
+        <Alert variant="success"><p>Disimpan.</p></Alert>
+      </div>
+      <pre><code>{KOD.alert}</code></pre>
+    </section>
+
+    <section class="panel" id="ui-butang">
+      <h3 class="display">Butang</h3>
+      <p class="muted">
+        Satu butang utama setiap tindakan. Bahaya untuk padam/nyahpaut (dengan
+        dialog pengesahan). <code>btn-sm</code> dalam jadual dan kepala panel.
+      </p>
+      <div class="actions">
+        <button class="btn btn-primary" type="button">Utama</button>
+        <button class="btn btn-outline" type="button">Kedua</button>
+        <button class="btn btn-bahaya" type="button">Bahaya</button>
+        <button class="btn btn-primary btn-sm" type="button">Kecil</button>
+        <a class="link" href="#ui-butang">Pautan</a>
+      </div>
+      <pre><code>{KOD.butang}</code></pre>
+    </section>
+
+    <section class="panel" id="ui-panel">
+      <h3 class="display">Panel + stat</h3>
+      <p class="muted">
+        Susun atur page akaun: tiga kad angka, kemudian panel dengan kepala
+        (tajuk + kawalan). Gaya dalam <code>styles/panel.css</code>.
+      </p>
+      <ul class="stat">
+        <li><span>Akan datang</span><strong>3</strong></li>
+        <li><span>RSVP</span><strong>24</strong></li>
+        <li><span>Hadir</span><strong>18</strong></li>
+      </ul>
+      <pre><code>{KOD.panel}</code></pre>
+    </section>
+
+    <section class="panel" id="ui-jadual">
+      <h3 class="display">Table</h3>
+      <p class="muted">
+        Senarai data: compact (panel kecil), standard (cari + halaman), full (+
+        penapis, papar N). Bawah 40rem setiap baris jadi kad.
+      </p>
+      <Table
+        id="demo-jadual"
+        variant="standard"
+        searchPlaceholder="Cari nama…"
+        empty="Tiada rekod."
+        columns={[
+          { label: "Nama" },
+          { label: "Jarak", numeric: true },
+          { label: "Pace", numeric: true },
+        ]}
+      />
+      <pre><code>{KOD.jadual}</code></pre>
+    </section>
+
+    <section class="panel" id="ui-sahkan">
+      <h3 class="display">Dialog pengesahan</h3>
+      <p class="muted">
+        Sebelum tindakan yang tak boleh dibatalkan. <code>danger</code> untuk padam;
+        <code>passwordLabel</code> + <code>action</code> bila perlu kata laluan.
+      </p>
+      <div class="actions">
+        <button class="btn btn-bahaya btn-sm" type="button" id="demo-sahkan"
+          >Cuba dialog</button
+        >
+        <span class="muted" id="demo-sahkan-hasil"></span>
+      </div>
+      <pre><code>{KOD.sahkan}</code></pre>
+    </section>
+
+    <section class="panel" id="ui-ikon">
+      <h3 class="display">Ikon</h3>
+      <p class="muted">
+        Lucide sahaja (<code>lib/icon.ts</code>) - hiasan, label datang dari
+        induk. Ikon baharu: import dari lucide-static dan daftar di ICONS.
+      </p>
+      <ul class="ikon-grid">
+        {
+          ikon.map((n) => (
+            <li>
+              <Icon name={n} />
+              <code>{n}</code>
+            </li>
+          ))
+        }
+      </ul>
+      <pre><code>{KOD.ikon}</code></pre>
+    </section>
+  </div>
+</AccountLayout>
+
+<script>
+  import { installMasks } from "../../lib/mask";
+  import { createTable } from "../../lib/table";
+  import { confirmDialog } from "../../lib/confirm";
+
+  installMasks();
+
+  // Nilai tersembunyi DatePicker / TimePicker - tunjuk kontrak `change`.
+  document.querySelectorAll<HTMLElement>("[data-nilai]").forEach((p) => {
+    const input = document.getElementById(p.dataset.nilai!) as HTMLInputElement;
+    input.addEventListener(
+      "change",
+      () => (p.textContent = `Nilai: ${input.value || "-"}`),
+    );
+  });
+
+  const j = createTable<{ nama: string; km: number; pace: string }>(
+    "demo-jadual",
+    {
+      search: (r) => r.nama,
+      columns: [(r) => r.nama, (r) => `${r.km} km`, (r) => r.pace],
+    },
+  );
+  j.data([
+    { nama: "Larian pagi", km: 5, pace: "6:45 /km" },
+    { nama: "Larian panjang", km: 12, pace: "7:10 /km" },
+    { nama: "Interval", km: 6.4, pace: "5:50 /km" },
+    { nama: "Larian mudah", km: 4, pace: "7:30 /km" },
+  ]);
+
+  document
+    .getElementById("demo-sahkan")!
+    .addEventListener("click", async () => {
+      const ya = await confirmDialog({
+        title: "Padam contoh?",
+        message: "Ini hanya demo - tiada apa dipadam.",
+        confirmLabel: "Padam",
+        danger: true,
+      });
+      document.getElementById("demo-sahkan-hasil")!.textContent = ya
+        ? "Disahkan."
+        : "Dibatalkan.";
+    });
+</script>
+
+<style>
+  .pengenalan,
+  .susun > .panel {
+    justify-items: stretch;
+  }
+  .pengenalan {
+    margin-bottom: 1rem;
+  }
+  .susun {
+    display: grid;
+    gap: 1rem;
+  }
+  .isi {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .chip-pautan {
+    padding: 0.3rem 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--navy);
+    font-size: 0.88rem;
+    text-decoration: none;
+  }
+  .chip-pautan:hover {
+    border-color: var(--orange);
+  }
+  .demo {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+    gap: 1rem 1.5rem;
+    align-items: start;
+    padding: 1rem;
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+  }
+  .demo.satu {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .nilai {
+    align-self: end;
+    font-variant-numeric: tabular-nums;
+  }
+  pre {
+    margin: 0;
+    padding: 0.85rem 1rem;
+    overflow-x: auto;
+    background: var(--navy);
+    color: #e2e8f0;
+    border-radius: var(--radius);
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+  .ikon-grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+    gap: 0.5rem;
+  }
+  .ikon-grid li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--navy);
+  }
+  .ikon-grid code {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+</style>

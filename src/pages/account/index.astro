@@ -11,10 +11,45 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
   <ul class="stat" aria-label="Ringkasan">
     <li><span>Pelan</span><strong id="bil-pelan">0</strong></li>
     <li><span>Sesi siap</span><strong id="bil-siap">0</strong></li>
-    <li><span>Keahlian</span><strong id="keahlian">…</strong></li>
+    <li><span>Keahlian</span><strong data-saya-peranan>…</strong></li>
   </ul>
 
-  <section class="panel" id="aktif" hidden>
+  <!-- Admin Nubi + owner: larian kumpulan yang perlu diurus. -->
+  <section class="panel" data-admin hidden aria-labelledby="t-urus">
+    <div class="panel-kepala">
+      <h3 class="display" id="t-urus">Urus larian</h3>
+      <div class="actions">
+        <a class="btn btn-primary btn-sm" href="/account/events/new"
+          >Tambah larian</a
+        >
+        <a class="btn btn-outline btn-sm" href="/account/events">Semua larian</a
+        >
+      </div>
+    </div>
+    <p class="muted" id="urus-nota">Memuatkan larian…</p>
+    <p id="urus-seterusnya" hidden></p>
+    <div id="urus-hadir" hidden>
+      <p><strong>Perlu tanda hadir</strong></p>
+      <ul class="pautan-senarai" id="urus-hadir-senarai"></ul>
+    </div>
+  </section>
+
+  <!-- Owner sahaja: komuniti Nubi (GET /owner/apps/nubi/members - owner sahaja di backend). -->
+  <section class="panel" data-owner hidden aria-labelledby="t-komuniti">
+    <div class="panel-kepala">
+      <h3 class="display" id="t-komuniti">Komuniti Nubi</h3>
+      <a
+        class="btn btn-outline btn-sm"
+        href="https://hafizbahtiar.com/admin/app-access"
+        target="_blank"
+        rel="noopener">Urus akses</a
+      >
+    </div>
+    <p class="muted" id="komuniti-nota">Memuatkan ahli…</p>
+    <ul class="pautan-senarai" id="komuniti-baru" hidden></ul>
+  </section>
+
+  <section class="panel" id="aktif" data-ahli hidden>
     <div class="panel-kepala">
       <h3 class="display">Pelan aktif</h3>
       <div class="actions">
@@ -76,7 +111,14 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
 </AccountLayout>
 
 <script>
-  import { currentUser } from "../../lib/api";
+  import { api, currentUser, json } from "../../lib/api";
+  import {
+    fetchEvents,
+    isEventAdmin,
+    rsvpText,
+    shortWhen,
+    started,
+  } from "../../lib/events";
   import {
     LEVELS,
     resumePoint,
@@ -119,20 +161,80 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
   } from "../../lib/plan-sync";
 
   const $ = (id: string) => document.getElementById(id)!;
+  const elText = <K extends keyof HTMLElementTagNameMap>(
+    tag: K,
+    teks: string,
+  ) => Object.assign(document.createElement(tag), { textContent: teks });
 
-  // Pengawal sesi + nama/e-mel = AccountLayout. Di sini hanya peranan.
-  const s = await currentUser();
-  if (s) {
-    const nubi = s.apps?.nubi;
-    $("keahlian").textContent =
-      s.role === "owner"
-        ? "Pemilik"
-        : nubi === "admin"
-          ? "Pentadbir"
-          : nubi === "ahli"
-            ? "Ahli"
-            : "Belum ahli";
+  // Admin Nubi + owner: larian seterusnya + larian selesai (7 hari) yang belum ditanda hadir.
+  async function urusLarian() {
+    const items = await fetchEvents(true);
+    if (!items)
+      return void ($("urus-nota").textContent =
+        "Tak dapat muat larian sekarang.");
+    const akan = items.filter((a) => !started(a));
+    const hadir = items.filter(
+      (a) => started(a) && a.going > 0 && a.attended === 0,
+    );
+    $("urus-nota").textContent = akan.length
+      ? `${akan.length} larian akan datang · ${akan.reduce((n, a) => n + a.going, 0)} RSVP`
+      : "Tiada larian dijadualkan. Tambah satu supaya ahli boleh RSVP.";
+    const lagi = akan[0];
+    if (lagi) {
+      const p = $("urus-seterusnya");
+      const a = elText("a", lagi.title);
+      a.className = "link";
+      a.href = `/account/events/view?id=${lagi.id}`;
+      p.replaceChildren(
+        "Seterusnya: ",
+        a,
+        ` · ${shortWhen(lagi.startsAt)} · RSVP ${rsvpText(lagi)}`,
+      );
+      p.hidden = false;
+    }
+    if (hadir.length) {
+      $("urus-hadir-senarai").replaceChildren(
+        ...hadir.map((x) => {
+          const li = document.createElement("li");
+          const a = elText("a", x.title);
+          a.className = "link";
+          a.href = `/account/events/view?id=${x.id}#kehadiran`;
+          li.append(a, ` · ${shortWhen(x.startsAt)} · ${x.going} RSVP`);
+          return li;
+        }),
+      );
+      $("urus-hadir").hidden = false;
+    }
   }
+
+  // Owner sahaja: bilangan ikut peranan + 5 terbaru (nama sahaja; e-mel kekal di portfolio).
+  async function komuniti() {
+    const res = await api("/owner/apps/nubi/members").catch(() => null);
+    if (!res?.ok)
+      return void ($("komuniti-nota").textContent =
+        "Tak dapat muat ahli sekarang.");
+    const ahli: { displayName: string; role: string; grantedAt: string }[] =
+      (await json(res)).data ?? [];
+    const bil = (r: string) => ahli.filter((m) => m.role === r).length;
+    $("komuniti-nota").textContent =
+      `${bil("ahli")} ahli · ${bil("admin")} pentadbir`;
+    if (!ahli.length) return;
+    $("komuniti-baru").replaceChildren(
+      ...ahli
+        .slice(0, 5)
+        .map((m) =>
+          elText(
+            "li",
+            `${m.displayName} · ${m.role === "admin" ? "pentadbir" : m.role} · sejak ${new Date(m.grantedAt).toLocaleDateString("ms-MY", { day: "numeric", month: "short", year: "numeric" })}`,
+          ),
+        ),
+    );
+    $("komuniti-baru").hidden = false;
+  }
+
+  // Pengawal sesi, nama, peranan dan bahagian ikut peranan = AccountLayout (dilukis dari cache sebelum
+  // /me pulang). Jangan tunggu /me di sini: senarai pelan (localStorage) dilukis serta-merta.
+  const sesi = currentUser();
 
   // Pelan tersimpan (lib/saved-plans.ts): parameter "<kunci>#p" (v2: lumba, pace, minggu 5K), atau - pelan
   // lama tanpa parameter - dari kunci "pelan-5k:<bulan>-<tahap>-<masa>-<hari>" / "pelan-10k|21k|42k:<minggu>-<masa>-<sasaran>-<hari>".
@@ -322,6 +424,9 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
   });
 
   papar();
+  const s = await sesi;
+  if (isEventAdmin(s)) void urusLarian();
+  if (s?.role === "owner") void komuniti();
   // Gabung awan (pelan dari peranti lain + tanda siap terkini), kemudian lukis dengan lencana.
   awan = await pullCloud();
   if (!awan) gagal();
@@ -330,7 +435,6 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
 
   // Pelan aktif (ahli sahaja, lib/plan-sync.ts): sesi seterusnya + minggu ini (Isnin-Ahad, waktu Malaysia).
   if (isMember(s)) {
-    $("aktif").hidden = false;
     const p = await activePlan();
     if (!p)
       $("aktif-nota").textContent =
@@ -529,6 +633,13 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
+  }
+
+  .pautan-senarai {
+    margin: 0;
+    padding-left: 1.1rem;
+    display: grid;
+    gap: 0.3rem;
   }
 
   .senarai {
