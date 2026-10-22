@@ -31,6 +31,7 @@ const NAV: { tajuk: string; items: NavItem[] }[] = [
         ikon: "aktiviti",
         members: true,
       },
+      { href: "/account/events", label: "Larian kumpulan", ikon: "kalendar" },
     ],
   },
   {
@@ -42,6 +43,7 @@ const NAV: { tajuk: string; items: NavItem[] }[] = [
         label: "Pelan 10K / 21K",
         ikon: "bendera",
       },
+      { href: "/account/plan-42k", label: "Pelan 42K", ikon: "bendera" },
       { href: "/account/maf", label: "Kira MAF", ikon: "nadi" },
     ],
   },
@@ -169,6 +171,11 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
 
 <script>
   import { currentUser } from "../lib/api";
+
+  // PWA: halaman akaun tidak dicache (data akaun), tetapi pendaftaran ini memastikan
+  // pelan awam + pemasa yang dibuka dari sini turut berfungsi luar talian.
+  if (import.meta.env.PROD && "serviceWorker" in navigator)
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
 
   const s = await currentUser();
   if (!s) {

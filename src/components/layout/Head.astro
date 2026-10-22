@@ -20,6 +20,8 @@ const og = Astro.site && new URL("/og.png", Astro.site);
 {noindex && <meta name="robots" content="noindex" />}
 {canonical && <link rel="canonical" href={canonical} />}
 <meta name="theme-color" content="#0a1a33" />
+<meta name="application-name" content={SITE.name} />
+<link rel="manifest" href="/manifest.webmanifest" />
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <meta property="og:type" content="website" />

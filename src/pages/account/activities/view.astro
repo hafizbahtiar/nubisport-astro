@@ -179,6 +179,42 @@ const GAYA: {
       <ul class="zon" id="nadi-zon"></ul>
       <p class="muted kecil" id="nadi-asas"></p>
     </section>
+
+    <section class="panel" id="tinggi" aria-labelledby="tinggi-tajuk" hidden>
+      <h3 class="display" id="tinggi-tajuk">Ketinggian</h3>
+      <figure class="carta tinggi">
+        <div class="carta-badan">
+          <span class="paksi-y" aria-hidden="true"
+            ><span id="tinggi-hi"></span><span id="tinggi-lo"></span></span
+          >
+          <svg
+            id="tinggi-carta"
+            viewBox="0 0 600 160"
+            preserveAspectRatio="none"
+            role="img"
+          >
+            <polygon id="tinggi-kawasan" class="kawasan"></polygon>
+            <polyline
+              id="tinggi-garis"
+              class="garis"
+              vector-effect="non-scaling-stroke"></polyline>
+          </svg>
+        </div>
+        <figcaption class="paksi-x" aria-hidden="true">
+          <span>0 km</span><span id="tinggi-jarak"></span>
+        </figcaption>
+      </figure>
+      <p class="muted kecil" id="tinggi-nota"></p>
+    </section>
+
+    <section class="panel" id="semakan" aria-labelledby="semakan-tajuk" hidden>
+      <h3 class="display" id="semakan-tajuk">Semakan sesi</h3>
+      <p id="semakan-ringkas"></p>
+      <ul class="semakan" id="semakan-blok"></ul>
+      <p class="muted kecil">
+        Anggaran dari fail FIT: blok ikut masa pelan, bukan penilaian jurulatih.
+      </p>
+    </section>
   </div>
 </AccountLayout>
 
@@ -192,12 +228,22 @@ const GAYA: {
     fitRecords,
     routeOf,
     heartSeries,
+    altitudeSeries,
     hrZones,
     paceFromDistance,
     formatDuration,
     type Sport,
   } from "../../../lib/activity-file";
-  import { sessionLabel, sessionFor, walkedNote } from "../../../lib/plan-sync";
+  import {
+    sessionLabel,
+    sessionFor,
+    walkedNote,
+    ticksFrom,
+    offerUntick,
+    type PlanSession,
+  } from "../../../lib/plan-sync";
+  import { checkSession } from "../../../lib/activity-analysis";
+  import { formatPace } from "../../../lib/plan-5k";
   import type {
     IControl,
     LngLatBoundsLike,
@@ -270,7 +316,8 @@ const GAYA: {
       hour: "2-digit",
       minute: "2-digit",
     })}`;
-    void sessionFor(a).then((m) => {
+    const sesiPelan = sessionFor(a);
+    void sesiPelan.then((m) => {
       if (!m) return;
       $("sesi-pelan").textContent = m.ditanda
         ? `Sesi pelan: ${sessionLabel(m.sesi)}`
@@ -298,8 +345,12 @@ const GAYA: {
         danger: true,
       });
       if (!ya) return;
+      const tanda = await ticksFrom([a]).catch(() => null);
       const d = await api(`${BASE}/${a.id}`, { method: "DELETE" });
-      if (d.ok || d.status === 404) location.href = "/account/activities";
+      if (d.ok || d.status === 404) {
+        await offerUntick(tanda);
+        location.href = "/account/activities";
+      }
       else
         $("peta-status").textContent =
           "Aktiviti tak dapat dipadam. Semak sambungan dan cuba lagi.";
@@ -317,7 +368,39 @@ const GAYA: {
       return;
     }
     nadi(heartSeries(rekod), a.maxHr);
+    tinggi(altitudeSeries(rekod), a.elevationGainM);
+    const m = await sesiPelan;
+    if (m) semakan(m.sesi, rekod);
     await peta(routeOf(rekod));
+  }
+
+  /** Interval/tempo: banding blok laju sebenar dengan pace sasaran dalam teks sesi. */
+  function semakan(sesi: PlanSession, rekod: any[]) {
+    if (sesi.jenis !== "interval" && sesi.jenis !== "tempo") return;
+    const h = checkSession(rekod, sesi.segmen, sesi.usaha);
+    if (!h) return;
+    $("semakan-ringkas").textContent =
+      h.target !== null
+        ? `${h.lulus}/${h.jumlah} blok laju dalam sasaran${
+            h.purata !== null ? ` · purata ${formatPace(h.purata)}` : ""
+          } (sasaran ${h.targetFinal ? "akhir " : ""}${formatPace(h.target)})`
+        : h.purata !== null
+          ? `Purata blok laju: ${formatPace(h.purata)}/km`
+          : "Tiada blok laju yang dapat diukur.";
+    $("semakan-blok").replaceChildren(
+      ...h.blok.map((b) => {
+        const li = document.createElement("li");
+        li.className =
+          b.lulus === true ? "lulus" : b.lulus === false ? "gagal" : "";
+        const kiri = document.createElement("span");
+        kiri.textContent = `Blok ${b.no} · ${formatDuration(b.saat)}`;
+        const kanan = document.createElement("strong");
+        kanan.textContent = b.pace !== null ? `${formatPace(b.pace)}/km` : "—";
+        li.append(kiri, kanan);
+        return li;
+      }),
+    );
+    $("semakan").hidden = false;
   }
 
   const ZON = ["Ringan", "Aerobik asas", "Tempo", "Ambang", "Maksimum"];
@@ -369,6 +452,39 @@ const GAYA: {
     $("nadi-asas").textContent =
       `Zon ikut % nadi maks aktiviti ini (${maks} bpm): Z1 bawah 60%, Z2 60-70%, Z3 70-80%, Z4 80-90%, Z5 90% ke atas. Nadi maks sebenar anda mungkin lebih tinggi - anggap ini panduan kasar.`;
     $("nadi").hidden = false;
+  }
+
+  /** Profil ketinggian (SVG sebaris). Tiada altitude = seksyen kekal tersembunyi. */
+  function tinggi(siri: [number, number][], naik: number | null) {
+    if (siri.length < 2) return;
+    let lo = Infinity,
+      hi = -Infinity;
+    for (const [, alt] of siri)
+      ((lo = Math.min(lo, alt)), (hi = Math.max(hi, alt)));
+    const T = siri.at(-1)![0] || 1;
+    const julat = hi - lo || 1;
+    const langkah = Math.ceil(siri.length / 600); // ~600 titik cukup untuk lebar carta
+    const titik = siri
+      .filter((_, i) => i % langkah === 0 || i === siri.length - 1)
+      .map(
+        ([d, alt]) =>
+          `${((d / T) * 600).toFixed(1)},${(155 - ((alt - lo) / julat) * 150).toFixed(1)}`,
+      )
+      .join(" ");
+    $("tinggi-garis").setAttribute("points", titik);
+    $("tinggi-kawasan").setAttribute("points", `0,160 ${titik} 600,160`);
+    $("tinggi-hi").textContent = `${Math.round(hi)} m`;
+    $("tinggi-lo").textContent = `${Math.round(lo)} m`;
+    $("tinggi-jarak").textContent = formatKm(T);
+    $("tinggi-carta").setAttribute(
+      "aria-label",
+      `Profil ketinggian: ${Math.round(lo)} hingga ${Math.round(hi)} m sepanjang ${formatKm(T)}`,
+    );
+    $("tinggi-nota").textContent =
+      naik == null
+        ? "Ketinggian dari fail FIT."
+        : `Naik ${Math.round(naik)} m sepanjang laluan. Turun tidak dikira.`;
+    $("tinggi").hidden = false;
   }
 
   async function peta(titik: [number, number][]) {
@@ -936,6 +1052,40 @@ const GAYA: {
   }
   .carta .kawasan {
     fill: color-mix(in srgb, var(--orange) 12%, transparent);
+  }
+  .carta.tinggi .garis {
+    stroke: var(--navy);
+  }
+  .carta.tinggi .kawasan {
+    fill: color-mix(in srgb, var(--navy) 10%, transparent);
+  }
+  .semakan {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.35rem;
+  }
+  .semakan :global(li) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.45rem 0.65rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    font-size: 0.9rem;
+  }
+  .semakan :global(li.lulus) {
+    border-color: var(--success-line);
+    background: var(--success-bg);
+  }
+  .semakan :global(li.gagal) {
+    border-color: var(--danger-line);
+    background: var(--danger-bg);
+  }
+  .semakan :global(li strong) {
+    color: var(--navy);
   }
   .paksi-y,
   .paksi-x {

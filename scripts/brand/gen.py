@@ -87,6 +87,11 @@ def main():
     shutil.copyfile(os.path.join(SRC, "nubi-favicon.svg"), os.path.join(PUBLIC, "favicon.svg"))
     rasterise(sized(read("nubi-avatar.svg"), 180, 180), 180, 180,
               os.path.join(PUBLIC, "apple-touch-icon.png"), NAVY)
+    # PWA icons: 80% of the canvas leaves the maskable safe zone around the avatar.
+    for size in (192, 512):
+        padding = round(size * 0.8)
+        rasterise(sized(read("nubi-avatar.svg"), padding, padding), size, size,
+                  os.path.join(OUT, f"icon-{size}.png"), NAVY)
     rasterise(sized(crop(on_dark), 760, 214), 1200, 630, os.path.join(PUBLIC, "og.png"), NAVY)
     print("wrote", ", ".join(sorted(os.listdir(OUT))), "+ favicon.svg, apple-touch-icon.png, og.png")
 

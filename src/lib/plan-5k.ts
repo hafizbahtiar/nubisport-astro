@@ -343,7 +343,7 @@ export function buildPlan(input: PlanInput): PlanResult {
         ok: false,
         sebab: pace
           ? `Anda dah lari 5K dalam ${S.teks} atau kurang - pilih pace sasaran lebih laju daripada ${formatPace((masa5k! * 60) / 5)}/km.`
-          : "Anda dah lari 5K dalam 30 minit atau kurang - tahniah! Pelan ini untuk yang belum sampai ke situ.",
+          : `Anda dah lari 5K dalam ${S.teks} atau kurang - tahniah! Pelan ini untuk yang belum sampai ke situ.`,
       };
   }
   // Pace 5K sekarang (s/km) - asas pace peribadi. Tiada = pace sasaran tetap + ikut rasa.
@@ -358,7 +358,7 @@ export function buildPlan(input: PlanInput): PlanResult {
     const b = bulanUntuk(MIN_WEEKS[tahap])!;
     return {
       ok: false,
-      sebab: `${bulan} bulan terlalu singkat untuk 5K bawah 30 minit dari tahap ini - cukup untuk habiskan 5K, tapi bukan dalam 30 minit. Cadangan: ${b} bulan atau lebih.`,
+      sebab: `${bulan} bulan terlalu singkat untuk 5K bawah ${S.teks} dari tahap ini - cukup untuk habiskan 5K, tapi bukan dalam ${S.teks}. Cadangan: ${b} bulan atau lebih.`,
       cadanganBulan: b,
     };
   }

@@ -17,6 +17,13 @@ import Table from "../../../components/ui/Table.astro";
       Import aktiviti Strava terbuka untuk ahli Nubi Sport. Keahlian diluluskan
       pentadbir - hubungi kami melalui kumpulan larian.
     </p>
+    <!-- Bekas ahli: data lama kekal milik mereka - boleh dipadam walaupun bukan ahli lagi. -->
+    <p id="data-lama" hidden>
+      <span id="data-lama-teks"></span>
+      <button class="btn btn-bahaya btn-sm" type="button" id="padam-lama">
+        Padam data aktiviti
+      </button>
+    </p>
   </Alert>
 
   <div id="ahli" hidden>
@@ -196,6 +203,8 @@ import Table from "../../../components/ui/Table.astro";
     sessionLabel,
     syncActivities,
     walkedNote,
+    ticksFrom,
+    offerUntick,
   } from "../../../lib/plan-sync";
 
   const $ = <T extends HTMLElement = HTMLElement>(id: string) =>
@@ -290,6 +299,31 @@ import Table from "../../../components/ui/Table.astro";
   const ahli = s?.role === "owner" || nubi === "ahli" || nubi === "admin";
   $("bukan-ahli").hidden = ahli;
   $("ahli").hidden = !ahli;
+  if (s && !ahli) void dataLama();
+
+  async function dataLama() {
+    const r = await api(`${BASE}?from=2000-01-01`).catch(() => null);
+    const n: number = r?.ok ? ((await json(r)).data?.totals?.count ?? 0) : 0;
+    if (!n) return;
+    $("data-lama-teks").textContent =
+      `Anda masih ada ${n} aktiviti tersimpan dari masa keahlian. `;
+    $("data-lama").hidden = false;
+    $("padam-lama").addEventListener("click", async () => {
+      const ya = await confirmDialog({
+        title: "Padam semua data aktiviti?",
+        message:
+          "Semua aktiviti, fail asal dan rekod persetujuan anda akan dibuang daripada Nubi Sport. Tindakan ini tak boleh dibatalkan.",
+        confirmLabel: "Padam semua",
+        danger: true,
+      });
+      if (!ya) return;
+      const d = await api(BASE, { method: "DELETE" }).catch(() => null);
+      $("data-lama-teks").textContent = d?.ok
+        ? "Data aktiviti dipadam. "
+        : "Data tak dapat dipadam. Semak sambungan dan cuba lagi. ";
+      if (d?.ok) $("padam-lama").hidden = true;
+    });
+  }
 
   let perluSetuju = true;
 
@@ -399,6 +433,7 @@ import Table from "../../../components/ui/Table.astro";
       danger: true,
     });
     if (!ya) return;
+    const tanda = await ticksFrom([a]).catch(() => null); // sebelum padam: padanan perlukan aktiviti ini
     const d = await api(`${BASE}/${a.id}`, { method: "DELETE" });
     if (!d.ok && d.status !== 404) {
       $("jumlah").textContent =
@@ -406,6 +441,7 @@ import Table from "../../../components/ui/Table.astro";
       return;
     }
     await Promise.all([senarai(), minggu()]);
+    await offerUntick(tanda);
   }
 
   async function padamSemua() {
@@ -417,6 +453,7 @@ import Table from "../../../components/ui/Table.astro";
       danger: true,
     });
     if (!ya) return;
+    const tanda = await ticksFrom("semua").catch(() => null);
     const r = await api(BASE, { method: "DELETE" });
     if (!r.ok) {
       $("jumlah").textContent =
@@ -429,6 +466,7 @@ import Table from "../../../components/ui/Table.astro";
     segarButang();
     papar("Data aktiviti dipadam dan persetujuan ditarik.", "success");
     await Promise.all([senarai(), minggu()]);
+    await offerUntick(tanda);
   }
 
   // ---------- Dulang ----------

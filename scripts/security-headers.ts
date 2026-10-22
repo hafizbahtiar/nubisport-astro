@@ -52,6 +52,14 @@ await Bun.write(
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
   Content-Security-Policy: ${csp}
+
+# PWA: the worker must be revalidated on every visit so updates land; the manifest
+# gets its proper media type on hosts that do not know .webmanifest.
+/sw.js
+  Cache-Control: no-cache
+
+/manifest.webmanifest
+  Content-Type: application/manifest+json
 `,
 );
 console.log(`security-headers: ${hashes.size} hash skrip sebaris, CSP ${csp.length} aksara.`);

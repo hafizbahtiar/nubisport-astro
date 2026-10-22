@@ -1,6 +1,6 @@
 // bun scripts/check-pace.ts - src/lib/pace.ts (kalkulator pace + pelan seterusnya).
 import { buildPlan, type Level } from "../src/lib/plan-5k";
-import { buildDistancePlan } from "../src/lib/distance-plan";
+import { buildDistancePlan, type Distance } from "../src/lib/distance-plan";
 import { parseTime, calcPace, nextPlan } from "../src/lib/pace";
 
 let gagal = 0;
@@ -32,7 +32,7 @@ const semakPautan = (nama: string, href: string) => {
     const h = buildPlan({ bulan: Number(g("bulan")), tahap: g("tahap") as Level, hari: Number(g("hari")), masa5k: Number(g("masa")) });
     ok(h.ok, `${nama}: ${href} -> ${h.ok ? "" : h.sebab}`);
   } else {
-    const h = buildDistancePlan({ jarak: g("jarak") as "10k" | "21k", minggu: Number(g("minggu")), hari: Number(g("hari")), masa: Number(g("masa")) });
+    const h = buildDistancePlan({ jarak: g("jarak") as Distance, minggu: Number(g("minggu")), hari: Number(g("hari")), masa: Number(g("masa")) });
     ok(h.ok, `${nama}: ${href} -> ${h.ok ? "" : h.sebab}`);
   }
 };
@@ -41,12 +41,15 @@ for (const hari of [3, 4]) {
   for (let m = 15; m <= 60; m += 0.5)
     for (const p of nextPlan("5k", m, hari, "/account/plan-5k").pautan) (pautan++, semakPautan(`5k ${m}`, p.href));
   for (let m = 35; m <= 110; m += 1) for (const p of nextPlan("10k", m, hari).pautan) (pautan++, semakPautan(`10k ${m}`, p.href));
+  for (let m = 75; m <= 240; m += 1) for (const p of nextPlan("21k", m, hari).pautan) (pautan++, semakPautan(`21k ${m}`, p.href));
 }
 const s30 = nextPlan("5k", 29.9, 3);
 ok(s30.pautan.length === 1 && s30.pautan[0].href.includes("jarak=10k") && s30.pautan[0].href.includes("masa=30"), "5K 29:54 -> 10K, masa bundar ke atas 30");
 const s33 = nextPlan("5k", 32.2, 4, "/plan-5k");
 ok(s33.pautan[0].href.startsWith("/plan-5k?") && s33.pautan[0].href.includes("masa=33") && s33.pautan[0].href.includes("hari=4"), "5K 32:12 -> 5K baru 33 min, hari kekal");
-ok(nextPlan("5k", 70, 3).pautan.length === 0 && nextPlan("21k", 130, 3).pautan.length === 0, "luar julat / 21K = tiada pautan");
+ok(nextPlan("5k", 70, 3).pautan.length === 0 && nextPlan("21k", 60, 3).pautan.length === 0 && nextPlan("42k", 300, 3).pautan.length === 0, "luar julat / 42K = tiada pautan");
+const s21 = nextPlan("21k", 129.5, 3);
+ok(s21.pautan.length === 1 && s21.pautan[0].href.startsWith("/account/plan-42k?") && s21.pautan[0].href.includes("masa=130"), "21K 2:09:30 -> pelan 42K, masa 130");
 
 if (gagal) throw new Error(`${gagal} semakan gagal`);
 console.log(`ok - pace + ${pautan} pautan pelan seterusnya disemak`);

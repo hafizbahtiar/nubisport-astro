@@ -47,14 +47,14 @@ export function calcPace(km: number, masa?: number, paceSaat?: number): PaceResu
   };
 }
 
-export type TestDistance = "5k" | "10k" | "21k";
+export type TestDistance = "5k" | "10k" | "21k" | "42k";
 export interface NextStep {
   teks: string;
   pautan: { href: string; label: string }[];
 }
 
 /**
- * Selepas hari ujian 5K / lumba 10K / 21K: cadang pelan seterusnya dari masa sebenar.
+ * Selepas hari ujian 5K / lumba 10K / 21K / 42K: cadang pelan seterusnya dari masa sebenar.
  * `pelan5k` = laluan page 5K yang sedang dibuka (/plan-5k atau /account/plan-5k).
  */
 export function nextPlan(dari: TestDistance, minitSebenar: number, hari: number, pelan5k = "/plan-5k"): NextStep {
@@ -88,8 +88,16 @@ export function nextPlan(dari: TestDistance, minitSebenar: number, hari: number,
       pautan: [{ href: `/account/distance-plan?${q({ jarak: "21k", minggu: 16, hari, masa: m })}`, label: "Buat pelan 21K" }],
     };
   }
+  if (dari === "21k") {
+    const p = DISTANCES["42k"].prasyarat;
+    if (m < p.min || m > p.max) return { teks: `Masa 21K ${formatTime(minitSebenar)}? Pelan 42K perlukan ${p.min}-${p.max} minit.`, pautan: [] };
+    return {
+      teks: `Separuh maraton dalam ${formatTime(minitSebenar)}. Tahniah! Ramalan maraton ~${formatTime(riegel(minitSebenar, 21.0975, 42.195))} (anggaran kasar). Rehat seminggu dua dulu sebelum mula pelan maraton.`,
+      pautan: [{ href: `${DISTANCES["42k"].halaman}?${q({ jarak: "42k", minggu: DISTANCES["42k"].mingguLalai, hari, masa: m })}`, label: "Buat pelan 42K" }],
+    };
+  }
   return {
-    teks: `Separuh maraton dalam ${formatTime(minitSebenar)}. Tahniah! Ramalan maraton ~${formatTime(riegel(minitSebenar, 21.0975, 42.195))} (anggaran kasar). Pelan maraton belum ada - rehat seminggu dua dulu.`,
+    teks: `Maraton dalam ${formatTime(minitSebenar)}. Tahniah - anda pelari maraton! Rehat 2-3 minggu (lari mudah sahaja) sebelum pelan seterusnya.`,
     pautan: [],
   };
 }

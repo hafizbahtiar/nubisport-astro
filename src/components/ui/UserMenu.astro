@@ -114,6 +114,11 @@ const { up = false, id } = Astro.props;
       if (!ya) return butang.focus();
       await api("/auth/logout", { method: "POST" }).catch(() => {});
       cacheMe(null);
+      // Kalendar automatik milik akaun ini - jangan auto-kemas kini untuk akaun seterusnya.
+      try {
+        localStorage.removeItem("nubi:kalendar");
+        localStorage.removeItem("nubi:kalendar-ics");
+      } catch {}
       // Cookie httpOnly dipadam oleh backend; session_active juga, tetapi pastikan UI ikut.
       document.cookie = "session_active=; Max-Age=0; path=/";
       location.replace("/");

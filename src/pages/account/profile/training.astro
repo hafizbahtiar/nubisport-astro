@@ -1,5 +1,5 @@
 ---
-// Profil Nubi - Maklumat latihan: tarikh lahir, keadaan MAF, hari, masa 5K/10K (lib/profile.ts,
+// Profil Nubi - Maklumat latihan: tarikh lahir, keadaan MAF, hari, masa 5K/10K/21K (lib/profile.ts,
 // app_items `profil`). Mengisi borang MAF dan pelan; URL pelan tetap menang.
 import ProfileShell from "../../../components/ProfileShell.astro";
 import Field from "../../../components/ui/Field.astro";
@@ -11,6 +11,7 @@ import { DAYS_PER_WEEK, TIME_MAX, TIME_MIN } from "../../../lib/plan-5k";
 import { DISTANCES } from "../../../lib/distance-plan";
 
 const p10 = DISTANCES["21k"].prasyarat;
+const p21 = DISTANCES["42k"].prasyarat;
 const hariIni = new Date().toISOString().slice(0, 10);
 ---
 
@@ -18,7 +19,9 @@ const hariIni = new Date().toISOString().slice(0, 10);
   <section class="panel" aria-labelledby="t-latihan">
     <h2 class="display" id="t-latihan">Maklumat latihan</h2>
     <p class="muted">
-      Isi sekali, dan borang MAF serta pelan akan terisi sendiri (pautan pelan tetap diutamakan). Semua medan pilihan - medan kosong tak disimpan. Hanya anda yang boleh lihat.
+      Isi sekali, dan borang MAF serta pelan akan terisi sendiri (pautan pelan
+      tetap diutamakan). Semua medan pilihan - medan kosong tak disimpan. Hanya
+      anda yang boleh lihat.
     </p>
     <form class="form" id="latihan" novalidate>
       <Field
@@ -66,6 +69,17 @@ const hariIni = new Date().toISOString().slice(0, 10);
           inputmode="numeric"
         />
       </Field>
+      <Field label="Masa 21K terkini (minit)">
+        <input
+          class="input"
+          type="number"
+          name="masa21k"
+          min={p21.min}
+          max={p21.max}
+          step="1"
+          inputmode="numeric"
+        />
+      </Field>
       <Alert variant="danger" id="mesej-latihan" hidden />
       <Alert variant="success" id="ok-latihan" hidden />
       <button class="btn btn-primary" type="submit">Simpan</button>
@@ -88,7 +102,14 @@ const hariIni = new Date().toISOString().slice(0, 10);
   };
 
   const latihan = document.getElementById("latihan") as HTMLFormElement;
-  const MEDAN = ["lahir", "keadaan", "hari", "masa5k", "masa10k"] as const;
+  const MEDAN = [
+    "lahir",
+    "keadaan",
+    "hari",
+    "masa5k",
+    "masa10k",
+    "masa21k",
+  ] as const;
   const medan = (k: string) =>
     latihan.elements.namedItem(k) as HTMLInputElement | RadioNodeList;
   void readProfile().then((p) => {
@@ -114,7 +135,7 @@ const hariIni = new Date().toISOString().slice(0, 10);
                 "input[type=number]",
               ),
             ].some((i) => !i.checkValidity())
-          ? "Semak masa 5K / 10K - di luar julat."
+          ? "Semak masa 5K / 10K / 21K - di luar julat."
           : null;
     papar("mesej-latihan", salah);
     if (salah) return;

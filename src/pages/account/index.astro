@@ -46,6 +46,7 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
         <a class="btn btn-outline btn-sm" href="/account/distance-plan"
           >Pelan 10K / 21K</a
         >
+        <a class="btn btn-outline btn-sm" href="/account/plan-42k">Pelan 42K</a>
       </div>
     </div>
     <div class="awan-meter" id="awan">
@@ -134,7 +135,7 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
   }
 
   // Pelan tersimpan (lib/saved-plans.ts): parameter "<kunci>#p" (v2: lumba, pace, minggu 5K), atau - pelan
-  // lama tanpa parameter - dari kunci "pelan-5k:<bulan>-<tahap>-<masa>-<hari>" / "pelan-10k|21k:<minggu>-<masa>-<sasaran>-<hari>".
+  // lama tanpa parameter - dari kunci "pelan-5k:<bulan>-<tahap>-<masa>-<hari>" / "pelan-10k|21k|42k:<minggu>-<masa>-<sasaran>-<hari>".
   function butiran(kunci: string) {
     const [jenis, isi] = kunci.split(":");
     const [a, b, c, hari] = isi.split("-");
@@ -173,7 +174,7 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
       p,
       nama: `${k.nama} · ${lumba ?? `${p.minggu} minggu`} · ${p.hari} hari seminggu`,
       sub: `${k.prasyarat.nama} ${p.masa} min → ${sasaran ? `bawah ${formatTime(sasaran)}` : "habis"}`,
-      href: `/account/distance-plan?${new URLSearchParams({ ...p, kunci })}`,
+      href: `${k.halaman}?${new URLSearchParams({ ...p, kunci })}`,
     };
   }
 

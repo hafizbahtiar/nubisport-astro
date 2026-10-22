@@ -194,6 +194,20 @@ Item yang dah siap dibuang (lihat git history).
   `not_found_handling: "404-page"` - dulu laluan tiada jatuh ke worker -> "hono-workers not found"); footer di bawah
   skrin pada halaman pendek; bar `<progress>` Dashboard bertrek (dulu nampak penuh pada 0%); 3 kad statistik sebaris di
   telefon; jarak bawah kepala pelan; julat pace `~8:27-8:57/km` tak dipatahkan.
+- **Semakan sesi + ketinggian** (2026-10-22): detail aktiviti ada panel "Semakan sesi" untuk
+  interval/tempo - banding blok `laju` sebenar dari FIT dengan pace sasaran dalam teks sesi
+  (`src/lib/activity-analysis.ts`, `check-session-analysis.ts`), dan profil ketinggian dari record
+  `altitude`. Anggaran, bukan penilaian jurulatih.
+- **Kalendar automatik** (2026-10-22): `PUT /me/calendar` simpan snapshot `.ics` di backend (hono 035,
+  `docs/calendar-feed.md`); butang "Hidupkan kalendar automatik" pada pelan 5K akaun (webcal + https),
+  auto kemas kini bila ICS berubah (Sambung/ubah pelan), "Batal kalendar automatik" revoke. Satu feed
+  per akaun; 10K/21K belum disambung.
+- **Sasaran 5K** (2026-10-22): pilihan Bawah 30/28/25 minit (`pace` chip; 336/300 s/km), masuk kunci
+  `-pPace` supaya dua sasaran tak berkongsi tanda siap.
+- **PWA + SEO + lawatan** (2026-10-22): `public/manifest.webmanifest` + `public/sw.js` (cache halaman
+  awam; `/api/*` dan `/account/*` tidak dicache; `/plan-5k` + pemasa boleh dibuka luar talian selepas
+  lawatan pertama), `public/robots.txt` + `src/pages/sitemap.xml.ts`, beacon `POST /api/v1/public/visit`
+  dari `Layout.astro` (Nubi) dan portfolio `PublicLayout` (panel visits admin).
 - **Menu header** (2026-10-18): butang "Alat" buka panel 4 kad (MAF, Pace, Lumba, Panduan - `ALAT` dalam
   `Header.astro`). Telefon: logo + Log masuk + butang menu; panel tambah Pelan 5K + Tentang / Cara sertai (dulu
   telefon hanya boleh capai Pelan 5K). Esc / klik luar / klik pautan menutup. Alat baru = satu entri `ALAT`.
@@ -210,20 +224,23 @@ Item yang dah siap dibuang (lihat git history).
   jadi `?bulan=&tahap=&masa=&hari=&mula=` dibaca oleh skrip halaman). Tukar logik = jalankan
   `bun scripts/check-plan-5k.ts` (setiap gabungan input: bilangan minggu, lonjakan ≤ 10%, minggu ringan
   setiap ke-4, minggu akhir ujian, kes tak munasabah ditolak). Gaya halaman `is:global` sebab hasil
-  dirender dengan `innerHTML`. Tanda siap = localStorage `pelan-5k:<bulan>-<tahap>-<masa>-<hari>`.
+  dirender dengan `innerHTML`. Tanda siap = localStorage `pelan-5k:<bulan>-<tahap>-<masa>-<hari>[-pPace]`.
   Hari sesi tetap (`SESSION_DAYS`: 3 hari = Isn/Rab/Sab, 4 hari = Isn/Rab/Jum/Ahd - sesi akhir hujung
   minggu); `mula` dianjak ke Isnin (`startMonday`) dan minggu semasa + sesi hari ini diserlahkan.
-- Semak: `bun run build` + `bun scripts/check-plan-5k.ts` + `bun scripts/check-maf.ts` +
-  `bun scripts/check-ics.ts` + `bun scripts/check-date.ts` + `bun scripts/check-run-check.ts` +
-  `bun scripts/check-ramadan.ts` + `bun scripts/check-sweat.ts` + `bun scripts/check-profile.ts` + `bun scripts/check-races.ts`. Belum ada lint. Tanda taip: `bunx tsc --noEmit -p .` saja tak
-  membaca skrip dalam `.astro` - jalankan `npx -y -p @astrojs/check -p typescript@5 astro-check`
+- Semak: `bun run build` + semua `bun scripts/check-*.ts` (17 skrip, termasuk
+  `check-session-analysis`) + `npx -y -p @astrojs/check -p typescript@5 astro-check`. Belum ada lint.
+  `bunx tsc --noEmit -p .` saja tak membaca skrip dalam `.astro` - guna astro-check
   (`@astrojs/check` belum sokong TS 7, jadi tak dipasang).
 
 ## 🚀 Owner - langkah manual
 
 - [ ] `CONTACT` WhatsApp group / Instagram (e-mel dah diisi: hafiz@hafizbahtiar.com) - "Sertai" kini tunjuk e-mel saja.
+- [ ] **Migration 035** (`nubi_calendar_feeds`) remote + deploy backend/frontend sebelum butang
+  "Hidupkan kalendar automatik" digunakan.
 - [ ] Uji import `.ics` pada iPhone (Safari: terus "Tambah semua" atau simpan ke Files?), Samsung Calendar,
   Google Calendar (web) dan Outlook - nota platform di halaman belum diuji pada peranti sebenar.
+- [ ] Uji kalendar automatik (iPhone Calendar + Google Calendar "From URL") dan PWA (install + buka
+  `/plan-5k` offline) selepas deploy.
 - [ ] **Halaman undang-undang** (2026-10-22): `/privacy`, `/terms`, `/account/pricing` (dalam akaun sahaja buat masa ini) dah ada - semak dengan peguam
   SEBELUM tier berbayar dibuka. Buka tier = `aktif: true` dalam `PELAN` (`src/pages/account/pricing.astro`).
   Ubah data yang disimpan / pembekal (backend) = ubah `/privacy` juga.
@@ -243,17 +260,10 @@ Item yang dah siap dibuang (lihat git history).
 - [ ] Label hero "Running Community · Sejak 2026" - kekal atau buang (wordmark kini "NUBI SPORT").
 - [ ] Gambar sebenar komuniti (larian kumpulan) - laman kini teks + jata saja. Perlu kebenaran orang
   dalam gambar.
-- [ ] `robots.txt` + `sitemap` (bila ada lebih dari satu halaman).
 - [ ] Analitik ringkas tanpa cookie (Cloudflare Web Analytics) - kalau perlu.
 - [ ] Mod gelap? Laman kini sengaja terang + navy; buat hanya kalau diminta.
-- [ ] **Semakan blok laju interval/tempo** (cadangan 2, [docs/plans/training-plan-v2.md](docs/plans/training-plan-v2.md)):
-  dari record `.fit` (`GET …/:id/file`, muat bila sesi dibuka), cari blok pace < sasaran + 15 s dan banding
-  dengan `Session.segmen` - "6/6 interval, purata 5:42 (sasaran 5:45)". Tanpa AI.
 - [ ] Uji pemasa pada telefon sebenar: bunyi iOS (suis senyap mematikan Web Audio), getaran (iOS tiada
   `navigator.vibrate`), Wake Lock Safari 16.4+.
-- [ ] Fail `.ics` lama tak berubah sendiri lepas "Sambung dari Minggu N" - langganan `webcal` (IDEA.md).
-- [ ] **Profil ketinggian** di bawah peta aktiviti (record FIT `altitude`) - selepas varian peta
-  ([docs/plans/map-3d.md](docs/plans/map-3d.md)).
 
 ## 💡 Idea
 
@@ -265,7 +275,6 @@ Semua idea (belum diputuskan, disusun ikut gelombang) dalam **`IDEA.md`**. Yang 
   (sumber awam) siap 2026-10-18: `docs/training-review.md` - 3 pembetulan (langkah 25 min, puncak
   10K 10 km, 21K 16 km); senarai semak untuk jurulatih di situ. Ambang munasabah + zon pace masih anggaran.
 - [ ] Unit: kini minit (+ pace /km). Tambah km bagi yang ada jam GPS?
-- [ ] Sasaran lain (bawah 28 / 25 minit) - `buildPlan` kini tetap 30 minit. (10K/21K: `/account/distance-plan`.)
 - [ ] Coach pantau ahli (peranan `coach` = migration backend baru).
 
 ## Soalan terbuka

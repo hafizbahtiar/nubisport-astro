@@ -2,12 +2,19 @@
 
 Belum diputuskan: bincang dulu sebelum bina. Disusun ikut nilai untuk **pemula**, kemudian kos
 (Cloudflare, masa bina, risiko). Kerja yang dah diputuskan pergi ke `TODO.md`.
-Semakan terakhir: 2026-10-18.
+Semakan terakhir: 2026-10-22.
 
 ## Dah ada
 
-Pelan 5K bawah 30 minit · Pelan 10K / 21K (akaun) · **pemasa jalan-lari** · **sambung lepas terlepas sesi** · **kalkulator pace** (`/pace`) · **pelan seterusnya lepas hari ujian/lumba** · **kongsi pelan dengan kawan** · **panduan pemula + senarai semak hari lumba** (`/guide`) · MAF / lari ikut nadi · fail `.ics` · had 3 pelan
-tanpa akaun · daftar + sahkan e-mel · profil + tukar kata laluan · simpan ke awan (3 slot, segerak tanda siap)
+Pelan 5K bawah 30 minit · Pelan 10K / 21K · **Pelan 42K maraton** (`/account/plan-42k`, bertangga dari masa 21K) (akaun) ·
+**nasihat pemula** (pelan 10K/21K/42K: "Saya pemula" -> mula dari Pelan 5K tahap sifar) · **pemasa jalan-lari** · **sambung lepas terlepas sesi** · **kalkulator pace** (`/pace`) · **pelan seterusnya lepas hari ujian/lumba** · **kongsi pelan dengan kawan** · **panduan pemula + senarai semak hari lumba** (`/guide`) · MAF / lari ikut nadi · fail `.ics` · had 3 pelan
+tanpa akaun · daftar + sahkan e-mel · profil (Maklumat / Latihan / Keselamatan) + tukar kata laluan · simpan ke awan
+(percuma 1 slot, ahli 5, admin 10; segerak tanda siap) · **aktiviti Strava** (ahli muat naik `.fit` + `.gpx`,
+peta laluan peribadi) · **pelan aktif + padanan Strava** (sesi ditanda sendiri; sesi laju perlukan nadi
+vigorous ACSM; padam aktiviti tanya dulu sebelum buang tanda) · **bot Telegram** (`/bind` pautkan akaun,
+`/nubiplan` lihat pelan, `/unbind`; nyahpaut juga dari profil) · **larian kumpulan + RSVP**
+(`/account/events`: admin Nubi cipta, ahli "Saya datang", admin tanda **hadir sebenar** - RSVP ≠ hadir,
+lencana kira hadir; had peserta pilihan; Google Maps, `.ics`)
 · notis luar talian · **kad "Sesuai lari hari ini?"** (IPU JAS + ramalan MET ikut negeri) · **mod Ramadan**
 (sesi dalam Hijri 9 ditag "Puasa" + banner nasihat) · **waktu lari terbaik hari ini** (JAKIM + MET, elak
 11 pagi - 4 petang ikut KKM) · **kalkulator peluh** (`/guide#peluh`, ACSM) · **kalendar lumba** (`/races`, susun tangan
@@ -37,9 +44,9 @@ Semua dibina - lihat "Dah ada" dan `TODO.md`.
 
 | Idea | Kenapa | Nota bina |
 |---|---|---|
-| **Jadual larian + RSVP** | Teras "komuniti" - sekarang laman tiada acara | `nubi_events` + `nubi_rsvps` (data dikongsi, bukan `app_items`). Admin Nubi cipta; ahli "Saya datang"; kiraan hadir; pautan Google Maps; `.ics` acara |
-| **Pengumuman** | Batal sebab hujan / tukar lokasi | Admin Nubi hantar; sambung bot Telegram sedia ada. Push web tangguh (kos + kebenaran) |
-| **Log larian ringkas** | Lihat kemajuan sebenar vs pelan | `app_items` kind `log`: tarikh, jarak, masa, nadi purata, rasa 1-5. Graf dalam pelayar. Had sederhana (contoh 500 rekod) |
+| **Larian kumpulan - baki** | Asas dah dibina (lihat "Dah ada") | Belum: senarai awam tanpa log masuk, larian berulang mingguan, senarai menunggu bila penuh |
+| **Pengumuman** | Batal sebab hujan / tukar lokasi | Admin Nubi hantar; sambung bot Telegram sedia ada. Hantar ke ramai RSVP = kerja latar -> Cloudflare Queues sesuai di sini (free: 10k operasi/hari, ~3 operasi setiap mesej). Push web tangguh (kos + kebenaran) |
+| **Log larian ringkas** | Lihat kemajuan sebenar vs pelan | Sebahagian dah ada untuk ahli: aktiviti Strava + bar beban mingguan. Baki: log manual untuk bukan ahli / tanpa jam (`app_items` kind `log`: tarikh, jarak, masa, rasa 1-5) |
 | **Lencana pencapaian** | Motivasi pemula | Dikira dari tanda siap + log + RSVP: 5K pertama, 10 sesi hadir, 4 minggu konsisten, MAF bertambah baik. Tiada jadual baru kalau dikira |
 | **Peranan `coach`** | Jurulatih pantau ahli yang setuju | Role baru `app_roles`; ahli pilih "kongsi pelan dengan coach" (lalai tak). Bergantung pada semakan jurulatih bertauliah dulu |
 | **Langganan kalendar** | `.ics` sekali tak ikut perubahan | `webcal://` dari backend ikut token peribadi (boleh ditarik balik). Kos rendah, cache |
@@ -70,8 +77,6 @@ Cara bina (semua dah ada di portfolio - guna semula, jangan bina lapisan baru):
 
 - **Ujian masa pertengahan pelan** (contoh minggu 6) yang mengemas kini pace sesi baki - kini hanya di hujung
   pelan. Perlu enjin terima "pace sekarang" pada minggu tengah.
-- **Pelan maraton** - `nextPlan` dari 21K kini hanya beri ramalan.
-
 - **Ulang minggu ini** (dah buat tapi terasa berat) - kini hanya "terlepas" yang dianjak. Ulang = anjak + buang
   tanda minggu itu; tunggu maklum balas ahli dulu.
 
@@ -79,12 +84,16 @@ Cara bina (semua dah ada di portfolio - guna semula, jangan bina lapisan baru):
   had kadar setiap pengguna, konteks = pelan + log tanpa PII, jawapan "panduan umum", tolak soalan perubatan.
 - **Tier berbayar** - lebih slot awan (`quotaFor` saja berubah, `docs/plans/cloud-sync.md`). Bayaran
   melalui pihak ketiga, bukan di laman.
-- **Strava** - OAuth/API ditolak (kos). Ganti: ahli muat naik `.fit` (wajib) + `.gpx` (pilihan) dari Strava, disimpan untuk analitik - `docs/plans/strava-activities.md`.
+- **Strava OAuth/API** - ditolak (kos). Muat naik fail `.fit`/`.gpx` sudah dibina (lihat "Dah ada").
+- **Semakan sesi laju yang tepat** - padanan kini guna nadi puncak sahaja (ACSM: < 77% HRmax = larian mudah).
+  Pelari muda yang ikut MAF boleh lepas 77% pada larian mudah. Tepat = semak blok laju dari fail FIT
+  (`activity-analysis.ts`), tapi terlalu berat untuk sync pukal.
 - **PWA penuh** - service worker supaya pelan + pemasa (dah ada, berjalan tanpa rangkaian lepas dibuka) boleh
   dibuka tanpa internet (taman sering tiada liputan).
 - **Suara Melayu dalam pemasa** - pemasa kini bunyi + getaran saja; `speechSynthesis` ms-MY tak ada di
   kebanyakan telefon (suara English sebut "Lari" pelik). Rakaman suara pendek kalau diminta.
-- **Zon nadi 1-5 (Karvonen)** - selain MAF. 220-umur sangat kasar; dilabel anggaran.
+- **Zon nadi 1-5** - selain MAF. Guna HRmax Tanaka (208 − 0.7 × umur, ACSM - sudah dalam padanan Strava),
+  bukan 220 − umur; zon ikut jadual intensiti ACSM. Dilabel anggaran. Sumber: `docs/training-review.md`.
 - **Kod etika kumpulan** - tiada siapa ditinggalkan, sweeper di belakang, hormat laluan awam. Bila ada acara.
 
 ## Ditolak (buat masa ini)

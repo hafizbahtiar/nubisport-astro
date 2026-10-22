@@ -1,11 +1,11 @@
-// Pelan 10K dan 21K (akaun sahaja): fungsi tulen, dikira dalam browser. Semak: bun scripts/check-distance-plan.ts
+// Pelan 10K, 21K dan 42K (akaun sahaja): fungsi tulen, dikira dalam browser. Semak: bun scripts/check-distance-plan.ts
 //
-// Bertangga: 10K mula dari masa 5K, 21K dari masa 10K (boleh lari jarak itu tanpa henti).
+// Bertangga: 10K mula dari masa 5K, 21K dari masa 10K, 42K dari masa 21K (boleh lari jarak itu tanpa henti).
 // Sasaran lalai = habis dengan selamat; masa sasaran pilihan menambah sesi laju + analisis.
 // Anggaran masa guna formula Riegel (T2 = T1 × (D2/D1)^1.06) - anggaran kasar, dilabel di page.
 import { strides, formatPace, segment, repeatSegments, type Analysis, type Phase, type Week, type Verdict, type Session } from "./plan-5k";
 
-export type Distance = "10k" | "21k";
+export type Distance = "10k" | "21k" | "42k";
 
 export const DISTANCES = {
   "10k": {
@@ -20,6 +20,8 @@ export const DISTANCES = {
     langkahKm: 1, // larian panjang naik paling banyak sebanyak ini seminggu
     mudah: [30, 45], // minit satu sesi mudah: awal -> puncak
     tirus: 1,
+    nisbahTirus: [0.6], // larian panjang minggu tirus = nisbah × larian panjang puncak
+    halaman: "/account/distance-plan",
   },
   "21k": {
     nama: "21K",
@@ -33,6 +35,25 @@ export const DISTANCES = {
     langkahKm: 2,
     mudah: [35, 55],
     tirus: 2,
+    nisbahTirus: [0.75, 0.5],
+    halaman: "/account/distance-plan",
+  },
+  "42k": {
+    nama: "42K",
+    km: 42.195,
+    minggu: [16, 18, 20, 24],
+    mingguLalai: 18, // Higdon Novice 1 marathon: 18 minggu
+    prasyarat: { nama: "21K", km: 21.0975, min: 80, max: 210 },
+    sasaran: { min: 160, max: 480 },
+    // Bukan > prasyarat seperti 10K/21K: 22 km pada minggu 1 terlalu berat. 16 km = dah biasa
+    // bagi yang boleh habis 21K. Puncak 32 km = Higdon Novice 1 (20 batu).
+    mulaKm: 16,
+    puncakKm: 32,
+    langkahKm: 2,
+    mudah: [40, 60],
+    tirus: 2,
+    nisbahTirus: [0.6, 0.4], // Higdon: 20 -> 12 -> 8 batu, kemudian lumba
+    halaman: "/account/plan-42k",
   },
 } as const satisfies Record<Distance, unknown>;
 
@@ -40,7 +61,7 @@ export interface DistanceInput {
   jarak: Distance;
   minggu: number;
   hari: number; // 3 | 4
-  masa: number; // minit, masa prasyarat (5K untuk 10K, 10K untuk 21K)
+  masa: number; // minit, masa prasyarat (5K untuk 10K, 10K untuk 21K, 21K untuk 42K)
   sasaran?: number; // minit, pilihan
   pace?: number; // pace sasaran sendiri, s/km - ganti `sasaran` (sasaran = pace × km)
   nadi?: { maf: number; bawah: number };
@@ -73,7 +94,7 @@ const withPace = (i: DistanceInput): DistanceInput =>
 export function validateDistanceInput(input: DistanceInput): string | null {
   const { jarak, minggu, hari, masa, sasaran, pace } = withPace(input);
   const c = DISTANCES[jarak];
-  if (!c) return "Pilih jarak 10K atau 21K.";
+  if (!c) return "Pilih jarak 10K, 21K atau 42K.";
   // Julat = pilihan pertama-terakhir (tarikh lumba boleh beri mana-mana minggu di antaranya).
   if (!Number.isInteger(minggu) || minggu < c.minggu[0] || minggu > c.minggu.at(-1)!) return `Pilih tempoh ${c.minggu[0]}-${c.minggu.at(-1)} minggu.`;
   if (hari !== 3 && hari !== 4) return "Pilih 3 atau 4 hari seminggu.";
@@ -208,9 +229,8 @@ export function buildDistancePlan(i: DistanceInput): DistanceResult {
     minggu.push({ no: w + 1, fasa, ringan, minit: sesi.reduce((a, s) => a + s.minit, 0), sesi });
   }
 
-  // Tirus: larian panjang turun (10K: 60%; 21K: 75% kemudian 50%), sesi mudah lebih pendek.
-  const nisbahTirus = c.tirus === 1 ? [0.6] : [0.75, 0.5];
-  nisbahTirus.forEach((r, i) => {
+  // Tirus: larian panjang turun ikut `nisbahTirus` (10K 60%; 21K 75% -> 50%; 42K 60% -> 40%), sesi mudah lebih pendek.
+  c.nisbahTirus.forEach((r, i) => {
     const e = bundar5(c.mudah[1] * 0.7);
     const kunci = sasaran
       ? { ...tempo(10, paceLumba), tajuk: "Rasa pace lumba", arahan: `Panas badan 10 min. 10 min pada pace sasaran ${c.nama}. Sejuk badan 10 min.`, usaha: `Pace sasaran ~${formatPace(paceLumba)}/km - terasa terkawal` }

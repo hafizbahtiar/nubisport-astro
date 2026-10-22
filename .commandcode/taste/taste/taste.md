@@ -4,9 +4,9 @@
 - Does not want new dependencies or tooling installed without being asked (e.g. declined to add `@astrojs/check` unprompted, instead noted it as an optional suggestion). Confidence: 0.6
 - Works on Astro projects using bun; expects changes to be verified by running the build (`bun run build`) and checking diagnostics. Confidence: 0.5
 - Prefers the agent to study/explore the project thoroughly and build a mental model before starting a task, rather than diving straight in. Confidence: 0.55
-- Prefers responses in Malay / Bahasa Melayu. Confidence: 0.5
+- Prefers responses in Malay / Bahasa Melayu. Confidence: 0.55
 - Expects new code to follow each repo's own established conventions rather than importing another project's style - e.g. the `hono-workers` backend is entirely English (filenames, identifiers, comments, error messages), while the Nubi/Astro app uses Malay. Confidence: 0.55
-- Maintains a written backlog (IDEA.md / TODO.md) and directs work from it (e.g. asks to "proceed" on specific IDEA.md items). Confidence: 0.5
+- Maintains a written backlog (IDEA.md / TODO.md) and directs work from it (e.g. asks to "proceed" on specific IDEA.md items). Endorses the agent's own prioritised shortlist wholesale - a bare "proceed" plus the pasted list - and expects the whole batch delivered in one pass rather than asking for approval item by item. Confidence: 0.55
 - Expects the agent to front-load context on its own before starting: read the project's taste file and the most recent Command Code session transcript (search past sessions if needed) and summarize carried-over state, rather than asking the user to re-explain. Confidence: 0.55
 - Works across a set of related repos (portfolio-astro, nubisport-astro, hono-workers) and expects the agent to know which repo a given file/IDE context belongs to, calling out mismatches (e.g. "this path is in hono-workers, not nubisport"). Confidence: 0.45
 - Prefers decluttered UI: removes redundant cards/sections that duplicate entry points available elsewhere (e.g. dropped the profile and MAF cards from the account dashboard because UserMenu/sidebar already link there) instead of keeping parallel shortcuts. Confidence: 0.5
@@ -29,3 +29,7 @@
 - Expects positioned UI (dropdown/popover/menu) to be dynamic and "pintar" on open — measure available viewport space and flip upward when there isn't room below, keeping the default direction (down) explicit. Confidence: 0.5
 - Cares about literal rendered output text: flags micro-typography bugs such as a missing space between a word and a following inline element/symbol, so the fix should be verified against the built HTML rather than the source only. Confidence: 0.45
 - Sends batches of small fixes as a terse numbered list, expecting each numbered item handled and reported back one by one. Confidence: 0.4
+- Asks for the outstanding-work inventory ("apa lagi features yang belum siap?") and expects it re-derived from the current code, not pasted from the backlog — call out where TODO/IDEA docs have drifted from reality. Confidence: 0.45
+- Wants the gap list grouped and prioritised (small/high-value first, then larger backend-dependent work), with an explicit suggestion of what to start with. Confidence: 0.4
+- Questions the choice of Malay UI wording ("betul ke nak guna perkataan 'langganan'? cuba cari apa lagi perkataan sesuai") and expects alternatives researched and weighed: terminology must fit the actual meaning and not mislead (e.g. "langganan" implies a paid tier, so free features get friendlier phrasing like "Hidupkan kalendar automatik"), with the rejected options and their trade-offs listed. Confidence: 0.55
+- Expects visual consistency in grouped UI controls: buttons sitting together in an action row must be the same width, not sized by their label length (flagged "Paut/Nyahpaut Telegram" vs "Padam akaun" mismatch) — fixes go in the shared shell/panel CSS so all tabs inherit it. Confidence: 0.45

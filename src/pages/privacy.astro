@@ -80,6 +80,10 @@ const hubungi = [
           dihantar ke chat sebelum pautan dibuang.
         </li>
         <li>
+          <strong>Kalendar automatik</strong> (pilihan) - snapshot pelan di URL token
+          peribadi. Sesiapa yang ada URL itu boleh baca pelan; batal di halaman pelan.
+        </li>
+        <li>
           <strong>Aktiviti Strava</strong> (ahli saja, lepas anda setuju) - fail asal
           <code>.fit</code> dan
           <code>.gpx</code> (pilihan) yang anda muat naik, <strong
@@ -97,7 +101,8 @@ const hubungi = [
         Cloudflare) dan jenis pelayar. Kami guna ini untuk keselamatan, had
         kadar (contoh: cubaan log masuk) dan log ralat. Sebahagian permintaan
         direkod dalam log pelayan Cloudflare, yang disimpan untuk tempoh yang
-        singkat.
+        singkat. Lawatan halaman awam juga dikira (laluan, IP, negara, pelayar,
+        rujukan) untuk statistik penggunaan; rekod ini disimpan 90 hari.
       </p>
 
       <h2>Kenapa kami guna data anda</h2>
@@ -203,6 +208,7 @@ const hubungi = [
           Token pautan Telegram - 5 minit, sekali guna. Pautan Telegram kekal
           sampai anda nyahpaut (bot atau Profil) atau padam akaun.
         </li>
+        <li>Lawatan halaman - 90 hari, kemudian dipadam automatik.</li>
         <li>Log pelayan - tempoh singkat, mengikut tetapan Cloudflare.</li>
       </ul>
 

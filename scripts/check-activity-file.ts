@@ -2,7 +2,7 @@
 // FIT dijana di sini dengan Encoder SDK Garmin (koordinat rekaan di tengah laut, 0°N 0°E) - tiada
 // fail larian sebenar dalam repo. Nilai meniru larian contoh owner: 2,663 m, 1,876 s, nadi purata 140 / maks 164.
 import { Encoder, Profile } from "@garmin/fitsdk";
-import { readGpx, buildUploadForm, fitRoute, fitRecords, heartSeries, hrZones, nameFromFile, paceFromDistance, pairFiles, isoSeconds, toSport, formatDuration } from "../src/lib/activity-file";
+import { readGpx, buildUploadForm, fitRoute, fitRecords, heartSeries, altitudeSeries, hrZones, nameFromFile, paceFromDistance, pairFiles, isoSeconds, toSport, formatDuration } from "../src/lib/activity-file";
 
 let gagal = 0;
 const ok = (c: unknown, msg: string) => {
@@ -110,6 +110,16 @@ ok(formatDuration(1876) === "31m 16s" && formatDuration(3700) === "1j 1m", "temp
   ok(p.length === 82, `titik laluan ${p.length}`);
   ok(Math.abs(p[0][0] - 0.001) < 1e-6 && p[0][1] === 0, `titik pertama ${p[0]}`);
   ok(Math.abs(p.at(-1)![0] - 0.082) < 1e-6, `titik akhir ${p.at(-1)}`);
+}
+
+// Ketinggian ikut jarak (profil ketinggian di page detail).
+{
+  const rekod = await fitRecords(fit().buffer);
+  const siri = altitudeSeries(rekod);
+  ok(siri.length === 83, `siri ketinggian ${siri.length}`);
+  ok(siri[0][0] === 0 && siri[0][1] === 46, `ketinggian mula ${siri[0]}`);
+  ok(siri.at(-1)![0] === 82 * 32, `jarak akhir ${siri.at(-1)}`);
+  ok(altitudeSeries([{ distance: 0 }]).length === 0, "tiada altitude = kosong");
 }
 
 // Nadi untuk page detail: siri ikut masa + zon % nadi maks (164). Nadi 116 -> 164 sesaat:

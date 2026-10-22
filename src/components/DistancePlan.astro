@@ -1,6 +1,7 @@
 ---
-// Pelan 10K / 21K - akaun sahaja (/account/distance-plan, pengawal sesi = AccountLayout).
-// Bertangga: 10K dari masa 5K, 21K dari masa 10K. Sasaran lalai = habis; masa sasaran pilihan.
+// Pelan 10K / 21K (/account/distance-plan) dan 42K (/account/plan-42k) - akaun sahaja, pengawal sesi = AccountLayout.
+// `jarak` = jarak yang page itu tawarkan (satu = tiada pilihan jarak). Bertangga: 10K dari masa 5K,
+// 21K dari masa 10K, 42K dari masa 21K. Sasaran lalai = habis; masa sasaran pilihan.
 // Enjin: src/lib/distance-plan.ts. Render kad minggu dikongsi dengan Pelan 5K (lib/plan-render.ts).
 import PageHero from "./ui/PageHero.astro";
 import Section from "./ui/Section.astro";
@@ -8,35 +9,51 @@ import ChipGroup from "./ui/ChipGroup.astro";
 import Field from "./ui/Field.astro";
 import DatePicker from "./ui/DatePicker.astro";
 import Checkbox from "./ui/Checkbox.astro";
+import Alert from "./ui/Alert.astro";
 import Timer from "./Timer.astro";
 import RunCheck from "./RunCheck.astro";
 import RaceDateField from "./RaceDateField.astro";
 import { CONDITIONS, AGE_MAX, AGE_MIN } from "../lib/maf";
-import { DISTANCES } from "../lib/distance-plan";
+import { DISTANCES, type Distance } from "../lib/distance-plan";
 import "../styles/plan.css";
 
+interface Props {
+  jarak?: Distance[];
+}
+const { jarak = ["10k", "21k"] } = Astro.props;
+const maraton = jarak.length === 1 && jarak[0] === "42k";
+const LABEL: Record<Distance, string> = {
+  "10k": "10K",
+  "21k": "21K (separuh maraton)",
+  "42k": "42K (maraton)",
+};
 const tahun = new Date().getFullYear();
 ---
 
 <PageHero
   eyebrow="Pelan latihan"
-  title="10K dan"
-  accent="21K."
-  lead="Langkah seterusnya lepas 5K. Sasaran utama habis dengan selamat - masukkan masa sasaran kalau nak sesi laju dan pecahan 'Realistik tak?'."
+  title={maraton ? "Maraton" : "10K dan"}
+  accent={maraton ? "42K." : "21K."}
+  lead={maraton
+    ? "Langkah seterusnya lepas 21K. Larian panjang naik perlahan hingga 32 km. Sasaran utama habis dengan selamat - masukkan masa sasaran kalau nak sesi laju dan pecahan 'Realistik tak?'."
+    : "Langkah seterusnya lepas 5K. Sasaran utama habis dengan selamat - masukkan masa sasaran kalau nak sesi laju dan pecahan 'Realistik tak?'."}
 >
-  <form class="form" method="get" id="borang">
-    <ChipGroup
-      legend="Jarak"
-      name="jarak"
-      checked="10k"
-      options={[
-        { value: "10k", label: "10K" },
-        { value: "21k", label: "21K (separuh maraton)" },
-      ]}
-    />
-    <RaceDateField jarak={["10K", "21K"]} />
+  <form class="form" method="get" id="borang" data-jarak={jarak.join(",")}>
     {
-      (Object.keys(DISTANCES) as (keyof typeof DISTANCES)[]).map((j) => (
+      jarak.length > 1 ? (
+        <ChipGroup
+          legend="Jarak"
+          name="jarak"
+          checked={jarak[0]}
+          options={jarak.map((j) => ({ value: j, label: LABEL[j] }))}
+        />
+      ) : (
+        <input type="hidden" name="jarak" value={jarak[0]} />
+      )
+    }
+    <RaceDateField jarak={jarak.map((j) => DISTANCES[j].nama)} />
+    {
+      jarak.map((j) => (
         <fieldset class="form-group" data-untuk={j} hidden disabled>
           <ChipGroup
             legend="Tempoh"
@@ -49,6 +66,20 @@ const tahun = new Date().getFullYear();
         </fieldset>
       ))
     }
+    <Checkbox
+      name="pemula"
+      id="pemula"
+      label="Saya pemula - belum tahu masa saya"
+      hint="Pelan ini dikira dari masa larian anda sekarang."
+    />
+    <Alert variant="warning" title="Mula dari Pelan 5K" id="pemula-nasihat" hidden>
+      <p id="pemula-teks"></p>
+      <p>
+        <a class="btn btn-primary btn-sm" href="/account/plan-5k?tahap=sifar"
+          >Buka Pelan 5K</a
+        >
+      </p>
+    </Alert>
     <Field label="Masa 5K sekarang (minit)" id="masa-medan">
       <input
         class="input"
@@ -145,11 +176,28 @@ const tahun = new Date().getFullYear();
       Pelan disimpan dalam pelayar ini. Tekan "Simpan ke awan" (akaun percuma 1
       pelan, ahli 5) supaya ia dan tanda siap ikut akaun anda ke peranti lain.
     </li>
-    <li>
-      Bertangga: 10K perlukan masa 5K (boleh lari 5 km tanpa henti), 21K
-      perlukan masa 10K. Belum sampai? Mula dengan
-      <a class="link" href="/account/plan-5k">Pelan 5K</a> atau pelan 10K dulu.
-    </li>
+    {
+      maraton ? (
+        <li>
+          Bertangga: maraton perlukan masa 21K (boleh habis separuh maraton).
+          Belum sampai? Mula dengan{" "}
+          <a class="link" href="/account/distance-plan?jarak=21k">
+            pelan 21K
+          </a>{" "}
+          dulu. Larian panjang 3-4 jam: latih minum dan makan (gel/kurma) sama
+          seperti hari lumba.
+        </li>
+      ) : (
+        <li>
+          Bertangga: 10K perlukan masa 5K (boleh lari 5 km tanpa henti), 21K
+          perlukan masa 10K. Belum sampai? Mula dengan{" "}
+          <a class="link" href="/account/plan-5k">
+            Pelan 5K
+          </a>{" "}
+          atau pelan 10K dulu.
+        </li>
+      )
+    }
     <li>
       Anggaran masa guna formula Riegel berdasarkan masa anda sekarang - <strong
         >anggaran kasar</strong
@@ -181,6 +229,7 @@ const tahun = new Date().getFullYear();
     isoDate,
     formatPace,
   } from "../lib/plan-5k";
+  import type { Week } from "../lib/plan-5k";
   import {
     DISTANCES,
     analyzeDistancePlan,
@@ -213,6 +262,7 @@ const tahun = new Date().getFullYear();
     planParamsFromForm,
     writeList,
     writeParams,
+    remapProgress,
   } from "../lib/saved-plans";
   import {
     removeFromCloud,
@@ -233,6 +283,8 @@ const tahun = new Date().getFullYear();
   const masaInput = el("masa") as HTMLInputElement;
   const sasaranInput = el("sasaran") as HTMLInputElement;
   const mafBox = document.getElementById("maf") as HTMLInputElement;
+  const pemulaBox = document.getElementById("pemula") as HTMLInputElement;
+  const butangBuat = borang.querySelector<HTMLButtonElement>('button[type="submit"]')!;
   const mafMedan = document.getElementById("maf-medan") as HTMLFieldSetElement;
   const hasil = document.getElementById("hasil")!;
   const pelanEl = document.getElementById("pelan")!;
@@ -243,12 +295,31 @@ const tahun = new Date().getFullYear();
     hari: "hari seminggu",
     masa5k: "masa 5K",
     masa10k: "masa 10K",
+    masa21k: "masa 21K",
     keadaan: "keadaan MAF",
+  };
+  // Medan profil untuk masa prasyarat setiap jarak, dan contoh (placeholder) masa / sasaran.
+  const PROFIL_MASA = {
+    "10k": "masa5k",
+    "21k": "masa10k",
+    "42k": "masa21k",
+  } as const;
+  const CONTOH = {
+    "10k": [32, 60],
+    "21k": [65, 140],
+    "42k": [130, 290],
+  } as const;
+  const PILIHAN = borang.dataset.jarak!.split(",") as Distance[];
+  const dariUrl = (): Distance => {
+    const j = q.get("jarak") as Distance;
+    return PILIHAN.includes(j) ? j : PILIHAN[0];
   };
 
   const q = new URLSearchParams(location.search);
+  // Pelan terakhir dipapar: "Kemas kini pelan" petakan tanda siap ke struktur baharu (remapProgress).
+  let lalu: { kunci: string; minggu: Week[] } | null = null;
   const ikutJarak = () => {
-    const j = ((el("jarak") as RadioNodeList).value || "10k") as Distance;
+    const j = ((el("jarak") as RadioNodeList).value || PILIHAN[0]) as Distance;
     const c = DISTANCES[j];
     borang
       .querySelectorAll<HTMLFieldSetElement>("[data-untuk]")
@@ -269,17 +340,29 @@ const tahun = new Date().getFullYear();
       `Masa ${c.prasyarat.nama} sekarang (minit)`;
     masaInput.min = String(c.prasyarat.min);
     masaInput.max = String(c.prasyarat.max);
-    masaInput.placeholder = j === "10k" ? "cth. 32" : "cth. 65";
+    masaInput.placeholder = `cth. ${CONTOH[j][0]}`;
     sasaranInput.min = String(c.sasaran.min);
     sasaranInput.max = String(c.sasaran.max);
-    sasaranInput.placeholder = j === "10k" ? "cth. 60" : "cth. 140";
+    sasaranInput.placeholder = `cth. ${CONTOH[j][1]}`;
     mafMedan.hidden = mafMedan.disabled = !mafBox.checked;
+    // Pemula tanpa masa: pelan ini tak boleh dikira - nasihat mula dari Pelan 5K (tahap sifar), ikut tangga.
+    const pemula = pemulaBox.checked;
+    const tangga = ["5K", "10K", "21K", "42K"];
+    document.getElementById("pemula-teks")!.textContent =
+      `Pelan ${c.nama} dikira dari masa ${c.prasyarat.nama} anda sekarang (boleh lari ${c.prasyarat.nama} tanpa henti). ` +
+      `Pemula: mula dengan Pelan 5K - ia bermula dari sifar (jalan-lari) dan berakhir dengan hari ujian 5K. ` +
+      `Masa itu membuka langkah seterusnya: ${tangga.slice(0, tangga.indexOf(c.nama) + 1).join(" → ")}.`;
+    document.getElementById("pemula-nasihat")!.hidden = !pemula;
+    masaMedan.hidden = masaInput.disabled = pemula;
+    butangBuat.disabled = pemula;
   };
   // Pilih jarak dahulu (tempoh bergantung padanya), kemudian isi medan lain dari URL.
-  if (q.get("jarak") === "21k") (el("jarak") as RadioNodeList).value = "21k";
+  if (PILIHAN.length > 1) (el("jarak") as RadioNodeList).value = dariUrl();
   ikutJarak();
-  void prefillForm(borang, q, (p) =>
-    (el("jarak") as RadioNodeList).value === "21k" ? p.masa10k : p.masa5k,
+  void prefillForm(
+    borang,
+    q,
+    (p) => p[PROFIL_MASA[(el("jarak") as RadioNodeList).value as Distance]],
   );
   for (const [k, v] of q) {
     const e = el(k);
@@ -300,11 +383,11 @@ const tahun = new Date().getFullYear();
   }
   borang.addEventListener("change", ikutJarak);
   ikutJarak();
-  // Tempoh lalai = `mingguLalai` setiap jarak (10K 10, 21K 16), ditanda oleh ikutJarak().
+  // Tempoh lalai = `mingguLalai` setiap jarak (10K 10, 21K 16, 42K 18), ditanda oleh ikutJarak().
   if (q.has("jarak")) papar();
 
   function papar() {
-    const jarak = (q.get("jarak") === "21k" ? "21k" : "10k") as Distance;
+    const jarak = dariUrl();
     const c = DISTANCES[jarak];
     let minggu = Number(q.get("minggu"));
     const hari = Number(q.get("hari"));
@@ -390,13 +473,19 @@ const tahun = new Date().getFullYear();
     const perlu = distanceWeeksNeeded(input);
     if (!dibuat.includes(kunci)) writeList(CREATED_KEY, [...dibuat, kunci]);
     writeParams(kunci, planParams(q));
-    // Buang tanda siap untuk sesi yang tak wujud lagi selepas pelan dikemas kini (minggu berubah).
+    // Kemas kini pelan: tanda siap ikut sesi yang sama (bukan indeks); yang tiada lagi dibuang.
     const sah = new Set(
       h.minggu.flatMap((w) => w.sesi.map((_, i) => `${w.no}.${i}`)),
     );
     const tersimpan = readList(kunci);
-    const siap = new Set<string>(tersimpan.filter((id) => sah.has(id)));
-    if (siap.size !== tersimpan.length) writeList(kunci, [...siap]);
+    const dipeta =
+      lalu?.kunci === kunci
+        ? remapProgress(tersimpan, lalu.minggu, h.minggu)
+        : tersimpan;
+    lalu = { kunci, minggu: h.minggu };
+    const siap = new Set<string>(dipeta.filter((id) => sah.has(id)));
+    if (JSON.stringify([...siap]) !== JSON.stringify(tersimpan))
+      writeList(kunci, [...siap]);
     const isnin = /^\d{4}-\d{2}-\d{2}$/.test(q.get("mula") ?? "")
       ? startMonday(new Date(`${q.get("mula")}T00:00:00`))
       : null;
@@ -445,11 +534,11 @@ const tahun = new Date().getFullYear();
       <ol class="minggu">${h.minggu.map((w) => weekHtml(w, isnin, hariIni, jarak, lumba)).join("")}</ol>`;
 
     const kemajuan = document.getElementById("kemajuan")!;
-    // Pelan 10K/21K = akaun: kawan perlu akaun percuma untuk membukanya.
+    // Pelan 10K/21K/42K = akaun: kawan perlu akaun percuma untuk membukanya.
     mountShare(
       pelanEl.querySelector<HTMLButtonElement>("[data-kongsi]")!,
       shareLink(
-        "/account/distance-plan",
+        c.halaman,
         (() => {
           const k = new URLSearchParams(q);
           k.delete("kunci"); // kunci simpanan peribadi - bukan untuk pautan kongsi
@@ -508,7 +597,7 @@ const tahun = new Date().getFullYear();
     // Profil kali pertama: isi medan kosong saja (lib/profile.ts).
     void fillEmptyProfile({
       hari: String(hari),
-      [jarak === "10k" ? "masa5k" : "masa10k"]: String(masa),
+      [PROFIL_MASA[jarak]]: String(masa),
       keadaan: nadi ? (q.get("keadaan") ?? undefined) : undefined,
     }).then((k) => {
       const p = pelanEl.querySelector<HTMLElement>("[data-profil]");

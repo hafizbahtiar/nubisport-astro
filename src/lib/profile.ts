@@ -1,4 +1,4 @@
-// Profil latihan (akaun): tarikh lahir, keadaan MAF, hari seminggu, masa 5K/10K terkini - supaya
+// Profil latihan (akaun): tarikh lahir, keadaan MAF, hari seminggu, masa 5K/10K/21K terkini - supaya
 // borang MAF dan pelan terisi sendiri. Disimpan sebagai app_items `profil` (satu rekod "saya",
 // /me/apps/nubi/profil) - bukan jadual baru: data milik seorang pengguna (IDEA.md). Hanya pemilik
 // akaun yang boleh baca. URL sentiasa menang (pautan kongsi / pelan seterusnya).
@@ -12,6 +12,7 @@ export interface TrainingProfile {
   hari?: string;
   masa5k?: string; // minit
   masa10k?: string;
+  masa21k?: string;
 }
 
 const LALUAN = "/me/apps/nubi/profil";

@@ -78,6 +78,17 @@ const tahun = new Date().getFullYear();
       />
     </Field>
     <ChipGroup
+      legend="Sasaran 5K"
+      name="pace"
+      checked=""
+      required={false}
+      options={[
+        { value: "", label: "Bawah 30 minit (6:00/km)" },
+        { value: 336, label: "Bawah 28 minit (5:36/km)" },
+        { value: 300, label: "Bawah 25 minit (5:00/km)" },
+      ]}
+    />
+    <ChipGroup
       legend="Hari seminggu"
       name="hari"
       checked={3}
@@ -198,6 +209,7 @@ const tahun = new Date().getFullYear();
     planParamsFromForm,
     writeList,
     writeParams,
+    remapProgress,
   } from "../lib/saved-plans";
   import {
     removeFromCloud,
@@ -211,6 +223,7 @@ const tahun = new Date().getFullYear();
     planSessionDate,
   } from "../lib/plan-sync";
   import { confirmDialog } from "../lib/confirm";
+  import { api, json } from "../lib/api";
   import { prefillForm, fillEmptyProfile } from "../lib/profile";
   import {
     weekHtml,
@@ -246,6 +259,7 @@ const tahun = new Date().getFullYear();
     PLAN_MONTHS,
     type Level,
   } from "../lib/plan-5k";
+  import type { Week } from "../lib/plan-5k";
 
   const PROFIL_LABEL: Record<string, string> = {
     hari: "hari seminggu",
@@ -277,6 +291,8 @@ const tahun = new Date().getFullYear();
   ) as HTMLFieldSetElement;
 
   const q = new URLSearchParams(location.search);
+  // Pelan terakhir dipapar: "Kemas kini pelan" petakan tanda siap ke struktur baharu (remapProgress).
+  let lalu: { kunci: string; minggu: Week[] } | null = null;
   if (full) void prefillForm(borang, q, (p) => p.masa5k);
   for (const [k, v] of q) {
     const el = borang.elements.namedItem(k);
@@ -424,13 +440,14 @@ const tahun = new Date().getFullYear();
       return;
     }
 
-    // Pelan lumba: minggu dalam kunci ("14w") - pace tak masuk kunci sebab minit sesi tak berubah.
+    // Pelan lumba: minggu dalam kunci ("14w"). Sasaran pace (sub-28/25) masuk kunci supaya
+    // dua sasaran tak berkongsi tanda siap. Pelan lalai (tiada pace) kekal kunci lama.
     // Pelan yang dibuka dari dashboard bawa `kunci` - "Kemas kini pelan" menulis params di bawahnya.
     const dibuat = readList(CREATED_KEY);
     const kunci = pickPlanKey(
       q.get("kunci"),
       dibuat,
-      planKey(lumba ? `${minggu}w` : bulan, tahap, masa5k, hari),
+      planKey(lumba ? `${minggu}w` : bulan, tahap, masa5k, hari, pace),
     );
     // Had tanpa akaun kira pelan 5K sahaja (10K/21K = akaun).
     if (
@@ -454,13 +471,19 @@ const tahun = new Date().getFullYear();
     }
     if (!dibuat.includes(kunci)) writeList(CREATED_KEY, [...dibuat, kunci]);
     if (full) writeParams(kunci, planParams(q));
-    // Buang tanda siap untuk sesi yang tak wujud lagi selepas pelan dikemas kini (minggu berubah).
+    // Kemas kini pelan: tanda siap ikut sesi yang sama (bukan indeks); yang tiada lagi dibuang.
     const sah = new Set(
       h.minggu.flatMap((w) => w.sesi.map((_, i) => `${w.no}.${i}`)),
     );
     const tersimpan = readList(kunci);
-    const siap = new Set<string>(tersimpan.filter((id) => sah.has(id)));
-    if (siap.size !== tersimpan.length) writeList(kunci, [...siap]);
+    const dipeta =
+      lalu?.kunci === kunci
+        ? remapProgress(tersimpan, lalu.minggu, h.minggu)
+        : tersimpan;
+    lalu = { kunci, minggu: h.minggu };
+    const siap = new Set<string>(dipeta.filter((id) => sah.has(id)));
+    if (JSON.stringify([...siap]) !== JSON.stringify(tersimpan))
+      writeList(kunci, [...siap]);
     const isnin = /^\d{4}-\d{2}-\d{2}$/.test(q.get("mula") ?? "")
       ? startMonday(new Date(`${q.get("mula")}T00:00:00`))
       : null;
@@ -511,7 +534,9 @@ const tahun = new Date().getFullYear();
                 <label class="field"><span class="field-label">Masa lari</span>
                   <input class="input" type="time" id="masa-lari" value="06:30" /></label>
                 <button class="btn btn-primary" type="button" data-ics>Muat turun fail kalendar (.ics)</button>
-              </div>`
+                <button class="btn btn-outline" type="button" data-langgan>Hidupkan kalendar automatik</button>
+              </div>
+              <p class="muted" data-langgan-hasil hidden></p>`
             : `<p class="muted">Isi "Tarikh mula" di atas dan tekan "Buat pelan" - kalendar perlukan tarikh sebenar.</p>`
         }
         <ul class="muted">
@@ -626,27 +651,30 @@ const tahun = new Date().getFullYear();
           if (a?.items.some((p) => p.key === kunci)) void saveToCloud(kunci);
         });
     });
+    const buatIcs = () => {
+      const jam =
+        (document.getElementById("masa-lari") as HTMLInputElement).value ||
+        "06:30";
+      return buildIcs(
+        h.minggu.flatMap((w) =>
+          w.sesi.map((s, i) => ({
+            uid: `${kunci.replace(":", "-")}-m${w.no}s${i}`,
+            mula: malaysiaTime(
+              planSessionDate(isnin!, w.no, hari, i, s.jenis, lumbaIso),
+              jam,
+            ),
+            minit: s.minit,
+            tajuk: `Nubi 5K · Minggu ${w.no}: ${s.tajuk} (${s.minit} min)`,
+            keterangan: `${s.arahan}\n${s.usaha}`,
+          })),
+        ),
+        { nama: `Nubi 5K · ${tempoh}` },
+      );
+    };
     pelanEl
       .querySelector<HTMLButtonElement>("[data-ics]")
       ?.addEventListener("click", () => {
-        const jam =
-          (document.getElementById("masa-lari") as HTMLInputElement).value ||
-          "06:30";
-        const ics = buildIcs(
-          h.minggu.flatMap((w) =>
-            w.sesi.map((s, i) => ({
-              uid: `${kunci.replace(":", "-")}-m${w.no}s${i}`,
-              mula: malaysiaTime(
-                planSessionDate(isnin!, w.no, hari, i, s.jenis, lumbaIso),
-                jam,
-              ),
-              minit: s.minit,
-              tajuk: `Nubi 5K · Minggu ${w.no}: ${s.tajuk} (${s.minit} min)`,
-              keterangan: `${s.arahan}\n${s.usaha}`,
-            })),
-          ),
-          { nama: `Nubi 5K · ${tempoh}` },
-        );
+        const ics = buatIcs();
         const a = document.createElement("a");
         a.href = URL.createObjectURL(
           new Blob([ics], { type: "text/calendar" }),
@@ -655,6 +683,109 @@ const tahun = new Date().getFullYear();
         a.click();
         setTimeout(() => URL.revokeObjectURL(a.href), 60e3);
       });
+    // Feed peribadi: snapshot .ics disimpan di backend; token kekal untuk kalendar automatik.
+    pelanEl
+      .querySelector<HTMLButtonElement>("[data-langgan]")
+      ?.addEventListener("click", async (e) => {
+        const b = e.currentTarget as HTMLButtonElement;
+        const hasilLanggan = pelanEl.querySelector<HTMLElement>(
+          "[data-langgan-hasil]",
+        )!;
+        b.disabled = true;
+        try {
+          const ics = buatIcs();
+          const r = await api("/me/calendar", {
+            method: "PUT",
+            body: JSON.stringify({ name: `Nubi 5K · ${tempoh}`, ics }),
+          });
+          const body = r.ok ? await json(r) : {};
+          if (!r.ok) {
+            hasilLanggan.textContent =
+              "Tak dapat hidupkan kalendar automatik sekarang. Cuba lagi sekejap.";
+            hasilLanggan.hidden = false;
+            return;
+          }
+          const token = String(body.data?.token ?? "");
+          const url = `${location.origin}/api/v1/public/calendar/${token}.ics`;
+          const webcal = url.replace(/^https?:/, "webcal:");
+          const pautan = document.createElement("a");
+          pautan.className = "link";
+          pautan.href = webcal;
+          pautan.textContent = webcal;
+          const nota = document.createElement("span");
+          nota.className = "muted";
+          nota.textContent = ` Salin ${url} ke aplikasi kalendar. Kalendar automatik dikemas kini bila pelan berubah.`;
+          hasilLanggan.replaceChildren(
+            "Kalendar automatik: ",
+            pautan,
+            document.createElement("br"),
+            nota,
+          );
+          hasilLanggan.hidden = false;
+          try {
+            localStorage.setItem("nubi:kalendar", "1");
+            localStorage.setItem("nubi:kalendar-ics", ics);
+          } catch {}
+        } catch {
+          hasilLanggan.textContent =
+            "Tiada sambungan. Semak internet dan cuba lagi.";
+          hasilLanggan.hidden = false;
+        } finally {
+          b.disabled = false;
+        }
+      });
+    // Auto-kemas kini feed selepas "Sambung"/ubah pelan: PUT hanya bila ICS berubah.
+    let feedAktif = false;
+    try {
+      feedAktif = localStorage.getItem("nubi:kalendar") === "1";
+    } catch {}
+    if (full && isnin && feedAktif) {
+      const ics = buatIcs();
+      let icsLama: string | null = null;
+      try {
+        icsLama = localStorage.getItem("nubi:kalendar-ics");
+      } catch {}
+      if (icsLama !== ics) {
+        void api("/me/calendar", {
+          method: "PUT",
+          body: JSON.stringify({ name: `Nubi 5K · ${tempoh}`, ics }),
+        })
+          .then((r) => {
+            if (r.ok)
+              try {
+                localStorage.setItem("nubi:kalendar-ics", ics);
+              } catch {}
+          })
+          .catch(() => {});
+      }
+    }
+    // Kalendar automatik aktif pada peranti ini: tunjuk status + jalan untuk batalkan (token terus mati).
+    if (full && isnin && feedAktif) {
+      const hasilLanggan = pelanEl.querySelector<HTMLElement>(
+        "[data-langgan-hasil]",
+      )!;
+      const batal = document.createElement("button");
+      batal.type = "button";
+      batal.className = "btn btn-outline btn-sm";
+      batal.textContent = "Batal kalendar automatik";
+      batal.addEventListener("click", async () => {
+        batal.disabled = true;
+        const r = await api("/me/calendar", { method: "DELETE" });
+        if (!r.ok) {
+          hasilLanggan.textContent =
+            "Tak dapat batalkan sekarang. Cuba lagi sekejap.";
+          batal.disabled = false;
+          return;
+        }
+        try {
+          localStorage.removeItem("nubi:kalendar");
+          localStorage.removeItem("nubi:kalendar-ics");
+        } catch {}
+        hasilLanggan.textContent = "Kalendar automatik dibatalkan.";
+      });
+      hasilLanggan.replaceChildren("Kalendar automatik aktif. ", batal);
+      hasilLanggan.hidden = false;
+    }
     // Minggu semasa (bila tarikh mula diisi) lebih berguna daripada atas pelan.
     (pelanEl.querySelector(".kad.kini") ?? hasil).scrollIntoView({
       behavior: "smooth",

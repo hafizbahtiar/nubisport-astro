@@ -105,6 +105,17 @@ export async function fitRecords(bait: ArrayBuffer): Promise<any[]> {
   return new Decoder(Stream.fromArrayBuffer(bait)).read().messages.recordMesgs ?? [];
 }
 
+/** Ketinggian ikut jarak: [meter, meter]. [] = fail tiada altitude/jarak. */
+export function altitudeSeries(rekod: any[]): [number, number][] {
+  const siri: [number, number][] = [];
+  for (const r of rekod) {
+    const alt = r.enhancedAltitude ?? r.altitude;
+    if (typeof alt === "number" && typeof r.distance === "number")
+      siri.push([r.distance, alt]);
+  }
+  return siri;
+}
+
 /** Laluan [lat, lon] dari record FIT (semicircle -> darjah). [] = tiada GPS (contoh treadmill). */
 export function routeOf(rekod: any[]): [number, number][] {
   const darjah = 180 / 2 ** 31;

@@ -1,5 +1,5 @@
 ---
-// Halaman profil akaun: card navigasi (Maklumat / Maklumat latihan / Kata laluan) di sebelah kandungan.
+// Halaman profil akaun: card navigasi (Maklumat / Latihan / Keselamatan) di sebelah kandungan.
 // Lebar: card menegak di kiri (melekat semasa skrol). Sempit (<= 48rem): card jadi tab segmen di atas.
 import AccountLayout from "../layouts/AccountLayout.astro";
 import Icon from "./ui/Icon.astro";
@@ -14,7 +14,7 @@ const SUB: { href: string; label: string; nota: string; ikon: IconName }[] = [
   {
     href: "/account/profile",
     label: "Maklumat",
-    nota: "Nama dan e-mel",
+    nota: "Nama, e-mel, Telegram",
     ikon: "pengguna",
   },
   {
@@ -25,8 +25,8 @@ const SUB: { href: string; label: string; nota: string; ikon: IconName }[] = [
   },
   {
     href: "/account/profile/password",
-    label: "Kata laluan",
-    nota: "Tukar kata laluan",
+    label: "Keselamatan",
+    nota: "Kata laluan, padam akaun",
     ikon: "mangga",
   },
 ];
@@ -190,6 +190,11 @@ const laluan = Astro.url.pathname.replace(/\/$/, "");
   }
   .profil-isi :global(.panel p) {
     margin: 0;
+  }
+  /* Butang tindakan panel (Telegram, padam akaun): satu lebar penuh, bukan ikut panjang label. */
+  .profil-isi :global(.panel .actions .btn) {
+    flex: 0 0 100%;
+    width: 100%;
   }
 
   /* Telefon: card yang sama jadi tab segmen mendatar */

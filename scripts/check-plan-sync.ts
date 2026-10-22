@@ -1,5 +1,5 @@
 // bun scripts/check-plan-sync.ts - semak padankan() dalam src/lib/plan-sync.ts (docs/plans/active-plan-sync.md).
-import { matchActivities, planSessions, walkedNote, weeklyLoad, planFromParams } from "../src/lib/plan-sync";
+import { matchActivities, planSessions, walkedNote, weeklyLoad, planFromParams, hrMax, VIGOROUS } from "../src/lib/plan-sync";
 import { racePlan, isoDate, RACE_WEEKS } from "../src/lib/plan-5k";
 import { DISTANCES } from "../src/lib/distance-plan";
 
@@ -126,17 +126,37 @@ ok(j && j.length > 0, "pelan 10K dibina");
   ok(w[0].sebenar === 40 && w[1].sebenar === 20 && w[2].sebenar === 0, `weeklyLoad sebenar: ${w.slice(0, 3).map((x) => x.sebenar)}`);
 }
 
-// Lumba setiap hari (Isnin 8 - Ahad 14 Feb 2027) × 3/4 hari × 5K/10K/21K: tarikh dari planSessions (kad, .ics,
+// Intensiti (ACSM): sesi tempo/interval tak boleh ditanda oleh larian yang nadi puncaknya < 77% HRmax (Tanaka).
+{
+  ok(hrMax(30) === 187 && VIGOROUS === 0.77, "HRmax Tanaka 30 thn = 187, vigorous 77%");
+  const t = planSessions("pelan-10k:x", { jarak: "10k", minggu: "10", masa: "30", sasaran: "60", hari: "3", mula: "2026-11-02" })!;
+  const tempo = t.find((s) => s.jenis === "tempo" || s.jenis === "interval")!;
+  ok(!!tempo, "pelan bersasaran ada sesi laju");
+  const pada = `${tempo.tarikh}T00:00:00Z`; // 08:00 MY, hari sesi laju
+  const lari = (maxHr: number | null) => ({ startedAt: pada, sport: "run", distanceM: 8000, movingS: tempo.minit * 60, runRatio: 0.95, maxHr });
+  const dapat = (maxHr: number | null, umur: number | null) => {
+    const x = lari(maxHr);
+    return matchActivities(t, [x], t.filter((s) => s.minggu === tempo.minggu && s.id !== tempo.id).map((s) => s.id), umur).padan.get(x)?.id;
+  };
+  ok(dapat(130, 30) === undefined, "nadi puncak 130 (< 144) = larian mudah, sesi laju tak ditanda");
+  ok(dapat(150, 30) === tempo.id, "nadi puncak 150 (>= 144) padan sesi laju");
+  ok(dapat(null, 30) === tempo.id && dapat(130, null) === tempo.id, "tiada nadi / tiada umur = tak dapat dibuktikan, tak dihalang");
+}
+
+// Lumba setiap hari (Isnin 8 - Ahad 14 Feb 2027) × 3/4 hari × 5K/10K/21K/42K: tarikh dari planSessions (kad, .ics,
 // padanan): naik, lumba = sesi terakhir = tarikh lumba, rehat sebelum lumba; beban mingguan = minit minggu pelan.
 for (const [kunci, asas, had] of [
   ["pelan-5k:x", { tahap: "5k", masa: "33" }, RACE_WEEKS],
   ["pelan-10k:x", { jarak: "10k", masa: "30" }, [DISTANCES["10k"].minggu[0], DISTANCES["10k"].minggu.at(-1)!]],
   ["pelan-21k:x", { jarak: "21k", masa: "60" }, [DISTANCES["21k"].minggu[0], DISTANCES["21k"].minggu.at(-1)!]],
+  ["pelan-42k:x", { jarak: "42k", masa: "130" }, [DISTANCES["42k"].minggu[0], DISTANCES["42k"].minggu.at(-1)!]],
 ] as const)
   for (const hari of [3, 4])
     for (let n = 8; n <= 14; n++) {
       const lumba = `2027-02-${String(n).padStart(2, "0")}`;
-      const r = racePlan(new Date("2026-10-21T00:00:00"), new Date(`${lumba}T00:00:00`), had, hari);
+      // 42K perlu >= 16 minggu: mula awal sebulan supaya setiap tarikh lumba dalam julat.
+      const mula = kunci.startsWith("pelan-42k") ? "2026-09-21" : "2026-10-21";
+      const r = racePlan(new Date(`${mula}T00:00:00`), new Date(`${lumba}T00:00:00`), had, hari);
       const p = { ...asas, hari: String(hari), minggu: String(r.minggu), mula: isoDate(r.mula), lumba };
       const s = planSessions(kunci, p);
       const nama = `${kunci} ${hari} hari lumba ${lumba}`;
