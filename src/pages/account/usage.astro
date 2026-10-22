@@ -1,0 +1,204 @@
+---
+// Penggunaan vs had setiap ciri (hono-workers GET /me/apps/nubi/usage). Had + jadual tier datang dari
+// backend (pemalar yang sama dengan laluan tulis), jadi page ini tiada nombor had sendiri.
+// Pricing nanti = tambah tier di backend; page ini ikut.
+import AccountLayout from "../../layouts/AccountLayout.astro";
+import "../../styles/panel.css";
+---
+
+<AccountLayout
+  title="Penggunaan"
+  description="Penggunaan dan had setiap ciri akaun Nubi Sport anda."
+>
+  <section class="panel" aria-labelledby="t-guna">
+    <div class="panel-kepala">
+      <h2 class="display" id="t-guna">Penggunaan anda</h2>
+      <span class="muted">Tier: <strong data-saya-peranan>…</strong></span>
+    </div>
+    <p class="muted" id="nota">Memuatkan penggunaan…</p>
+    <ul class="meter-senarai" id="meter"></ul>
+  </section>
+
+  <section class="panel" aria-labelledby="t-tier" id="tier" hidden>
+    <div class="panel-kepala">
+      <h2 class="display" id="t-tier">Had ikut tier</h2>
+      <a class="btn btn-outline btn-sm" href="/account/pricing">Lihat harga</a>
+    </div>
+    <div class="jadual-skrol">
+      <table class="jadual">
+        <thead>
+          <tr>
+            <th scope="col">Ciri</th>
+            <th scope="col" data-t="free">Percuma</th>
+            <th scope="col" data-t="ahli">Ahli</th>
+            <th scope="col" data-t="admin">Pentadbir</th>
+          </tr>
+        </thead>
+        <tbody id="tier-isi"></tbody>
+      </table>
+    </div>
+    <p class="muted kecil">Pemilik guna had Pentadbir.</p>
+  </section>
+</AccountLayout>
+
+<script>
+  import { api, json } from "../../lib/api";
+
+  type Had = number | null; // null = tiada had; 0 = tiada pada tier itu
+  type Item = {
+    key: string;
+    used: number;
+    limit: Had;
+    tiers: Record<"free" | "ahli" | "admin", Had>;
+  };
+
+  const NAMA: Record<string, [string, string]> = {
+    plan: ["Pelan di awan", "Pelan peranti ini tidak dikira."],
+    activities: ["Aktiviti Strava", "Fail .fit yang dimuat naik."],
+    rsvp: ["RSVP larian akan datang", "Larian yang belum tamat."],
+  };
+  const nombor = (n: number) => n.toLocaleString("ms-MY");
+  const had = (h: Had) =>
+    h === null ? "Tiada had" : h === 0 ? "-" : nombor(h);
+  const $ = (id: string) => document.getElementById(id)!;
+
+  const res = await api("/me/apps/nubi/usage", { cache: "no-store" }).catch(
+    () => null,
+  );
+  const data: { tier: string; items: Item[] } | null = res?.ok
+    ? (await json(res)).data
+    : null;
+  if (!data)
+    $("nota").textContent =
+      "Tak dapat muat penggunaan sekarang. Cuba lagi sekejap.";
+  else {
+    $("nota").hidden = true;
+    $("meter").replaceChildren(
+      ...data.items.map((i) => {
+        const [nama, sub] = NAMA[i.key] ?? [i.key, ""];
+        const li = document.createElement("li");
+        const kepala = document.createElement("p");
+        kepala.className = "meter-kepala";
+        const b = Object.assign(document.createElement("strong"), {
+          textContent: nama,
+        });
+        const angka = document.createElement("span");
+        li.append(kepala);
+        kepala.append(b, angka);
+        if (i.limit === 0) {
+          // Tiada pada tier ini: pautan ke harga, bukan bar kosong.
+          angka.textContent = "Untuk ahli";
+          const a = Object.assign(document.createElement("a"), {
+            className: "link",
+            href: "/account/pricing",
+            textContent: "Lihat cara jadi ahli",
+          });
+          const p = Object.assign(document.createElement("p"), {
+            className: "muted kecil",
+          });
+          p.append(`${sub} `, a);
+          li.append(p);
+          return li;
+        }
+        angka.textContent =
+          i.limit === null
+            ? `${nombor(i.used)} · tiada had`
+            : `${nombor(i.used)} / ${nombor(i.limit)}`;
+        if (i.limit !== null) {
+          const bar = Object.assign(document.createElement("progress"), {
+            max: i.limit,
+            value: Math.min(i.used, i.limit),
+          });
+          bar.setAttribute("aria-label", `${nama}: ${angka.textContent}`);
+          if (i.used >= i.limit) li.classList.add("penuh");
+          li.append(bar);
+        }
+        li.append(
+          Object.assign(document.createElement("p"), {
+            className: "muted kecil",
+            textContent:
+              i.limit !== null && i.used >= i.limit ? `Had penuh. ${sub}` : sub,
+          }),
+        );
+        return li;
+      }),
+    );
+    // Lajur tier semasa ditanda (owner = admin).
+    const semasa = data.tier === "owner" ? "admin" : data.tier;
+    document
+      .querySelectorAll<HTMLElement>(`[data-t="${semasa}"]`)
+      .forEach((th) => th.classList.add("tier-ini"));
+    $("tier-isi").replaceChildren(
+      ...data.items.map((i) => {
+        const tr = document.createElement("tr");
+        tr.append(
+          Object.assign(document.createElement("th"), {
+            scope: "row",
+            textContent: NAMA[i.key]?.[0] ?? i.key,
+          }),
+        );
+        for (const t of ["free", "ahli", "admin"] as const)
+          tr.append(
+            Object.assign(document.createElement("td"), {
+              textContent: had(i.tiers[t]),
+              className: t === semasa ? "tier-ini" : "",
+            }),
+          );
+        return tr;
+      }),
+    );
+    $("tier").hidden = false;
+  }
+</script>
+
+<style>
+  .meter-senarai {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1.25rem;
+  }
+  .meter-senarai li {
+    display: grid;
+    gap: 0.4rem;
+  }
+  .meter-senarai :global(.meter-kepala) {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 0;
+  }
+  .meter-senarai :global(progress) {
+    width: 100%;
+    height: 0.6rem;
+    accent-color: var(--orange);
+  }
+  .meter-senarai :global(li.penuh progress) {
+    accent-color: var(--danger-ink);
+  }
+  .meter-senarai :global(p) {
+    margin: 0;
+  }
+  .kecil,
+  .meter-senarai :global(.kecil) {
+    font-size: 0.88rem;
+  }
+  .jadual-skrol {
+    overflow-x: auto;
+  }
+  .jadual {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .jadual :is(th, td) {
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    white-space: nowrap;
+  }
+  .jadual :global(.tier-ini) {
+    background: var(--paper-2);
+    font-weight: 700;
+  }
+</style>

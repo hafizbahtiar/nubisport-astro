@@ -19,7 +19,14 @@ const { title, description = `Akaun ${SITE.name}.` } = Astro.props;
 
 // ikon: nama Lucide (src/lib/icon.ts). members: hanya ahli Nubi (lihat `ahli` di bawah) - dilukis
 // tersembunyi, didedahkan bila pengguna diketahui. Profil + log keluar ada dalam UserMenu.
-type NavItem = { href: string; label: string; ikon: IconName; members?: true };
+// owner: hanya owner (data-owner) - contoh Panduan UI untuk pembangun.
+type NavItem = {
+  href: string;
+  label: string;
+  ikon: IconName;
+  members?: true;
+  owner?: true;
+};
 const NAV: { tajuk: string; items: NavItem[] }[] = [
   {
     tajuk: "Utama",
@@ -49,7 +56,11 @@ const NAV: { tajuk: string; items: NavItem[] }[] = [
   },
   {
     tajuk: "Akaun",
-    items: [{ href: "/account/pricing", label: "Harga", ikon: "harga" }],
+    items: [
+      { href: "/account/usage", label: "Penggunaan", ikon: "laju" },
+      { href: "/account/pricing", label: "Harga", ikon: "harga" },
+      { href: "/account/ui", label: "Panduan UI", ikon: "buku", owner: true },
+    ],
   },
 ];
 const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
@@ -97,8 +108,9 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
               {g.items.map((n) => (
                 <a
                   href={n.href}
-                  hidden={n.members}
+                  hidden={n.members || n.owner}
                   data-ahli={n.members ? "" : undefined}
+                  data-owner={n.owner ? "" : undefined}
                   aria-current={
                     laluan === n.href ||
                     (n.href !== "/account" && laluan.startsWith(`${n.href}/`))
