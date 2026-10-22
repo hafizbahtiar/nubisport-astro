@@ -163,9 +163,10 @@ const laluan = Astro.url.pathname.replace(/\/$/, "");
   }
 
   /* Skrin lebar: borang dua kolum supaya panel mengisi lebar kandungan (bukan 40rem di kiri).
-     Fieldset (chip), alert, butang dan perenggan kekal satu baris penuh. */
+     Fieldset (chip), alert, butang dan perenggan kekal satu baris penuh. `.form-sempit` = kekal
+     satu kolum sempit (contoh kata laluan: medan bertindan, meter di bawah medannya). */
   @media (min-width: 64rem) {
-    .profil-isi :global(.form) {
+    .profil-isi :global(.form:not(.form-sempit)) {
       max-width: none;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       align-items: start;

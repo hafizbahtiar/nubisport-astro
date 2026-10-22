@@ -110,6 +110,7 @@ const { up = false, id } = Astro.props;
         message:
           "Lepas ini, log masuk semula untuk buka Dashboard dan pelan versi penuh.",
         confirmLabel: "Log keluar",
+        danger: true,
       });
       if (!ya) return butang.focus();
       await api("/auth/logout", { method: "POST" }).catch(() => {});
@@ -189,12 +190,17 @@ const { up = false, id } = Astro.props;
   .um-menu {
     min-width: 13rem;
   }
+  /* .dd-menu kini selebar isi (Dropdown): navbar = jajar kanan avatar; sidebar = selebar butang. */
   .um-down .um-menu {
     left: auto;
+    right: 0;
   }
   .um-up .um-menu {
     top: auto;
     bottom: calc(100% + 0.5rem);
+    right: 0;
+    width: auto;
+    max-width: none;
   }
   .um-menu [role="menuitem"] {
     display: flex;
@@ -225,5 +231,19 @@ const { up = false, id } = Astro.props;
     width: 1.1rem;
     height: 1.1rem;
     color: var(--muted);
+  }
+  /* Log keluar = tindakan bahaya: merah, dipisah dari pautan biasa. */
+  .um-menu [data-keluar] {
+    margin-top: 0.25rem;
+    border-top: 1px solid var(--line);
+    border-radius: 0 0 var(--radius) var(--radius);
+    color: var(--danger-ink);
+  }
+  .um-menu [data-keluar] :global(.lucide) {
+    color: var(--danger-ink);
+  }
+  .um-menu [data-keluar]:hover,
+  .um-menu [data-keluar]:focus {
+    background: var(--danger-bg);
   }
 </style>
