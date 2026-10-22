@@ -450,6 +450,22 @@ legend,
   border-color: var(--orange);
 }
 
+/* ---------- Masa (TimePicker.astro, lib/time-picker.ts) ---------- */
+.tp {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.tp .input {
+  width: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.tp-titik {
+  font-weight: 700;
+}
+
 /* ---------- Tarikh (DatePicker.astro) ---------- */
 .dp {
   position: relative;

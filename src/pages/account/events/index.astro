@@ -1,0 +1,243 @@
+---
+// Larian kumpulan (hono-workers /me/apps/nubi/events). Satu page, dua paparan ikut peranan:
+//   admin Nubi / owner -> jadual urus (akan datang + 7 hari lepas untuk tanda hadir), Tambah/Ubah ke
+//                         /account/events/new (tambah), /account/events/view?id= (butiran, ubah, hadir), Padam di sini.
+//   ahli / akaun lain  -> kad larian akan datang (components/EventList.astro); RSVP ahli sahaja.
+// Backend tetap pengawal sebenar (403) - page hanya memilih paparan.
+import AccountLayout from "../../../layouts/AccountLayout.astro";
+import Alert from "../../../components/ui/Alert.astro";
+import Table from "../../../components/ui/Table.astro";
+import Dropdown from "../../../components/ui/Dropdown.astro";
+import EventList from "../../../components/EventList.astro";
+import "../../../styles/panel.css";
+---
+
+<AccountLayout title="Larian kumpulan">
+  <Alert variant="danger" id="ralat" hidden />
+
+  <!-- Paparan ahli -->
+  <div id="paparan-ahli" hidden>
+    <Alert variant="info" title="RSVP untuk ahli" id="bukan-ahli" hidden>
+      <p>
+        Semua boleh lihat jadual. Untuk tekan "Saya datang", anda perlu jadi
+        ahli - <a class="link" href="/account/pricing">lihat keahlian</a>.
+      </p>
+    </Alert>
+    <ul class="stat" aria-label="Ringkasan larian">
+      <li><span>Akan datang</span><strong id="ahli-bil">0</strong></li>
+      <li><span>7 hari ini</span><strong id="ahli-minggu">0</strong></li>
+      <li><span>Saya datang</span><strong id="ahli-saya">0</strong></li>
+    </ul>
+    <section class="panel" aria-labelledby="t-ahli">
+      <div class="panel-kepala">
+        <h3 class="display" id="t-ahli">Larian akan datang</h3>
+      </div>
+      <p class="muted">
+        Lari bersama komuniti. Tiada pace minimum - ada kumpulan untuk pemula.
+      </p>
+      <EventList id="kad" />
+    </section>
+  </div>
+
+  <!-- Paparan admin -->
+  <div id="paparan-admin" hidden>
+    <ul class="stat" aria-label="Ringkasan larian">
+      <li><span>Akan datang</span><strong id="admin-bil">0</strong></li>
+      <li><span>RSVP akan datang</span><strong id="admin-rsvp">0</strong></li>
+      <li><span>Hadir 7 hari</span><strong id="admin-hadir">0</strong></li>
+    </ul>
+    <section class="panel" aria-labelledby="t-admin">
+      <div class="panel-kepala">
+        <h3 class="display" id="t-admin">Urus larian</h3>
+        <a class="btn btn-primary btn-sm" href="/account/events/new"
+          >Tambah larian</a
+        >
+      </div>
+      <p class="muted">
+        Larian selesai kekal di sini 7 hari untuk tanda hadir (RSVP = niat,
+        hadir = yang dikira lencana).
+      </p>
+      <Table
+        id="jadual"
+        variant="full"
+        searchPlaceholder="Cari tajuk atau lokasi…"
+        empty="Tiada larian dalam paparan ini."
+        emptyHint='Tekan "Tambah larian" untuk jadualkan yang pertama.'
+        emptyIcon="kalendar"
+        columns={[
+          { label: "Bila" },
+          { label: "Larian" },
+          { label: "RSVP", numeric: true },
+          { label: "Hadir", numeric: true },
+          { label: "Tindakan", srOnly: true },
+        ]}
+      >
+        <div slot="filters">
+          <label class="sr-only" for="status-butang">Status</label>
+          <Dropdown
+            id="status"
+            value="semua"
+            options={[
+              { value: "semua", label: "Semua" },
+              { value: "akan", label: "Akan datang" },
+              { value: "selesai", label: "Selesai (7 hari)" },
+            ]}
+          />
+        </div>
+      </Table>
+    </section>
+  </div>
+</AccountLayout>
+
+<script>
+  import { api, currentUser } from "../../../lib/api";
+  import { confirmDialog } from "../../../lib/confirm";
+  import { createTable } from "../../../lib/table";
+  import { renderEventList } from "../../../lib/event-list";
+  import {
+    EVENTS,
+    eventError,
+    fetchEvents,
+    isEventAdmin,
+    isEventMember,
+    rsvpText,
+    shortWhen,
+    started,
+    type Acara,
+  } from "../../../lib/events";
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const ralat = (m: string | null) => {
+    $("ralat").textContent = m ?? "";
+    $("ralat").hidden = !m;
+  };
+  const el = <K extends keyof HTMLElementTagNameMap>(
+    tag: K,
+    teks = "",
+    kelas = "",
+  ) => {
+    const e = document.createElement(tag);
+    e.textContent = teks;
+    if (kelas) e.className = kelas;
+    return e;
+  };
+
+  // Pengawal sesi = AccountLayout; s null bermaksud page sedang dilencong ke /login.
+  const s = await currentUser();
+  const admin = isEventAdmin(s);
+
+  if (s && admin) {
+    $("paparan-admin").hidden = false;
+    const jadual = createTable<Acara>("jadual", {
+      search: (a) => `${a.title} ${a.location}`,
+      columns: [
+        (a) => shortWhen(a.startsAt),
+        (a) => {
+          const d = el("span", "", "sel-larian");
+          d.append(el("strong", a.title), el("span", a.location, "muted"));
+          return d;
+        },
+        (a) => rsvpText(a),
+        (a) => (started(a) ? String(a.attended) : "-"),
+        (a) => {
+          const d = el("div", "", "actions");
+          const ubah = el("a", "Lihat / ubah", "btn btn-outline btn-sm");
+          ubah.href = `/account/events/view?id=${a.id}`;
+          d.append(ubah);
+          if (started(a)) {
+            const hadir = el("a", "Tanda hadir", "btn btn-primary btn-sm");
+            hadir.href = `/account/events/view?id=${a.id}#kehadiran`;
+            d.append(hadir);
+          }
+          const padam = el("button", "Padam", "btn btn-bahaya btn-sm");
+          padam.type = "button";
+          padam.addEventListener("click", () => buang(a));
+          d.append(padam);
+          return d;
+        },
+      ],
+    });
+    ($("status") as HTMLSelectElement).addEventListener("change", (e) => {
+      const v = (e.target as HTMLSelectElement).value;
+      jadual.filter(
+        v === "semua" ? null : (a) => started(a) === (v === "selesai"),
+      );
+    });
+
+    const muat = async () => {
+      jadual.loading();
+      const items = await fetchEvents(true);
+      if (!items) ralat("Tak dapat muat larian sekarang. Cuba lagi sekejap.");
+      const semua = items ?? [];
+      const akan = semua.filter((a) => !started(a));
+      $("admin-bil").textContent = String(akan.length);
+      $("admin-rsvp").textContent = String(
+        akan.reduce((n, a) => n + a.going, 0),
+      );
+      $("admin-hadir").textContent = String(
+        semua.filter(started).reduce((n, a) => n + a.attended, 0),
+      );
+      jadual.data(semua);
+    };
+
+    async function buang(a: Acara) {
+      const ya = await confirmDialog({
+        title: "Padam larian?",
+        message: `"${a.title}" dan semua RSVP (${a.going} orang) akan dipadam.`,
+        confirmLabel: "Padam",
+        danger: true,
+      });
+      if (!ya) return;
+      const res = await api(`${EVENTS}/${a.id}`, { method: "DELETE" }).catch(
+        () => null,
+      );
+      if (!res?.ok)
+        return ralat(res ? await eventError(res) : "Tiada sambungan.");
+      ralat(null);
+      await muat();
+    }
+
+    await muat();
+  } else if (s) {
+    $("paparan-ahli").hidden = false;
+    const ahli = isEventMember(s);
+    $("bukan-ahli").hidden = ahli;
+    const muat = async () => {
+      const items = await fetchEvents(false);
+      const semua = items ?? [];
+      const minggu = Date.now() + 7 * 86_400_000;
+      $("ahli-bil").textContent = String(semua.length);
+      $("ahli-minggu").textContent = String(
+        semua.filter((a) => Date.parse(a.startsAt) < minggu).length,
+      );
+      $("ahli-saya").textContent = String(semua.filter((a) => a.mine).length);
+      renderEventList("kad", items, {
+        ahli,
+        selepas: () => (ralat(null), void muat()),
+        ralat,
+      });
+    };
+    await muat();
+  }
+</script>
+
+<style>
+  .panel :global(.sel-larian) {
+    display: grid;
+    gap: 0.1rem;
+  }
+  .panel :global(td .actions) {
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  #paparan-admin > .panel,
+  #paparan-ahli > .panel {
+    justify-items: stretch;
+  }
+  .stat {
+    margin-bottom: 1rem;
+  }
+  #bukan-ahli {
+    margin-bottom: 1rem;
+  }
+</style>

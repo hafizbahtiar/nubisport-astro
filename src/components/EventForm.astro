@@ -1,0 +1,108 @@
+---
+// Borang larian kumpulan (admin Nubi / owner). Dipakai oleh /account/events/new (tambah) dan
+// /account/events/view (mod edit). Logik: lib/event-form.ts (mountEventForm, fillEventForm).
+// Skrin lebar: dua kolum berpasangan; telefon: satu kolum.
+import Field from "./ui/Field.astro";
+import Alert from "./ui/Alert.astro";
+import DatePicker from "./ui/DatePicker.astro";
+import TimePicker from "./ui/TimePicker.astro";
+
+interface Props {
+  id: string;
+  submitLabel?: string;
+}
+const { id, submitLabel = "Simpan" } = Astro.props;
+// Julat tahun sahaja: dikira masa build (bukan runtime), dan ubah larian lepas (7 hari) perlu
+// tarikh lampau. Backend terima apa-apa masa sah.
+const tahun = new Date().getFullYear();
+---
+
+<form class="form borang-larian" id={id} novalidate>
+  <Field label="Tajuk">
+    <input
+      class="input"
+      name="title"
+      maxlength="120"
+      required
+      placeholder="cth. Larian Sabtu"
+    />
+  </Field>
+  <Field label="Lokasi" hint="Titik kumpul - dibuka dalam Google Maps.">
+    <input
+      class="input"
+      name="location"
+      maxlength="200"
+      required
+      placeholder="cth. Pintu utama Taman Tasik Titiwangsa"
+    />
+  </Field>
+  <Field label="Tarikh" for={`${id}-tarikh-text`}>
+    <DatePicker
+      id={`${id}-tarikh`}
+      name="tarikh"
+      min={`${tahun - 1}-01-01`}
+      max={`${tahun + 3}-12-31`}
+    />
+  </Field>
+  <Field label="Masa mula (waktu Malaysia)" for={`${id}-jam-jam`}>
+    <TimePicker id={`${id}-jam`} name="jam" value="07:00" />
+  </Field>
+  <Field label="Jarak (km, pilihan)">
+    <input
+      class="input"
+      type="number"
+      name="distanceKm"
+      min="0.5"
+      max="100"
+      step="0.1"
+      inputmode="decimal"
+    />
+  </Field>
+  <Field label="Pace kumpulan (pilihan)">
+    <input
+      class="input"
+      name="pace"
+      maxlength="40"
+      placeholder="cth. 7:00-8:00 /km"
+    />
+  </Field>
+  <Field
+    label="Had peserta (pilihan)"
+    hint="Kosong = tiada had. Selepas larian mula, walk-in masih boleh RSVP."
+  >
+    <input
+      class="input"
+      type="number"
+      name="capacity"
+      min="1"
+      max="1000"
+      step="1"
+      inputmode="numeric"
+    />
+  </Field>
+  <Field label="Nota (pilihan)" hint="Apa perlu dibawa, sweeper, parkir.">
+    <textarea class="input" name="notes" maxlength="1000" rows="3"></textarea>
+  </Field>
+  <Alert variant="danger" id={`${id}-ralat`} hidden />
+  <div class="actions">
+    <button class="btn btn-primary" type="submit">{submitLabel}</button>
+    <slot name="actions" />
+  </div>
+</form>
+
+<style>
+  @media (min-width: 48rem) {
+    .borang-larian {
+      max-width: none;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: start;
+    }
+    .borang-larian > :is(:has(textarea), .alert, .actions) {
+      grid-column: 1 / -1;
+    }
+  }
+  .borang-larian :global(.input:not(.tp .input)),
+  .borang-larian :global(.dp) {
+    width: 100%;
+  }
+</style>

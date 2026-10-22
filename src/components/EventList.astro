@@ -1,0 +1,58 @@
+---
+// Senarai larian kumpulan untuk ahli (kad). Diisi dari skrip page dengan renderEventList()
+// (lib/event-list.ts): butiran, Google Maps, RSVP, kalendar. Admin guna jadual di /account/events.
+interface Props {
+  id: string;
+}
+const { id } = Astro.props;
+---
+
+<ul class="acara" id={id} aria-live="polite">
+  <li class="acara-kosong muted">Memuatkan…</li>
+</ul>
+
+<style>
+  .acara {
+    justify-self: stretch;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+    gap: 1rem;
+  }
+  /* Item dijana skrip - tiada atribut skop Astro, jadi :global. */
+  .acara :global(.acara-kad) {
+    display: grid;
+    gap: 0.4rem;
+    align-content: start;
+    padding: 1rem 1.25rem;
+    background: var(--paper-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+  }
+  .acara :global(.acara-kad[data-saya]) {
+    border-color: var(--orange);
+  }
+  .acara :global(.acara-kosong) {
+    grid-column: 1 / -1;
+  }
+  .acara :global(h4) {
+    margin: 0;
+    font-size: 1.15rem;
+    color: var(--navy);
+  }
+  .acara :global(.acara-bila) {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .acara :global(.acara-nota) {
+    white-space: pre-line;
+  }
+  .acara :global(.acara-kiraan) {
+    color: var(--ink);
+  }
+  .acara :global(.actions) {
+    margin-top: 0.4rem;
+  }
+</style>

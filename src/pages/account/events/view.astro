@@ -1,0 +1,238 @@
+---
+// Satu larian kumpulan: /account/events/view?id=N.
+//   Semua akaun -> kad butiran (components/EventList.astro); ahli boleh RSVP.
+//   Admin Nubi / owner -> + Ubah (mod edit: EventForm yang sama), Padam, dan "Peserta / Kehadiran"
+//                         (#kehadiran): sebelum mula = senarai nama; selepas mula = tanda hadir
+//                         (RSVP = niat, hadir = yang dikira lencana; dikunci 7 hari selepas larian).
+// Pautan kekal: GET satu larian berfungsi untuk larian lepas juga (kiraan sahaja, tiada nama).
+import AccountLayout from "../../../layouts/AccountLayout.astro";
+import Alert from "../../../components/ui/Alert.astro";
+import EventList from "../../../components/EventList.astro";
+import EventForm from "../../../components/EventForm.astro";
+import "../../../styles/panel.css";
+---
+
+<AccountLayout title="Larian kumpulan">
+  <p class="balik">
+    <a class="link" href="/account/events">← Larian kumpulan</a>
+  </p>
+  <Alert variant="danger" id="ralat" hidden />
+
+  <div class="susun" id="isi" hidden>
+    <!-- Mod lihat -->
+    <section class="panel" id="lihat" aria-labelledby="t-lihat">
+      <div class="panel-kepala">
+        <h3 class="display" id="t-lihat">Butiran larian</h3>
+        <div class="actions" id="alat-admin" hidden>
+          <button class="btn btn-outline btn-sm" type="button" id="ubah"
+            >Ubah</button
+          >
+          <button class="btn btn-bahaya btn-sm" type="button" id="padam"
+            >Padam</button
+          >
+        </div>
+      </div>
+      <EventList id="kad" />
+    </section>
+
+    <!-- Mod edit (admin) -->
+    <section class="panel" id="edit" aria-labelledby="t-edit" hidden>
+      <div class="panel-kepala">
+        <h3 class="display" id="t-edit">Ubah larian</h3>
+      </div>
+      <EventForm id="borang" submitLabel="Simpan perubahan">
+        <button slot="actions" class="btn btn-outline" type="button" id="batal"
+          >Batal</button
+        >
+      </EventForm>
+    </section>
+
+    <section class="panel" id="kehadiran" aria-labelledby="t-hadir" hidden>
+      <div class="panel-kepala">
+        <h3 class="display" id="t-hadir">Peserta</h3>
+        <span class="muted" id="hadir-ringkas"></span>
+      </div>
+      <p class="muted" id="hadir-nota"></p>
+      <div class="hadir-senarai" id="hadir-senarai"></div>
+      <p class="muted" id="hadir-ralat" role="status"></p>
+    </section>
+  </div>
+</AccountLayout>
+
+<script>
+  import { api, currentUser, json } from "../../../lib/api";
+  import { confirmDialog } from "../../../lib/confirm";
+  import { renderEventList } from "../../../lib/event-list";
+  import { fillEventForm, mountEventForm } from "../../../lib/event-form";
+  import {
+    EVENTS,
+    eventError,
+    fetchEvent,
+    isEventAdmin,
+    isEventMember,
+    started,
+    type Acara,
+  } from "../../../lib/events";
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const ralat = (m: string | null) => {
+    $("ralat").textContent = m ?? "";
+    $("ralat").hidden = !m;
+  };
+  const borang = $("borang") as HTMLFormElement;
+
+  // Pengawal sesi = AccountLayout; s null bermaksud page sedang dilencong ke /login.
+  const s = await currentUser();
+  const admin = isEventAdmin(s);
+  const id = Number(new URLSearchParams(location.search).get("id")) || 0;
+  let semasa: Acara | null = null;
+
+  const modEdit = (on: boolean) => {
+    $("lihat").hidden = on;
+    $("edit").hidden = !on;
+    if (on && semasa) fillEventForm(borang, semasa);
+    (on
+      ? borang.querySelector<HTMLInputElement>('[name="title"]')
+      : $("ubah")
+    )?.focus();
+  };
+
+  async function muat() {
+    const a = await fetchEvent(id);
+    semasa = a;
+    if (!a) {
+      $("isi").hidden = true;
+      return ralat("Larian ini tiada atau sudah dipadam.");
+    }
+    $("isi").hidden = false;
+    renderEventList("kad", [a], {
+      ahli: isEventMember(s),
+      selepas: () => (ralat(null), void muat()),
+      ralat,
+    });
+    if (admin) await muatPeserta(a);
+  }
+
+  // Sebelum mula = senarai nama; selepas mula = kotak semak hadir. Walk-in tekan "Saya datang" di
+  // lokasi dulu, kemudian ditanda di sini.
+  async function muatPeserta(a: Acara) {
+    $("kehadiran").hidden = false;
+    const mula = started(a);
+    // Backend sama: tanda hadir dikunci 7 hari selepas larian (kiraan lencana kekal).
+    const kunci = Date.now() > Date.parse(a.startsAt) + 7 * 86_400_000;
+    $("t-hadir").textContent = mula ? "Kehadiran" : "Peserta";
+    $("hadir-ringkas").textContent =
+      `${a.going} RSVP${mula ? ` · ${a.attended} hadir` : ""}`;
+    $("hadir-nota").textContent = kunci
+      ? "Kehadiran dikunci (lebih 7 hari selepas larian)."
+      : mula
+        ? 'Tanda yang hadir. Walk-in: minta dia tekan "Saya datang" dulu. Dikunci 7 hari selepas larian.'
+        : "Kehadiran boleh ditanda bila larian bermula.";
+    const kotak = $("hadir-senarai");
+    const res = await api(`${EVENTS}/${a.id}/attendees`).catch(() => null);
+    if (!res?.ok)
+      return void (kotak.textContent = "Tak dapat muat senarai peserta.");
+    const items: { userId: number; name: string; attended: boolean }[] =
+      (await json(res)).data?.items ?? [];
+    if (!items.length) return void (kotak.textContent = "Belum ada RSVP.");
+    if (!mula) {
+      const ul = document.createElement("ul");
+      ul.className = "nama";
+      ul.append(
+        ...items.map((i) =>
+          Object.assign(document.createElement("li"), { textContent: i.name }),
+        ),
+      );
+      return void kotak.replaceChildren(ul);
+    }
+    let hadir = a.attended;
+    kotak.replaceChildren(
+      ...items.map((i) => {
+        const label = document.createElement("label");
+        label.className = "check";
+        const c = document.createElement("input");
+        c.type = "checkbox";
+        c.checked = i.attended;
+        c.disabled = kunci;
+        c.addEventListener("change", async () => {
+          c.disabled = true;
+          const r = await api(`${EVENTS}/${a.id}/attendance/${i.userId}`, {
+            method: c.checked ? "PUT" : "DELETE",
+          }).catch(() => null);
+          c.disabled = false;
+          if (r?.ok) {
+            hadir += c.checked ? 1 : -1;
+            $("hadir-ringkas").textContent = `${a.going} RSVP · ${hadir} hadir`;
+            return void ($("hadir-ralat").textContent = "");
+          }
+          c.checked = !c.checked;
+          $("hadir-ralat").textContent = r
+            ? await eventError(r)
+            : "Tiada sambungan.";
+        });
+        const nama = document.createElement("span");
+        nama.className = "check-label";
+        nama.textContent = i.name;
+        label.append(c, nama);
+        return label;
+      }),
+    );
+  }
+
+  if (s) {
+    if (admin) {
+      $("alat-admin").hidden = false;
+      $("ubah").addEventListener("click", () => modEdit(true));
+      $("batal").addEventListener("click", () => modEdit(false));
+      mountEventForm(borang, {
+        id,
+        selepas: async () => {
+          await muat();
+          modEdit(false);
+        },
+      });
+      $("padam").addEventListener("click", async () => {
+        if (!semasa) return;
+        const ya = await confirmDialog({
+          title: "Padam larian?",
+          message: `"${semasa.title}" dan semua RSVP (${semasa.going} orang) akan dipadam.`,
+          confirmLabel: "Padam",
+          danger: true,
+        });
+        if (!ya) return;
+        const res = await api(`${EVENTS}/${id}`, { method: "DELETE" }).catch(
+          () => null,
+        );
+        if (!res?.ok)
+          return ralat(res ? await eventError(res) : "Tiada sambungan.");
+        location.replace("/account/events");
+      });
+    }
+    await muat();
+    if (location.hash === "#kehadiran") $("kehadiran").scrollIntoView();
+  }
+</script>
+
+<style>
+  .balik {
+    margin: 0 0 1rem;
+  }
+  .susun {
+    display: grid;
+    gap: 1rem;
+  }
+  .susun > .panel {
+    justify-items: stretch;
+  }
+  .hadir-senarai {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
+    gap: 0.5rem 1rem;
+  }
+  .hadir-senarai :global(.nama) {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding-left: 1.25rem;
+    columns: 14rem;
+  }
+</style>

@@ -72,7 +72,12 @@ const tahun = new Date().getFullYear();
       label="Saya pemula - belum tahu masa saya"
       hint="Pelan ini dikira dari masa larian anda sekarang."
     />
-    <Alert variant="warning" title="Mula dari Pelan 5K" id="pemula-nasihat" hidden>
+    <Alert
+      variant="warning"
+      title="Mula dari Pelan 5K"
+      id="pemula-nasihat"
+      hidden
+    >
       <p id="pemula-teks"></p>
       <p>
         <a class="btn btn-primary btn-sm" href="/account/plan-5k?tahap=sifar"
@@ -219,6 +224,7 @@ const tahun = new Date().getFullYear();
 <Timer />
 <script>
   import { buildIcs, malaysiaTime } from "../lib/ics";
+  import { mountTimePickers, timePickerHtml } from "../lib/time-picker";
   import { prefillForm, fillEmptyProfile } from "../lib/profile";
   import { calcMaf, type Condition } from "../lib/maf";
   import {
@@ -284,7 +290,9 @@ const tahun = new Date().getFullYear();
   const sasaranInput = el("sasaran") as HTMLInputElement;
   const mafBox = document.getElementById("maf") as HTMLInputElement;
   const pemulaBox = document.getElementById("pemula") as HTMLInputElement;
-  const butangBuat = borang.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+  const butangBuat = borang.querySelector<HTMLButtonElement>(
+    'button[type="submit"]',
+  )!;
   const mafMedan = document.getElementById("maf-medan") as HTMLFieldSetElement;
   const hasil = document.getElementById("hasil")!;
   const pelanEl = document.getElementById("pelan")!;
@@ -523,8 +531,8 @@ const tahun = new Date().getFullYear();
         ${
           isnin
             ? `<div class="actions">
-                <label class="field"><span class="field-label">Masa lari</span>
-                  <input class="input" type="time" id="masa-lari" value="06:30" /></label>
+                <div class="field"><label class="field-label" for="masa-lari-jam">Masa lari</label>
+                  ${timePickerHtml({ id: "masa-lari", value: "06:30" })}</div>
                 <button class="btn btn-primary" type="button" data-ics>Muat turun fail kalendar (.ics)</button>
               </div>`
             : `<p class="muted">Isi "Tarikh mula" di atas dan tekan "Buat pelan" - kalendar perlukan tarikh sebenar.</p>`
@@ -532,6 +540,7 @@ const tahun = new Date().getFullYear();
       </div>
       <div class="no-print" data-sambung-slot></div>
       <ol class="minggu">${h.minggu.map((w) => weekHtml(w, isnin, hariIni, jarak, lumba)).join("")}</ol>`;
+    mountTimePickers(pelanEl);
 
     const kemajuan = document.getElementById("kemajuan")!;
     // Pelan 10K/21K/42K = akaun: kawan perlu akaun percuma untuk membukanya.

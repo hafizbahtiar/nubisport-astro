@@ -1,0 +1,50 @@
+---
+// Tambah larian kumpulan - admin Nubi / owner (backend 403 untuk yang lain). Simpan -> view.
+import AccountLayout from "../../../layouts/AccountLayout.astro";
+import Alert from "../../../components/ui/Alert.astro";
+import EventForm from "../../../components/EventForm.astro";
+import "../../../styles/panel.css";
+---
+
+<AccountLayout title="Tambah larian">
+  <p class="balik">
+    <a class="link" href="/account/events">← Larian kumpulan</a>
+  </p>
+  <Alert variant="warning" title="Untuk admin Nubi" id="bukan-admin" hidden>
+    <p>Hanya admin Nubi boleh tambah larian.</p>
+  </Alert>
+  <section class="panel" id="isi" aria-labelledby="t-baru" hidden>
+    <div class="panel-kepala">
+      <h3 class="display" id="t-baru">Tambah larian</h3>
+    </div>
+    <EventForm id="borang" submitLabel="Tambah larian">
+      <a slot="actions" class="btn btn-outline" href="/account/events">Batal</a>
+    </EventForm>
+  </section>
+</AccountLayout>
+
+<script>
+  import { currentUser } from "../../../lib/api";
+  import { isEventAdmin } from "../../../lib/events";
+  import { mountEventForm } from "../../../lib/event-form";
+
+  // Pengawal sesi = AccountLayout; s null bermaksud page sedang dilencong ke /login.
+  const s = await currentUser();
+  if (s && !isEventAdmin(s))
+    document.getElementById("bukan-admin")!.hidden = false;
+  else if (s) {
+    document.getElementById("isi")!.hidden = false;
+    mountEventForm(document.getElementById("borang") as HTMLFormElement, {
+      selepas: (a) => location.replace(`/account/events/view?id=${a.id}`),
+    });
+  }
+</script>
+
+<style>
+  .balik {
+    margin: 0 0 1rem;
+  }
+  #isi {
+    justify-items: stretch;
+  }
+</style>

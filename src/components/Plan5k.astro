@@ -198,6 +198,7 @@ const tahun = new Date().getFullYear();
 <Timer />
 <script>
   import { buildIcs, malaysiaTime } from "../lib/ics";
+  import { mountTimePickers, timePickerHtml } from "../lib/time-picker";
   import { calcMaf, type Condition } from "../lib/maf";
   import {
     CREATED_KEY,
@@ -531,8 +532,8 @@ const tahun = new Date().getFullYear();
         ${
           isnin
             ? `<div class="actions">
-                <label class="field"><span class="field-label">Masa lari</span>
-                  <input class="input" type="time" id="masa-lari" value="06:30" /></label>
+                <div class="field"><label class="field-label" for="masa-lari-jam">Masa lari</label>
+                  ${timePickerHtml({ id: "masa-lari", value: "06:30" })}</div>
                 <button class="btn btn-primary" type="button" data-ics>Muat turun fail kalendar (.ics)</button>
                 <button class="btn btn-outline" type="button" data-langgan>Hidupkan kalendar automatik</button>
               </div>
@@ -550,6 +551,7 @@ const tahun = new Date().getFullYear();
       }
       <div class="no-print" data-sambung-slot></div>
       <ol class="minggu">${h.minggu.map((w) => weekHtml(w, isnin, hariIni, "5k", lumba)).join("")}</ol>`;
+    mountTimePickers(pelanEl);
 
     const kemajuan = document.getElementById("kemajuan")!;
     // Pelan lumba tak dianjak - tarikh lumba tetap (anjak = minggu hilang).
