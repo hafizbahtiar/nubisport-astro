@@ -13,7 +13,7 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
     <div class="alert alert-success" id="hasil" hidden></div>
     <div class="actions" id="tindakan" hidden>
       <button class="btn btn-primary" type="button" id="benar">Benarkan</button>
-      <a class="btn btn-outline" href="/account">Batal</a>
+      <a class="btn btn-outline" href="/account" rel="noreferrer">Batal</a>
     </div>
   </section>
 </AccountLayout>
@@ -28,6 +28,8 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
   const hasil = document.getElementById("hasil")!;
 
   const token = new URLSearchParams(location.search).get("t") ?? "";
+  // Buang token dari URL/history selepas dibaca - ia kekal dalam pemboleh ubah sahaja.
+  if (token) history.replaceState(null, "", location.pathname);
   const tunjuk = (el: HTMLElement, teks: string) => {
     el.textContent = teks;
     el.hidden = false;
