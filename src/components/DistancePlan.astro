@@ -41,7 +41,6 @@ const tahun = new Date().getFullYear();
           <ChipGroup
             legend="Tempoh"
             name="minggu"
-            checked={DISTANCES[j].minggu[1]}
             options={DISTANCES[j].minggu.map((m) => ({
               value: m,
               label: `${m} minggu`,
@@ -210,10 +209,17 @@ const tahun = new Date().getFullYear();
     distancePlanKey,
     deletePlan,
     planParams,
+    pickPlanKey,
+    planParamsFromForm,
     writeList,
     writeParams,
   } from "../lib/saved-plans";
-  import { removeFromCloud, mountCloudBox } from "../lib/cloud-sync";
+  import {
+    removeFromCloud,
+    mountCloudBox,
+    listCloud,
+    saveToCloud,
+  } from "../lib/cloud-sync";
   import {
     mountActivePlanBox,
     mountActuals,
@@ -250,6 +256,15 @@ const tahun = new Date().getFullYear();
         (f) =>
           (f.hidden = f.disabled = f.dataset.untuk !== j || !!lumbaInput.value),
       ); // tarikh lumba = minggu dikira
+    // Dua fieldset kongsi name="minggu", jadi checked server tak boleh dipakai. Set lalai
+    // pada kumpulan aktif sahaja, dan jangan ganggu pilihan dari URL/pengguna.
+    const tempoh = [
+      ...borang.querySelectorAll<HTMLInputElement>(
+        'fieldset:not([disabled]) input[name="minggu"]',
+      ),
+    ];
+    if (tempoh.length && !tempoh.some((r) => r.checked))
+      tempoh.find((r) => Number(r.value) === c.mingguLalai)!.checked = true;
     masaMedan.querySelector(".field-label")!.textContent =
       `Masa ${c.prasyarat.nama} sekarang (minit)`;
     masaInput.min = String(c.prasyarat.min);
@@ -285,7 +300,7 @@ const tahun = new Date().getFullYear();
   }
   borang.addEventListener("change", ikutJarak);
   ikutJarak();
-  // Tempoh lalai bila tiada tarikh lumba = pilihan tengah (10K 10, 21K 16 minggu) - checked dalam ChipGroup.
+  // Tempoh lalai = `mingguLalai` setiap jarak (10K 10, 21K 16), ditanda oleh ikutJarak().
   if (q.has("jarak")) papar();
 
   function papar() {
@@ -325,6 +340,15 @@ const tahun = new Date().getFullYear();
       q.set("minggu", String(minggu));
       history.replaceState(null, "", `?${q}`);
     }
+    // Tiada pilihan minggu (contoh pautan hanya ?jarak=10k): ambil lalai yang sudah ditanda.
+    if (!Number.isInteger(minggu)) {
+      const dipilih = borang.querySelector<HTMLInputElement>(
+        'fieldset:not([disabled]) input[name="minggu"]:checked',
+      );
+      minggu = Number(dipilih?.value ?? c.mingguLalai);
+      q.set("minggu", String(minggu));
+      history.replaceState(null, "", `?${q}`);
+    }
     const awal = (n: number) =>
       earliestRaceDate(new Date(`${q.get("mula")}T00:00:00`), n, hari);
     const cubaLumba = (n: number) =>
@@ -354,20 +378,25 @@ const tahun = new Date().getFullYear();
     if (!h.ok) return amaran(h.sebab);
     const a = analyzeDistancePlan(input);
 
-    const kunci = distancePlanKey(
-      jarak,
-      minggu,
-      masa,
-      pace ? `p${pace}` : sasaran,
-      hari,
+    // Pelan yang dibuka dari dashboard bawa `kunci` - "Kemas kini pelan" menulis params di bawahnya.
+    const dibuat = readList(CREATED_KEY);
+    const kunci = pickPlanKey(
+      q.get("kunci"),
+      dibuat,
+      distancePlanKey(jarak, minggu, masa, pace ? `p${pace}` : sasaran, hari),
     );
     const paces = planDistancePaces(input);
     const sasaranMinit = pace ? (pace * c.km) / 60 : sasaran;
     const perlu = distanceWeeksNeeded(input);
-    const dibuat = readList(CREATED_KEY);
     if (!dibuat.includes(kunci)) writeList(CREATED_KEY, [...dibuat, kunci]);
     writeParams(kunci, planParams(q));
-    const siap = new Set<string>(readList(kunci));
+    // Buang tanda siap untuk sesi yang tak wujud lagi selepas pelan dikemas kini (minggu berubah).
+    const sah = new Set(
+      h.minggu.flatMap((w) => w.sesi.map((_, i) => `${w.no}.${i}`)),
+    );
+    const tersimpan = readList(kunci);
+    const siap = new Set<string>(tersimpan.filter((id) => sah.has(id)));
+    if (siap.size !== tersimpan.length) writeList(kunci, [...siap]);
     const isnin = /^\d{4}-\d{2}-\d{2}$/.test(q.get("mula") ?? "")
       ? startMonday(new Date(`${q.get("mula")}T00:00:00`))
       : null;
@@ -388,6 +417,7 @@ const tahun = new Date().getFullYear();
         <div class="actions no-print">
           <button class="btn btn-outline" type="button" data-kongsi>Kongsi</button>
           <button class="btn btn-outline" type="button" onclick="print()">Cetak</button>
+          <button class="btn btn-outline" type="button" data-kemas>Kemas kini pelan</button>
           <button class="btn btn-outline" type="button" data-padam>Padam pelan</button>
         </div>
       </div>
@@ -418,9 +448,29 @@ const tahun = new Date().getFullYear();
     // Pelan 10K/21K = akaun: kawan perlu akaun percuma untuk membukanya.
     mountShare(
       pelanEl.querySelector<HTMLButtonElement>("[data-kongsi]")!,
-      shareLink("/account/distance-plan", q),
+      shareLink(
+        "/account/distance-plan",
+        (() => {
+          const k = new URLSearchParams(q);
+          k.delete("kunci"); // kunci simpanan peribadi - bukan untuk pautan kongsi
+          return k;
+        })(),
+      ),
       `Mari berlari bersama: pelan ${tajuk} dari Nubi Sport (perlu akaun percuma).`,
     );
+    // Ubah masa/pace/tarikh pada borang, kemudian tulis params di bawah kunci yang sama.
+    pelanEl.querySelector("[data-kemas]")?.addEventListener("click", () => {
+      const baru = planParamsFromForm(borang, q, kunci);
+      for (const k of [...q.keys()]) q.delete(k);
+      baru.forEach((v, k) => q.set(k, v));
+      papar();
+      history.replaceState(null, "", `?${q}`);
+      // Pelan ini mungkin sudah di awan: hantar params/tanda siap baharu (update, bukan slot baharu).
+      if (pelanEl.querySelector("[data-kemas]"))
+        void listCloud().then((a) => {
+          if (a?.items.some((p) => p.key === kunci)) void saveToCloud(kunci);
+        });
+    });
     // Pelan lumba tak dianjak - tarikh lumba tetap.
     const sambung =
       isnin && !lumba

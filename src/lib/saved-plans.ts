@@ -11,6 +11,31 @@ export const planKey = (bulan: number | string, tahap: string, masa: number | st
 export const distancePlanKey = (jarak: string, minggu: number, masa: number, sasaran: number | string | undefined, hari: number) =>
   `pelan-${jarak}:${minggu}-${masa}-${sasaran ?? ""}-${hari}`;
 
+/**
+ * Kunci untuk halaman ini: kunci dalam URL (dibuka dari dashboard) hanya dipakai kalau ia
+ * pelan sedia ada dengan jenis yang sama. Selain itu pelan baharu - jadi "Buat pelan"
+ * sentiasa mencipta pelan baru, "Kemas kini pelan" menulis params di bawah kunci lama.
+ */
+export const pickPlanKey = (dipilih: string | null, dibuat: string[], baharu: string): string => {
+  const jenis = baharu.split(":")[0];
+  return dipilih && dipilih.startsWith(`${jenis}:`) && dibuat.includes(dipilih) ? dipilih : baharu;
+};
+
+/**
+ * URL untuk "Kemas kini pelan": kekalkan param yang bukan medan borang (contoh `pace` dari
+ * borang pace), ganti medan borang (kosong = dibuang), dan bawa `kunci` pelan.
+ */
+export function planParamsFromForm(borang: HTMLFormElement, q: URLSearchParams, kunci: string): URLSearchParams {
+  const baru = new URLSearchParams(q);
+  const nama = new Set(
+    [...borang.querySelectorAll<HTMLElement>("[name]")].map((e) => e.getAttribute("name")!),
+  );
+  for (const n of nama) baru.delete(n);
+  for (const [k, v] of new FormData(borang)) baru.set(k, String(v));
+  baru.set("kunci", kunci);
+  return baru;
+}
+
 export function readList(k: string): string[] {
   try {
     const v = JSON.parse(localStorage.getItem(k) ?? "[]");

@@ -17,14 +17,23 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
   <section class="panel" id="aktif" hidden>
     <div class="panel-kepala">
       <h3 class="display">Pelan aktif</h3>
-      <a class="btn btn-outline btn-sm" id="aktif-buka" href="#" hidden
-        >Buka pelan</a
-      >
+      <div class="actions">
+        <button
+          class="btn btn-outline btn-sm"
+          type="button"
+          id="aktif-sync"
+          hidden>Sync aktiviti</button
+        >
+        <a class="btn btn-outline btn-sm" id="aktif-buka" href="#" hidden
+          >Buka pelan</a
+        >
+      </div>
     </div>
     <p class="muted" id="aktif-nota">Menyemak pelan aktif…</p>
     <p id="aktif-seterusnya" hidden></p>
     <p id="aktif-minggu" hidden></p>
     <p id="aktif-minit" hidden></p>
+    <p class="muted" id="aktif-sync-nota" hidden></p>
     <div class="beban-senarai" id="aktif-beban" hidden></div>
     <div id="aktif-sambung" hidden></div>
   </section>
@@ -129,6 +138,7 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
     activePlan,
     planFromParams,
     weeklyLoad,
+    syncActivePlan,
   } from "../../lib/plan-sync";
 
   const $ = (id: string) => document.getElementById(id)!;
@@ -178,7 +188,7 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
         p,
         nama: `5K · ${lumba ?? `${p.bulan} bulan`} · ${p.hari} hari seminggu`,
         sub: `${LEVELS[p.tahap as Level]}${p.masa ? ` (${p.masa} min)` : ""}${p.pace ? ` · pace ${formatPace(+p.pace)}/km` : ""}`,
-        href: `/account/plan-5k?${new URLSearchParams(p)}`,
+        href: `/account/plan-5k?${new URLSearchParams({ ...p, kunci })}`,
       };
     const k = DISTANCES[h.jenis as Distance];
     const sasaran = p.pace
@@ -191,7 +201,7 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
       p,
       nama: `${k.nama} · ${lumba ?? `${p.minggu} minggu`} · ${p.hari} hari seminggu`,
       sub: `${k.prasyarat.nama} ${p.masa} min → ${sasaran ? `bawah ${formatTime(sasaran)}` : "habis"}`,
-      href: `/account/distance-plan?${new URLSearchParams(p)}`,
+      href: `/account/distance-plan?${new URLSearchParams({ ...p, kunci })}`,
     };
   }
 
@@ -400,6 +410,34 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
         "aktif-minit",
         `Minit minggu ini: ${minggu.reduce((n, x) => n + x.minit, 0)} dirancang, ${Math.round(sebenar)} sebenar`,
       );
+      // Sync manual: aktiviti Strava yang sudah dimuat naik tetapi belum dipadankan (contoh
+      // pelan dijadikan aktif selepas aktiviti itu dimuat naik).
+      const syncButang = $("aktif-sync") as HTMLButtonElement;
+      const syncNota = $("aktif-sync-nota");
+      syncButang.hidden = false;
+      syncButang.addEventListener("click", async () => {
+        syncButang.disabled = true;
+        const n = await syncActivePlan();
+        syncButang.disabled = false;
+        syncNota.hidden = false;
+        if (n === null) {
+          syncNota.textContent = "Tak dapat sync sekarang. Cuba lagi sekejap.";
+          return;
+        }
+        siap.clear();
+        readList(p.kunci).forEach((x) => siap.add(x));
+        $("aktif-minggu").textContent =
+          `Minggu ini: ${minggu.filter((x) => siap.has(x.id)).length} / ${minggu.length} sesi siap`;
+        const lagiBaru = p.sesi.find(
+          (x) => x.tarikh >= hariIni && !siap.has(x.id),
+        );
+        $("aktif-seterusnya").textContent = lagiBaru
+          ? `Sesi seterusnya: ${new Date(`${lagiBaru.tarikh}T00:00:00`).toLocaleDateString("ms-MY", { weekday: "long", day: "numeric", month: "long" })} - ${sessionLabel(lagiBaru)} (${lagiBaru.minit} min)`
+          : "Tiada lagi sesi akan datang.";
+        syncNota.textContent = n
+          ? `${n} sesi ditanda siap dari aktiviti Strava.`
+          : "Tiada sesi baharu untuk ditanda.";
+      });
       // Beban mingguan (6 minggu terakhir sehingga minggu ini): dirancang vs sebenar.
       if (semua) {
         const lepas = weeklyLoad(p.sesi, semua)

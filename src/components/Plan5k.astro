@@ -194,10 +194,17 @@ const tahun = new Date().getFullYear();
     planKey,
     deletePlan,
     planParams,
+    pickPlanKey,
+    planParamsFromForm,
     writeList,
     writeParams,
   } from "../lib/saved-plans";
-  import { removeFromCloud, mountCloudBox } from "../lib/cloud-sync";
+  import {
+    removeFromCloud,
+    mountCloudBox,
+    listCloud,
+    saveToCloud,
+  } from "../lib/cloud-sync";
   import {
     mountActivePlanBox,
     mountActuals,
@@ -418,8 +425,13 @@ const tahun = new Date().getFullYear();
     }
 
     // Pelan lumba: minggu dalam kunci ("14w") - pace tak masuk kunci sebab minit sesi tak berubah.
-    const kunci = planKey(lumba ? `${minggu}w` : bulan, tahap, masa5k, hari);
+    // Pelan yang dibuka dari dashboard bawa `kunci` - "Kemas kini pelan" menulis params di bawahnya.
     const dibuat = readList(CREATED_KEY);
+    const kunci = pickPlanKey(
+      q.get("kunci"),
+      dibuat,
+      planKey(lumba ? `${minggu}w` : bulan, tahap, masa5k, hari),
+    );
     // Had tanpa akaun kira pelan 5K sahaja (10K/21K = akaun).
     if (
       !canBuildPlan(
@@ -442,7 +454,13 @@ const tahun = new Date().getFullYear();
     }
     if (!dibuat.includes(kunci)) writeList(CREATED_KEY, [...dibuat, kunci]);
     if (full) writeParams(kunci, planParams(q));
-    const siap = new Set<string>(readList(kunci));
+    // Buang tanda siap untuk sesi yang tak wujud lagi selepas pelan dikemas kini (minggu berubah).
+    const sah = new Set(
+      h.minggu.flatMap((w) => w.sesi.map((_, i) => `${w.no}.${i}`)),
+    );
+    const tersimpan = readList(kunci);
+    const siap = new Set<string>(tersimpan.filter((id) => sah.has(id)));
+    if (siap.size !== tersimpan.length) writeList(kunci, [...siap]);
     const isnin = /^\d{4}-\d{2}-\d{2}$/.test(q.get("mula") ?? "")
       ? startMonday(new Date(`${q.get("mula")}T00:00:00`))
       : null;
@@ -468,6 +486,7 @@ const tahun = new Date().getFullYear();
         <div class="actions no-print">
           <button class="btn btn-outline" type="button" data-kongsi>Kongsi</button>
           <button class="btn btn-outline" type="button" onclick="print()">Cetak</button>
+          ${full ? `<button class="btn btn-outline" type="button" data-kemas>Kemas kini pelan</button>` : ""}
           ${full ? `<button class="btn btn-outline" type="button" data-padam>Padam pelan</button>` : ""}
         </div>
       </div>
@@ -584,9 +603,29 @@ const tahun = new Date().getFullYear();
       });
     mountShare(
       pelanEl.querySelector<HTMLButtonElement>("[data-kongsi]")!,
-      shareLink("/plan-5k", q),
+      shareLink(
+        "/plan-5k",
+        (() => {
+          const k = new URLSearchParams(q);
+          k.delete("kunci"); // kunci simpanan peribadi - bukan untuk pautan kongsi
+          return k;
+        })(),
+      ),
       `Mari berlari bersama: pelan 5K bawah ${sasaranTeks} (${tempoh}, ${hari} hari seminggu) dari Nubi Sport.`,
     );
+    // Ubah masa/pace/tarikh pada borang, kemudian tulis params di bawah kunci yang sama.
+    pelanEl.querySelector("[data-kemas]")?.addEventListener("click", () => {
+      const baru = planParamsFromForm(borang, q, kunci);
+      for (const k of [...q.keys()]) q.delete(k);
+      baru.forEach((v, k) => q.set(k, v));
+      papar();
+      history.replaceState(null, "", `?${q}`);
+      // Pelan ini mungkin sudah di awan: hantar params/tanda siap baharu (update, bukan slot baharu).
+      if (pelanEl.querySelector("[data-kemas]"))
+        void listCloud().then((a) => {
+          if (a?.items.some((p) => p.key === kunci)) void saveToCloud(kunci);
+        });
+    });
     pelanEl
       .querySelector<HTMLButtonElement>("[data-ics]")
       ?.addEventListener("click", () => {

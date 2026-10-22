@@ -11,7 +11,8 @@ export const DISTANCES = {
   "10k": {
     nama: "10K",
     km: 10,
-    minggu: [8, 10, 12],
+    minggu: [8, 10, 12, 14, 16],
+    mingguLalai: 10,
     prasyarat: { nama: "5K", km: 5, min: 15, max: 60 },
     sasaran: { min: 35, max: 120 },
     mulaKm: 6, // larian panjang minggu 1 (> jarak prasyarat)
@@ -23,7 +24,8 @@ export const DISTANCES = {
   "21k": {
     nama: "21K",
     km: 21.0975,
-    minggu: [12, 16, 20],
+    minggu: [12, 16, 20, 24],
+    mingguLalai: 16,
     prasyarat: { nama: "10K", km: 10, min: 35, max: 110 },
     sasaran: { min: 75, max: 240 },
     mulaKm: 11,

@@ -109,6 +109,7 @@ Item yang dah siap dibuang (lihat git history).
   (`full`: pecahan analisis, ikut nadi MAF, .ics, tiada had 3 pelan). Sekatan di pelayar saja.
   Storan pelan = `lib/saved-plans.ts` (`readList`/`writeList`/`deletePlan`) + awan (`lib/cloud-sync.ts`).
   Padam pelan: Dashboard + pelan penuh saja (di awam ia membuka semula slot had 3 pelan).
+- **Kemas kini pelan** (2026-10-22): buka pelan dari dashboard (URL bawa `kunci`), ubah masa/pace/tarikh pada borang, tekan "Kemas kini pelan" - params ditulis bawah kunci yang sama (progress/awan/aktif kekal), tanda siap sesi yang dah tiada dipangkas, dan pelan yang sudah di awan dihantar semula. "Buat pelan" (borang GET) masih mencipta pelan baru. Kunci jadi pengecam - nilai di dalam teksnya mungkin lama. Semak: `bun scripts/check-plan-update.ts`.
 - **Akaun lain**: `/account/maf` (`components/Maf.astro full`: simpan `maf:terakhir` untuk Dashboard + butang
   Pelan 5K ikut nadi; `/maf` lencong ke situ bila log masuk), `/account/profile` (Maklumat: nama `PATCH /me`; Zon bahaya: padam akaun `DELETE /me` dengan kata laluan dalam
   `confirmDialog({ passwordLabel, action })`, lepas itu `localStorage.clear()` -> `/?akaun=dipadam`) +
@@ -129,10 +130,13 @@ Item yang dah siap dibuang (lihat git history).
   pelan, panel dashboard, mesej lepas muat naik, baris "Sesi pelan" di detail. Padanan (2026-10-22, v2): mana-mana sesi
   belum siap dalam minggu pelan sama (Isnin-Ahad, hari sama dahulu, kemudian paling hampir); `runRatio` (kadens >= 140
   langkah/min, dari `.fit`, migration 033) mesti >= 0.7 untuk sesi lari, >= 0.15 untuk jalan-lari - kalau gagal sebab
-  itu saja, mesej `walkedNote` ("kebanyakannya jalan"). Spec: `docs/plans/active-plan-sync.md`.
+  itu saja, mesej `walkedNote` ("kebanyakannya jalan"). Butang "Sync aktiviti" di page pelan (pelan
+  aktif) dan dashboard memanggil `syncActivePlan()` - padankan semula semua aktiviti sejak tarikh mula,
+  selamat ditekan berulang (hanya menambah). Spec: `docs/plans/active-plan-sync.md`.
 - **Pelan v2** (2026-10-22, `docs/plans/training-plan-v2.md`): param `lumba` (tarikh lumba) -> `racePlan` kira
   `minggu` + `mula` dan tulis ke URL (pelan tak berubah bila dibuka minggu lain); 5K `minggu` 8-24 (kunci `pelan-5k:<N>w-...`),
-  10K/21K mana-mana minggu dalam julat pilihan (8-12 / 12-20). `pace` (s/km) = sasaran sendiri (5K ganti 6:00/km; 10K/21K
+  10K/21K mana-mana minggu dalam julat pilihan (10K 8-16, lalai 10; 21K 12-24, lalai 16 -
+  `DISTANCES.mingguLalai`; dua fieldset kongsi `name="minggu"`, jadi lalai ditanda oleh `ikutJarak()`). `pace` (s/km) = sasaran sendiri (5K ganti 6:00/km; 10K/21K
   ganti `sasaran`, kunci `p<pace>`); mudah/panjang kekal dari masa sekarang. Pelan lama (tanpa `lumba`/`pace`) terbina
   sama - `check-plan-5k` / `check-distance-plan` semak cincangan output, jadi `ENGINE_VERSION` tak dinaikkan. Pelan lumba
   tak ada "Sambung" (tarikh lumba tetap). Data sebenar di kad sesi + bar beban = `mountActuals` (pelan aktif saja).

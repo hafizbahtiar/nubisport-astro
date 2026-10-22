@@ -183,6 +183,19 @@ export async function syncActivities<A extends MatchableActivity>(aktiviti: A[])
   return p && tanda(p, aktiviti);
 }
 
+/**
+ * Butang "Sync aktiviti": padankan SEMUA aktiviti sejak pelan aktif bermula dengan sesi yang
+ * belum siap. Tiada aktiviti dibuang, jadi selamat ditekan berulang. null = tiada pelan aktif
+ * atau aktiviti tak dapat dimuatkan.
+ */
+export async function syncActivePlan(): Promise<number | null> {
+  const p = await activePlan();
+  if (!p) return null;
+  const a = await activitiesBetween(p.sesi[0].tarikh);
+  if (!a) return null;
+  return (await tanda(p, a)).padan.size;
+}
+
 /** Aktiviti dalam [dari, hingga) - tarikh Malaysia, dengan sehari lebihan di kiri (UTC). */
 export async function activitiesBetween<A extends MatchableActivity>(dari: string, hingga?: string): Promise<A[] | null> {
   const r = await api(`${AKTIVITI}?from=${addDays(dari, -1)}${hingga ? `&to=${hingga}` : ""}`).catch(() => null);
@@ -231,13 +244,27 @@ export async function mountActivePlanBox(slot: HTMLElement, kunci: string, adaMu
     const diAwan = a.items.some((i) => i.key === kunci);
     slot.innerHTML =
       k === kunci
-        ? `<span class="lencana lencana-awan">${icon("aktiviti")}Aktif</span> <span class="muted">${pesan || "Aktiviti Strava yang dimuat naik akan tanda sesi siap sendiri."}</span>`
+        ? `<span class="lencana lencana-awan">${icon("aktiviti")}Aktif</span> <span class="muted">${pesan || "Aktiviti Strava yang dimuat naik akan tanda sesi siap sendiri."}</span>
+           <button class="btn btn-outline btn-sm" type="button" data-sync>Sync aktiviti</button>`
         : !diAwan
           ? `<span class="muted">Simpan pelan ini ke awan untuk jadikan ia pelan aktif.</span>`
           : !adaMula
             ? `<span class="muted">Isi "Tarikh mula" di atas dan tekan "Buat pelan" untuk jadikan ia pelan aktif.</span>`
             : `<button class="btn btn-outline btn-sm" type="button" data-aktifkan>Jadikan pelan aktif</button>
                <span class="muted">Aktiviti Strava akan tanda sesi pelan ini siap.</span>`;
+    slot.querySelector<HTMLButtonElement>("[data-sync]")?.addEventListener("click", async (e) => {
+      const b = e.currentTarget as HTMLButtonElement;
+      b.disabled = true;
+      const n = await syncActivePlan();
+      if (n === null) {
+        await lukis("Tak dapat sync sekarang. Cuba lagi sekejap.");
+        return;
+      }
+      siap.clear();
+      readList(kunci).forEach((x) => siap.add(x));
+      kemas();
+      await lukis(n ? `${n} sesi ditanda siap dari aktiviti Strava.` : "Tiada sesi baharu untuk ditanda.");
+    });
     slot.querySelector<HTMLButtonElement>("[data-aktifkan]")?.addEventListener("click", async (e) => {
       const b = e.currentTarget as HTMLButtonElement;
       b.disabled = true;
