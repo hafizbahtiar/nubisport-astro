@@ -1,0 +1,89 @@
+---
+// Halaman authorize pautan Telegram dari bot: /account/telegram?t=<token>.
+// Bot (hono-workers services/telegram-public.ts) beri pautan 5 minit sekali guna;
+// halaman ini baca token, tunjuk akaun/app, kemudian pengguna tekan Benarkan.
+import AccountLayout from "../../layouts/AccountLayout.astro";
+---
+
+<AccountLayout title="Pautkan Telegram">
+  <section class="card" aria-labelledby="t-paut">
+    <h2 class="display card-title" id="t-paut">Pautkan Telegram</h2>
+    <p class="muted" id="status" aria-live="polite">Menyemak pautan…</p>
+    <div class="alert alert-danger" id="ralat" hidden></div>
+    <div class="alert alert-success" id="hasil" hidden></div>
+    <div class="actions" id="tindakan" hidden>
+      <button class="btn btn-primary" type="button" id="benar">Benarkan</button>
+      <a class="btn btn-outline" href="/account">Batal</a>
+    </div>
+  </section>
+</AccountLayout>
+
+<script>
+  import { api, json } from "../../lib/api";
+
+  const status = document.getElementById("status")!;
+  const tindakan = document.getElementById("tindakan")!;
+  const benar = document.getElementById("benar") as HTMLButtonElement;
+  const ralat = document.getElementById("ralat")!;
+  const hasil = document.getElementById("hasil")!;
+
+  const token = new URLSearchParams(location.search).get("t") ?? "";
+  const tunjuk = (el: HTMLElement, teks: string) => {
+    el.textContent = teks;
+    el.hidden = false;
+  };
+  const gagal = (teks: string) => {
+    status.hidden = true;
+    tindakan.hidden = true;
+    hasil.hidden = true;
+    tunjuk(ralat, teks);
+  };
+
+  if (!token) {
+    gagal("Pautan tak lengkap. Hantar /bind semula dalam Telegram.");
+  } else {
+    const res = await api(
+      `/me/telegram/link?token=${encodeURIComponent(token)}`,
+    ).catch(() => null);
+    const body = res ? await json(res) : {};
+    if (!res?.ok) {
+      gagal(
+        "Pautan tak sah atau dah tamat. Hantar /bind semula dalam Telegram.",
+      );
+    } else {
+      const data = body.data as {
+        app: { name: string };
+        telegramName: string | null;
+      };
+      tunjuk(
+        status,
+        `Pautkan akaun ${data.app.name} dengan Telegram${
+          data.telegramName ? ` ${data.telegramName}` : ""
+        }. Selepas dibenarkan, anda boleh taip /nubiplan dalam bot.`,
+      );
+      tindakan.hidden = false;
+
+      benar.addEventListener("click", async () => {
+        benar.disabled = true;
+        const r = await api("/me/telegram/link", {
+          method: "POST",
+          body: JSON.stringify({ token }),
+        }).catch(() => null);
+        if (r?.ok) {
+          const b = await json(r);
+          status.hidden = true;
+          tindakan.hidden = true;
+          tunjuk(
+            hasil,
+            `Telegram terikat dengan akaun ${b.data?.app?.name ?? data.app.name}. Balik ke Telegram dan taip /nubiplan.`,
+          );
+          return;
+        }
+        benar.disabled = false;
+        gagal(
+          "Tak dapat pautkan sekarang. Pautan mungkin dah tamat - hantar /bind semula dan cuba lagi.",
+        );
+      });
+    }
+  }
+</script>
