@@ -33,8 +33,11 @@ oleh owner, **sebelum** Nubi bila Nubi bergantung pada endpoint baru.
 | `/account` | akaun | Dashboard: pelan aktif (sesi seterusnya, minggu ini X/Y, minit dirancang vs sebenar, bar beban 6 minggu, "Sambung dari Minggu N"), pelan saya (lencana **Awan** / **Peranti ini**, meter slot, Ganti), profil, MAF |
 | `/account/activities` | ahli | Import aktiviti Strava (`.fit` wajib + `.gpx` pilihan, seret & lepas), jadual cari / tapis sukan / halaman, padanan ke pelan aktif |
 | `/account/activities/view?id=` | ahli | Detail aktiviti: peta laluan 2D / 3D / Terrain, ringkasan, % lari, sesi pelan yang dipadankan |
-| `/account/plan-5k` | akaun | Pelan 5K penuh: pecahan analisis, ikut nadi, kalendar `.ics`, simpan ke awan, jadikan pelan aktif |
-| `/account/distance-plan` | akaun | Pelan 10K / 21K (bertangga dari masa 5K / 10K, masa sasaran pilihan, tempoh lalai 10 / 16 minggu) + kad "Sesuai lari hari ini?" |
+| `/account/plans` | akaun | Senarai semua pelan (5K, 10K, 21K, 42K) - jadual, storan, status, padam |
+| `/account/plans/5k/new`, `/account/plans/5k/view?kunci=` | akaun | Pelan 5K penuh: borang panel, view/edit, pecahan analisis, ikut nadi, kalendar `.ics`, simpan ke awan, jadikan pelan aktif |
+| `/account/plans/10k/new`, `/account/plans/10k/view?kunci=` | akaun | Pelan 10K: borang panel, view/edit (bertangga dari masa 5K) |
+| `/account/plans/21k/new`, `/account/plans/21k/view?kunci=` | akaun | Pelan 21K: borang panel, view/edit (bertangga dari masa 10K) |
+| `/account/plans/42k/new`, `/account/plans/42k/view?kunci=` | akaun | Pelan 42K: borang panel, view/edit (bertangga dari masa 21K) |
 | `/account/maf` | akaun | MAF + butang buat Pelan 5K ikut nadi |
 | `/account/pricing` | akaun | Harga: Percuma + Ahli aktif, tier lain "Akan datang" |
 | `/account/profile`, `/account/profile/training`, `/account/profile/password` | akaun | Maklumat (nama), Latihan (tarikh lahir, keadaan MAF, hari, masa 5K/10K - isi borang MAF/pelan) dan tukar kata laluan - card navigasi `ProfileShell`. Maklumat ada "Zon bahaya": padam akaun sendiri (`DELETE /me`, perlu kata laluan) |
@@ -97,6 +100,8 @@ bun scripts/check-profile.ts         # umur dari tarikh lahir
 bun scripts/check-ramadan.ts        # bulan Hijri + tag/banner Ramadan
 bun scripts/check-activity-file.ts  # fail Strava -> ringkasan, laluan, % lari (FIT sintetik)
 bun scripts/check-plan-sync.ts      # padanan aktiviti -> sesi pelan aktif
+bun scripts/check-plan-list.ts      # senarai pelan + view hanya buka pelan tersimpan
+bun scripts/check-login-next.ts     # ?next= log masuk kekal dalam laman
 bun run build
 ```
 
@@ -109,7 +114,8 @@ bun run build
   notis luar talian, `Icon` = ikon Lucide).
 - `src/lib/` - `icon.ts` (semua ikon UI = Lucide, `lucide-static`; tiada path SVG tulisan tangan), logik tulen (pelan, MAF, tarikh, ics, IPU/cuaca/waktu lari, Ramadan, peluh), `api.ts` (fetch `/api/v1`, satu refresh dikongsi,
   salinan `/me` 5 min), `cloud-sync.ts`, `plan-render.ts` (HTML kad minggu dikongsi), `activity-file.ts`, `plan-sync.ts`. Nama eksport = English; medan/data tersimpan kekal Melayu.
-- `src/styles/` - `global.css` (token + atom), `plan.css` (pelan dirender melalui `innerHTML`).
+- `src/styles/` - `global.css` (token + atom), `forms.css` (borang), `overlays.css` (picker/dropdown),
+  `panel.css` (panel akaun), `plan.css` (pelan + `.plan-form`).
 - `src/data/site.ts` - nama, pautan hubungan (**kosong hingga pautan sebenar wujud**), kunci tapak
   Turnstile, `CLOUD_NOTE`.
 - `worker.ts` + `wrangler.jsonc` - hanya `/api/*` menjalankan Worker; selainnya aset statik (percuma).

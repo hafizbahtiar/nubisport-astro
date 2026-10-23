@@ -70,7 +70,7 @@ jalan-lari 0.1/0.2, pelan tanpa tarikh).
 
 ## Aliran pengguna
 
-- **Halaman pelan** (`/plan-5k`, `/account/distance-plan`): butang "Jadikan pelan aktif" bagi pelan
+- **Halaman pelan** (`/plan-5k`, `/account/plans/*/view`): butang "Jadikan pelan aktif" bagi pelan
   awan. Lencana "Aktif" pada pelan aktif. Bila diaktifkan (ahli saja): padankan aktiviti sejak tarikh
   mula, kemudian beritahu hasil ("4 sesi ditanda siap dari aktiviti Strava").
 - **Dashboard** (`/account`): panel "Pelan aktif" di atas - sesi seterusnya (tarikh, tajuk), minggu ini

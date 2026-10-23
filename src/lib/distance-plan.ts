@@ -21,7 +21,7 @@ export const DISTANCES = {
     mudah: [30, 45], // minit satu sesi mudah: awal -> puncak
     tirus: 1,
     nisbahTirus: [0.6], // larian panjang minggu tirus = nisbah × larian panjang puncak
-    halaman: "/account/distance-plan",
+    halaman: "/account/plans/10k/new",
   },
   "21k": {
     nama: "21K",
@@ -36,7 +36,7 @@ export const DISTANCES = {
     mudah: [35, 55],
     tirus: 2,
     nisbahTirus: [0.75, 0.5],
-    halaman: "/account/distance-plan",
+    halaman: "/account/plans/21k/new",
   },
   "42k": {
     nama: "42K",
@@ -53,7 +53,7 @@ export const DISTANCES = {
     mudah: [40, 60],
     tirus: 2,
     nisbahTirus: [0.6, 0.4], // Higdon: 20 -> 12 -> 8 batu, kemudian lumba
-    halaman: "/account/plan-42k",
+    halaman: "/account/plans/42k/new",
   },
 } as const satisfies Record<Distance, unknown>;
 
@@ -88,13 +88,13 @@ const separuh = (n: number) => Math.round(n * 2) / 2;
 
 /** `pace` -> `sasaran` (minit) supaya enjin hanya kenal satu sasaran. */
 const withPace = (i: DistanceInput): DistanceInput =>
-  i.pace !== undefined && DISTANCES[i.jarak] ? { ...i, sasaran: (i.pace * DISTANCES[i.jarak].km) / 60 } : i;
+  i.pace !== undefined && Object.hasOwn(DISTANCES, i.jarak) ? { ...i, sasaran: (i.pace * DISTANCES[i.jarak].km) / 60 } : i;
 
 /** Semakan input yang dikongsi buildDistancePlan dan analyzeDistancePlan. null = sah. */
 export function validateDistanceInput(input: DistanceInput): string | null {
   const { jarak, minggu, hari, masa, sasaran, pace } = withPace(input);
+  if (!Object.hasOwn(DISTANCES, jarak)) return "Pilih jarak 10K, 21K atau 42K."; // bukan `in`: "__proto__" dari URL
   const c = DISTANCES[jarak];
-  if (!c) return "Pilih jarak 10K, 21K atau 42K.";
   // Julat = pilihan pertama-terakhir (tarikh lumba boleh beri mana-mana minggu di antaranya).
   if (!Number.isInteger(minggu) || minggu < c.minggu[0] || minggu > c.minggu.at(-1)!) return `Pilih tempoh ${c.minggu[0]}-${c.minggu.at(-1)} minggu.`;
   if (hari !== 3 && hari !== 4) return "Pilih 3 atau 4 hari seminggu.";

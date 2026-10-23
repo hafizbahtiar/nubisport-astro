@@ -28,8 +28,10 @@ Item yang dah siap dibuang (lihat git history).
   npx wrangler dev --port 8790 --local-upstream localhost:8790` - binding bersambung sendiri. Tanpa
   `--local-upstream`, wrangler tulis semula `Origin` ke `http://nubisport.hafizbahtiar.com` dan CSRF backend
   tolak semua POST (403). `.dev.vars` backend mesti ada `ALLOWED_ORIGINS=http://localhost:8790`.
-- **Asas UI**: semua gaya kongsi dalam `src/styles/global.css` (token warna/radius, butang `.btn-*`, borang
-  `.form/.field/.input/.chips`, `.card`, `.alert-*`, `.surface-dark`, `.prose`, `[hidden]` menang). Komponen
+- **Asas UI**: `src/styles/global.css` (token, asas, butang `.btn-*`, kad, alert, `.surface-dark`, `.prose`,
+  `.back-link`, `.grid-cards`/`.card-grid`, `[hidden]` menang), `forms.css` (borang `.form/.field/.input/.chips/.check`,
+  `.form-narrow`, `.form-grid`), `overlays.css` (DatePicker/TimePicker/Dropdown), `panel.css` (`.stat/.panel`, diimport
+  oleh `AccountLayout`), `plan.css` (hasil pelan + `.plan-form`). Komponen
   `src/components/ui/`: `PageHero` (kepala halaman gelap + slot borang), `Section`, `ChipGroup` (radio pil,
   `stacked` untuk label panjang), `Checkbox` (kelas `.check`; medan bergantung = `<fieldset class="form-group"
   hidden disabled>` ditogol skrip), `Field` (label + input + petunjuk; `for` untuk kawalan berbilang
@@ -72,6 +74,8 @@ Item yang dah siap dibuang (lihat git history).
   Garmin, Nubi Sport, FIT, GPX, label menu Strava ("Export Original"). Unit kekal: km, m, bpm, min.
   Kunci data (`nubi/consent/aktiviti`, `nubi/plan`, `pelan-5k:...`, UID `.ics` `lumba-<id>`, nilai
   `tak-realistik`, param URL `mula`/`bulan`/`tahap`) jangan diterjemah.
+  **Nama fail/URL/eksport = English** (2026-10-22): route dan fail baharu guna English (contoh
+  `/account/plans`, `plans/5k/new`, `plans/5k/view`, `plan-list.ts`, `SavedPlan.key/kind/name/detail`).
   **Nama kod = English**: fungsi, jenis dan pemalar yang dieksport dari `src/lib/*.ts` / `src/data/*.ts`
   (contoh `buildPlan`, `sessionDate`, `matchActivities`, `ENGINE_VERSION`, `Week`, `Level`). Medan yang disimpan
   atau dihantar (payload awan, JSON localStorage, param URL, token tanda siap) dan nilai union yang masuk ke data
@@ -101,7 +105,7 @@ Item yang dah siap dibuang (lihat git history).
 - **Akaun (`/account/*`)**: `AccountLayout.astro` - sidebar (laci bawah 64rem: Esc / scrim tutup), navbar,
   kandungan lebar penuh. Layout = satu-satunya pengawal sesi (tiada sesi -> `/login?next=`); halaman ambil
   pengguna dengan `currentUser()` (`lib/api.ts`, satu /me dikongsi). `/login` lencong ke `?next=` (laluan
-  dalaman saja) atau `/account`. Sidebar berkumpulan (`NAV`: Utama / Latihan / Akaun); item `members: true`
+  dalaman saja, `internalPath` dalam `lib/api.ts` - semak origin dengan `URL`, bukan regex) atau `/account`. Sidebar berkumpulan (`NAV`: Utama / Latihan / Akaun); item `members: true`
   (contoh Aktiviti) tersembunyi bagi bukan ahli. Profil + log keluar dalam `components/ui/UserMenu.astro`
   (bawah sidebar `up`, navbar akaun, Header awam) - satu komponen, jangan buat menu lain. `<head>` dikongsi = `Head.astro`.
 - **CSP ketat** (`scripts/security-headers.ts`, jalan dalam `bun run build`): skrip sebaris di-hash automatik, tapi
@@ -109,11 +113,11 @@ Item yang dah siap dibuang (lihat git history).
   sampai ditambah dalam skrip itu. Guna `addEventListener`, bukan atribut `on*`.
   Item yang dijana skrip perlu `:global(...)` dalam `<style>` halaman (tiada atribut skop Astro).
 - **Pelan 5K awam vs penuh**: `components/Plan5k.astro` (kandungan saja; halaman pilih layout).
-  `/plan-5k` = pelan + label "Realistik tak?" + kotak promosi; log masuk -> lencong ke `/account/plan-5k`
+  `/plan-5k` = pelan + label "Realistik tak?" + kotak promosi; log masuk -> `/account/plans/5k/new`
   (`full`: pecahan analisis, ikut nadi MAF, .ics, tiada had 3 pelan). Sekatan di pelayar saja.
   Storan pelan = `lib/saved-plans.ts` (`readList`/`writeList`/`deletePlan`) + awan (`lib/cloud-sync.ts`).
   Padam pelan: Dashboard + pelan penuh saja (di awam ia membuka semula slot had 3 pelan).
-- **Kemas kini pelan** (2026-10-22): buka pelan dari dashboard (URL bawa `kunci`), ubah masa/pace/tarikh pada borang, tekan "Kemas kini pelan" - params ditulis bawah kunci yang sama (progress/awan/aktif kekal), tanda siap sesi yang dah tiada dipangkas, dan pelan yang sudah di awan dihantar semula. "Buat pelan" (borang GET) masih mencipta pelan baru. Kunci jadi pengecam - nilai di dalam teksnya mungkin lama. Semak: `bun scripts/check-plan-update.ts`.
+- **Kemas kini pelan** (2026-10-22): buka pelan dari dashboard (URL bawa `kunci`), ubah masa/pace/tarikh pada borang, tekan "Kemas kini pelan" - params ditulis bawah kunci yang sama (progress/awan/aktif kekal), tanda siap sesi yang dah tiada dipangkas, dan pelan yang sudah di awan dihantar semula. "Buat pelan" di `/new` mencipta pelan baru dalam page (submit, tiada muat semula) - link berparam hanya mengisi borang, tak pernah mencipta. View hanya buka kunci yang ada dalam senarai pelan (`savedPlanParams`); kunci asing/tiada -> `/account/plans`. Kunci jadi pengecam - nilai di dalam teksnya mungkin lama. Semak: `bun scripts/check-plan-update.ts`.
 - **Akaun lain**: `/account/maf` (`components/Maf.astro full`: simpan `maf:terakhir` untuk Dashboard + butang
   Pelan 5K ikut nadi; `/maf` lencong ke situ bila log masuk), `/account/profile` (Maklumat: nama `PATCH /me`; Zon bahaya: padam akaun `DELETE /me` dengan kata laluan dalam
   `confirmDialog({ passwordLabel, action })`, lepas itu `localStorage.clear()` -> `/?akaun=dipadam`) +
@@ -227,8 +231,8 @@ Item yang dah siap dibuang (lihat git history).
   dirender dengan `innerHTML`. Tanda siap = localStorage `pelan-5k:<bulan>-<tahap>-<masa>-<hari>[-pPace]`.
   Hari sesi tetap (`SESSION_DAYS`: 3 hari = Isn/Rab/Sab, 4 hari = Isn/Rab/Jum/Ahd - sesi akhir hujung
   minggu); `mula` dianjak ke Isnin (`startMonday`) dan minggu semasa + sesi hari ini diserlahkan.
-- Semak: `bun run build` + semua `bun scripts/check-*.ts` (17 skrip, termasuk
-  `check-session-analysis`) + `npx -y -p @astrojs/check -p typescript@5 astro-check`. Belum ada lint.
+- Semak: `bun run build` + semua `bun scripts/check-*.ts` (22 skrip, termasuk
+  `check-session-analysis`, `check-plan-list`, `check-login-next`) + `npx -y -p @astrojs/check -p typescript@5 astro-check`. Belum ada lint.
   `bunx tsc --noEmit -p .` saja tak membaca skrip dalam `.astro` - guna astro-check
   (`@astrojs/check` belum sokong TS 7, jadi tak dipasang).
 
@@ -264,6 +268,21 @@ Item yang dah siap dibuang (lihat git history).
 - [ ] Mod gelap? Laman kini sengaja terang + navy; buat hanya kalau diminta.
 - [ ] Uji pemasa pada telefon sebenar: bunyi iOS (suis senyap mematikan Web Audio), getaran (iOS tiada
   `navigator.vibrate`), Wake Lock Safari 16.4+.
+
+## 🗂 Struktur pelan - index / view / new (2026-10-22)
+
+- [x] **Satu senarai semua pelan**: `/account/plans` (label "Pelan larian") = index Table
+  (5K, 10K, 21K, 42K). 5K -> view/edit baru; jarak lain -> halaman sedia ada.
+- [x] **5K dulu** (experiment): `/account/plans/5k/new` = borang, `/account/plans/5k/view?kunci=`
+  = paparan + mod edit. Borang awam `/plan-5k` kekal tanpa akaun.
+- [x] **Borang awam vs akaun berbeza**: awam dalam `PageHero` (ringkas, tanpa MAF); akaun dalam panel
+  `plan-form` (header + back link, MAF, "Kemas kini" dalam view). Markup dikongsi `Plan5kForm.astro`,
+  layout berasingan - jangan gabung.
+- [x] **View terus**: `pullCloud()` bila params tiada (bookmark/peranti baru) sebelum papar pelan.
+- [x] **10K / 21K / 42K** (2026-10-22): `/account/plans/<jarak>/new` + `/view?kunci=` (borang panel,
+  view/edit, `DistancePlan` `mode`); index + Dashboard paut ke view. Halaman lama dibuang.
+- URL lama `/account/plan-5k`, `/account/distance-plan`, `/account/plan-42k` dibuang - tiada redirect.
+  Pautan dalam app guna `/account/plans/...`; nav "Pelan larian" = satu-satunya pintu senarai.
 
 ## 💡 Idea
 

@@ -16,7 +16,7 @@ import { TURNSTILE_SITE_KEY } from "../data/site";
     accent="masuk."
     lead="Satu akaun untuk Nubi Sport dan hafizbahtiar.com - guna e-mel dan kata laluan yang sama."
   >
-    <form class="form login" id="borang" novalidate hidden>
+    <form class="form form-narrow" id="borang" novalidate hidden>
       <Field label="E-mel">
         <input
           class="input"
@@ -43,7 +43,7 @@ import { TURNSTILE_SITE_KEY } from "../data/site";
         data-appearance="interaction-only"
       >
       </div>
-      <p class="mesej" id="mesej" aria-live="polite" hidden></p>
+      <p class="alert alert-danger" id="mesej" aria-live="polite" hidden></p>
       <p class="lead" id="belum-sah" hidden>
         Tiada e-mel pengesahan?{" "}
         <a class="link" href="/verify">Hantar semula pautan</a>.
@@ -81,7 +81,13 @@ import { TURNSTILE_SITE_KEY } from "../data/site";
   defer></script>
 
 <script>
-  import { api, json, fetchMe, type CurrentUser } from "../lib/api";
+  import {
+    api,
+    json,
+    fetchMe,
+    internalPath,
+    type CurrentUser,
+  } from "../lib/api";
 
   const borang = document.getElementById("borang") as HTMLFormElement;
   const memuat = document.getElementById("memuat")!;
@@ -93,9 +99,10 @@ import { TURNSTILE_SITE_KEY } from "../data/site";
   const turnstile = () =>
     (window as any).turnstile as { reset(): void } | undefined;
 
-  // ?next= hanya laluan dalam laman ini ("/..." tetapi bukan "//host" atau "/\host").
-  const next = new URLSearchParams(location.search).get("next") ?? "";
-  const tuju = /^\/(?![/\\])/.test(next) ? next : "/account";
+  const tuju = internalPath(
+    new URLSearchParams(location.search).get("next"),
+    location.origin,
+  );
 
   const papar = (s: CurrentUser | null) => {
     if (s) return location.replace(tuju);
@@ -164,16 +171,3 @@ import { TURNSTILE_SITE_KEY } from "../data/site";
     .then(papar)
     .catch(() => papar(null));
 </script>
-
-<style>
-  .login {
-    max-width: 26rem;
-  }
-  .mesej {
-    margin: 0;
-    padding: 0.75rem 1rem;
-    border-radius: var(--radius);
-    background: var(--danger-bg);
-    color: var(--danger-ink);
-  }
-</style>

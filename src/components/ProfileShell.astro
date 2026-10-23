@@ -80,7 +80,7 @@ const laluan = Astro.url.pathname.replace(/\/$/, "");
     background: var(--paper);
     border: 1px solid var(--line);
     border-radius: var(--radius-lg);
-    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+    box-shadow: var(--shadow-sm);
   }
   .profil-nav-tajuk {
     margin: 0.25rem 0.5rem 0.6rem;
@@ -162,35 +162,15 @@ const laluan = Astro.url.pathname.replace(/\/$/, "");
     align-content: start;
   }
 
-  /* Skrin lebar: borang dua kolum supaya panel mengisi lebar kandungan (bukan 40rem di kiri).
-     Fieldset (chip), alert, butang dan perenggan kekal satu baris penuh. `.form-sempit` = kekal
-     satu kolum sempit (contoh kata laluan: medan bertindan, meter di bawah medannya). */
-  @media (min-width: 64rem) {
-    .profil-isi :global(.form:not(.form-sempit)) {
-      max-width: none;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      align-items: start;
-    }
-    .profil-isi :global(.form > :is(fieldset, .form-group, .alert, .btn, p)) {
-      grid-column: 1 / -1;
-    }
-  }
   .profil-isi :global(.panel) {
-    display: grid;
+    justify-items: stretch;
     gap: 1rem;
-    padding: 1.25rem 1.5rem;
-    background: var(--paper);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-lg);
-    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+    box-shadow: var(--shadow-sm);
   }
   .profil-isi :global(.panel h2) {
     margin: 0;
     font-size: 1.5rem;
     color: var(--navy);
-  }
-  .profil-isi :global(.panel p) {
-    margin: 0;
   }
   /* Butang tindakan panel (Telegram, padam akaun): satu lebar penuh, bukan ikut panjang label. */
   .profil-isi :global(.panel .actions .btn) {

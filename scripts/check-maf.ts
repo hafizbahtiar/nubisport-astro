@@ -33,6 +33,7 @@ ok((calcMaf(40, "sakit") as { nota: string[] }).nota.length === 1, "a: nota ubat
 for (const u of [AGE_MIN - 1, AGE_MAX + 1, 30.5, NaN]) ok(!calcMaf(u, "konsisten").ok, `umur ${u} ditolak`);
 ok(!calcMaf(30, "x" as Condition).ok, "kategori tak sah ditolak");
 ok(Object.keys(CONDITIONS).length === 4, "4 kategori");
+ok(!calcMaf(30, "constructor" as Condition).ok, "keadaan constructor (prototaip) ditolak");
 
 if (gagal) throw new Error(`${gagal} semakan gagal`);
 console.log("ok - MAF");

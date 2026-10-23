@@ -31,7 +31,7 @@ const ddmm = (iso: string) => iso.split("-").reverse().join("/");
   />
 
   <Section>
-    <ul class="lumba" id="lumba">
+    <ul class="lumba card-grid" id="lumba">
       {
         senarai.map((l) => (
           <li class="card" data-tarikh={l.tarikh} data-tutup={l.tutup}>
@@ -79,7 +79,8 @@ const ddmm = (iso: string) => iso.split("-").reverse().join("/");
       }
     </ul>
     <p class="lead" id="kosong" hidden>
-      Tiada lumba akan datang dalam senarai ini lagi - kami tengah semak acara baru.
+      Tiada lumba akan datang dalam senarai ini lagi - kami tengah semak acara
+      baru.
     </p>
   </Section>
 
@@ -112,14 +113,6 @@ const ddmm = (iso: string) => iso.split("-").reverse().join("/");
 </script>
 
 <style>
-  .lumba {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
-    gap: 1rem;
-  }
   .lumba li {
     display: flex;
     flex-direction: column;

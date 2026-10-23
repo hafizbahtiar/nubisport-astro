@@ -68,7 +68,7 @@ const GAYA: {
 ---
 
 <AccountLayout title="Aktiviti">
-  <a class="balik" href="/account/activities"
+  <a class="back-link back-link--spaced" href="/account/activities"
     ><Icon name="kiri" />Semua aktiviti</a
   >
 
@@ -350,8 +350,7 @@ const GAYA: {
       if (d.ok || d.status === 404) {
         await offerUntick(tanda);
         location.href = "/account/activities";
-      }
-      else
+      } else
         $("peta-status").textContent =
           "Aktiviti tak dapat dipadam. Semak sambungan dan cuba lagi.";
     });
@@ -730,91 +729,21 @@ const GAYA: {
 </script>
 
 <style>
-  .balik {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    margin-bottom: 1rem;
-    font-weight: 600;
-    color: var(--navy);
-    text-decoration: none;
-  }
-  .balik:hover {
-    text-decoration: underline;
-  }
-
   /* .stat dan .panel = gaya dashboard (src/pages/account/index.astro). */
-  .stat {
-    list-style: none;
-    padding: 0;
-    margin: 0 0 1rem;
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1rem;
-  }
-  .stat li,
-  .panel {
-    background: var(--paper);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-lg);
-  }
-  .stat li {
-    display: grid;
-    gap: 0.25rem;
-    padding: 1rem 1.25rem;
-  }
-  .stat span {
-    font-size: 0.8rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-  .stat strong {
-    font-family: var(--display);
-    font-style: italic;
-    font-size: 2rem;
-    color: var(--navy);
-  }
-  @media (max-width: 36rem) {
-    .stat {
-      gap: 0.5rem;
-    }
-    .stat li {
-      padding: 0.75rem;
-    }
-    .stat span {
-      font-size: 0.68rem;
-      letter-spacing: 0.06em;
-    }
-    .stat strong {
-      font-size: 1.35rem;
-      line-height: 1.1;
-    }
-  }
-
-  .panel {
-    display: grid;
-    gap: 0.75rem;
-    padding: 1.25rem 1.5rem;
+  .stat.stat {
     margin-bottom: 1rem;
   }
-  .panel h3 {
-    margin: 0;
-    font-size: 1.5rem;
-    color: var(--navy);
+  .panel.panel {
+    justify-items: stretch;
+    margin-bottom: 1rem;
+  }
+  .panel.panel h3 {
     overflow-wrap: anywhere;
   }
-  .panel p {
-    margin: 0;
-  }
-  .panel-kepala {
-    display: flex;
-    flex-wrap: wrap;
+  .panel .panel-kepala {
     align-items: flex-start;
-    justify-content: space-between;
-    gap: 0.75rem;
   }
+
   .tajuk {
     display: grid;
     gap: 0.2rem;
@@ -893,7 +822,7 @@ const GAYA: {
     padding-bottom: env(safe-area-inset-bottom);
   }
   .gaya::backdrop {
-    background: rgb(10 26 51 / 0.55); /* sama dengan .confirm-dialog */
+    background: var(--scrim);
   }
   .gaya-isi {
     display: grid;

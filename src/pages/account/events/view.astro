@@ -9,12 +9,13 @@ import AccountLayout from "../../../layouts/AccountLayout.astro";
 import Alert from "../../../components/ui/Alert.astro";
 import EventList from "../../../components/EventList.astro";
 import EventForm from "../../../components/EventForm.astro";
-import "../../../styles/panel.css";
 ---
 
 <AccountLayout title="Larian kumpulan">
-  <p class="balik">
-    <a class="link" href="/account/events">← Larian kumpulan</a>
+  <p class="back-link-row">
+    <a class="back-link back-link--accent" href="/account/events"
+      >← Larian kumpulan</a
+    >
   </p>
   <Alert variant="danger" id="ralat" hidden />
 
@@ -214,9 +215,6 @@ import "../../../styles/panel.css";
 </script>
 
 <style>
-  .balik {
-    margin: 0 0 1rem;
-  }
   .susun {
     display: grid;
     gap: 1rem;

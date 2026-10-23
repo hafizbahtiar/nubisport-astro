@@ -47,14 +47,24 @@ const {
 const full = variant === "full";
 ---
 
-<div class="jadual" id={id} data-variant={variant} data-limit={variant === "compact" ? limit : 10}>
+<div
+  class="jadual"
+  id={id}
+  data-variant={variant}
+  data-limit={variant === "compact" ? limit : 10}
+>
   {
     variant !== "compact" && (
       <div class="jadual-alat">
         <label class="jadual-cari">
           <Icon name="cari" />
           <span class="sr-only">Cari</span>
-          <input class="input" type="search" placeholder={searchPlaceholder} data-cari />
+          <input
+            class="input"
+            type="search"
+            placeholder={searchPlaceholder}
+            data-cari
+          />
         </label>
         {full && <slot name="filters" />}
       </div>
@@ -78,9 +88,17 @@ const full = variant === "full";
     </table>
   </div>
   <p class="muted jadual-kosong" data-kosong hidden role="status">
-    <span class="jadual-kosong-ikon" aria-hidden="true"><Icon name={emptyIcon} /></span>
+    <span class="jadual-kosong-ikon" aria-hidden="true"
+      ><Icon name={emptyIcon} /></span
+    >
     <span data-kosong-tajuk>{empty}</span>
-    {emptyHint && <span class="jadual-kosong-hint" data-kosong-hint>{emptyHint}</span>}
+    {
+      emptyHint && (
+        <span class="jadual-kosong-hint" data-kosong-hint>
+          {emptyHint}
+        </span>
+      )
+    }
   </p>
 
   {
@@ -100,13 +118,23 @@ const full = variant === "full";
             />
           </div>
         )}
-        <p class="muted" data-julat aria-live="polite"></p>
+        <p class="muted" data-julat aria-live="polite" />
         <div class="jadual-halaman">
-          <button class="btn btn-outline btn-sm" type="button" data-sebelum aria-label="Halaman sebelum">
+          <button
+            class="btn btn-outline btn-sm"
+            type="button"
+            data-sebelum
+            aria-label="Halaman sebelum"
+          >
             <Icon name="kiri" />
           </button>
-          <span data-muka></span>
-          <button class="btn btn-outline btn-sm" type="button" data-seterus aria-label="Halaman seterusnya">
+          <span data-muka />
+          <button
+            class="btn btn-outline btn-sm"
+            type="button"
+            data-seterus
+            aria-label="Halaman seterusnya"
+          >
             <Icon name="kanan" />
           </button>
         </div>

@@ -12,7 +12,7 @@ interface Props {
   full?: boolean;
 }
 const { full = false } = Astro.props;
-const pelan = full ? "/account/plan-5k" : "/plan-5k";
+const pelan = full ? "/account/plans/5k/new" : "/plan-5k";
 ---
 
 <PageHero
@@ -69,8 +69,7 @@ const pelan = full ? "/account/plan-5k" : "/plan-5k";
     <p>
       Bawah had ini, badan belajar membakar lemak sebagai tenaga dan jantung
       menjadi lebih cekap. Lama-kelamaan,{" "}
-      <strong>pace anda pada nadi yang sama makin laju</strong> - itulah
-      tanda kemajuan.
+      <strong>pace anda pada nadi yang sama makin laju</strong> - itulah tanda kemajuan.
     </p>
     <p>
       Mula-mula memang rasa terlalu perlahan. Ramai pemula terpaksa jalan-lari
@@ -101,7 +100,8 @@ const pelan = full ? "/account/plan-5k" : "/plan-5k";
         pace perlahan.
       </li>
       <li>
-        <strong>Tetapkan amaran pada jam</strong> di had atas - jam berbunyi bila nadi terlebih, jadi tak perlu asyik tengok jam.
+        <strong>Tetapkan amaran pada jam</strong> di had atas - jam berbunyi bila
+        nadi terlebih, jadi tak perlu asyik tengok jam.
       </li>
       <li>
         <strong>Tali dada lebih tepat</strong> daripada sensor jam di pergelangan,
@@ -150,7 +150,9 @@ const pelan = full ? "/account/plan-5k" : "/plan-5k";
       </li>
     </ol>
     <p class="muted">
-      Masa tak turun beberapa bulan berturut-turut? Itu tanda latihan, rehat atau tidur perlu dinilai semula - bagi Maffetone, itu isyarat, bukan kegagalan. Jangan uji terlalu kerap.
+      Masa tak turun beberapa bulan berturut-turut? Itu tanda latihan, rehat
+      atau tidur perlu dinilai semula - bagi Maffetone, itu isyarat, bukan
+      kegagalan. Jangan uji terlalu kerap.
     </p>
   </div>
 </Section>
@@ -166,7 +168,8 @@ const pelan = full ? "/account/plan-5k" : "/plan-5k";
     </p>
     <p>
       Maffetone sendiri cadangkan beberapa bulan asas aerobik tanpa latihan
-      laju. Kalau anda baru bermula, MAF dulu, kemudian pelan 5K - memang perlahan, tapi selamat.
+      laju. Kalau anda baru bermula, MAF dulu, kemudian pelan 5K - memang
+      perlahan, tapi selamat.
     </p>
   </div>
 </Section>
@@ -235,7 +238,7 @@ const pelan = full ? "/account/plan-5k" : "/plan-5k";
         <p class="lead">Jangan lebih <strong>${h.maf}</strong>. Julat latihan biasa: <strong>${h.bawah}-${h.maf}</strong> denyut/min.</p>
         <p class="muted">Keadaan: ${CONDITIONS[kategori].label.toLowerCase()} (${CONDITIONS[kategori].ubah >= 0 ? "+" : ""}${CONDITIONS[kategori].ubah}).</p>
         ${h.nota.map((n) => `<div class="alert alert-info maf-nota"><p>${n}</p></div>`).join("")}
-        ${full ? `<a class="btn btn-primary maf-nota" href="/account/plan-5k?${new URLSearchParams({ maf: "1", umur: String(Number(q.get("umur"))), keadaan: kategori })}#borang">Buat Pelan 5K ikut nadi ini</a>` : ""}`
+        ${full ? `<a class="btn btn-primary maf-nota" href="/account/plans/5k/new?${new URLSearchParams({ maf: "1", umur: String(Number(q.get("umur"))), keadaan: kategori })}#borang">Buat Pelan 5K ikut nadi ini</a>` : ""}`
       : `<div class="alert alert-warning"><p>${h.sebab}</p></div>`;
     hasil.scrollIntoView({ behavior: "smooth" });
   }

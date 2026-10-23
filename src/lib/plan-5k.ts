@@ -229,7 +229,7 @@ const KADAR_BIASA = 1 / WEEKS_PER_MINUTE; // minit dipotong seminggu (anggaran k
 export function analyzePlan(input: PlanInput): Analysis | null {
   const { bulan, minggu, tahap, hari, masa5k, nadi, pace } = input;
   if (minggu === undefined ? !(PLAN_MONTHS as readonly number[]).includes(bulan) : !mingguSah(minggu)) return null;
-  if (!(DAYS_PER_WEEK as readonly number[]).includes(hari) || !(tahap in LEVELS) || !paceSah(pace)) return null;
+  if (!(DAYS_PER_WEEK as readonly number[]).includes(hari) || !Object.hasOwn(LEVELS, tahap) || !paceSah(pace)) return null;
   const S = sasaranOf(pace);
   const adaMasa = masa5k !== undefined && tahap !== "sifar";
   if (adaMasa && (!Number.isInteger(masa5k) || masa5k < TIME_MIN || masa5k > TIME_MAX || masa5k <= S.minit)) return null;
@@ -326,7 +326,7 @@ export function buildPlan(input: PlanInput): PlanResult {
   if (mingguLumba === undefined && !(PLAN_MONTHS as readonly number[]).includes(bulan)) return { ok: false, sebab: "Pilih tempoh 2, 3, 4 atau 6 bulan." };
   if (!paceSah(pace)) return { ok: false, sebab: `Pace sasaran ${formatPace(PACE_RANGE[0])}-${formatPace(PACE_RANGE[1])}/km.` };
   if (!(DAYS_PER_WEEK as readonly number[]).includes(hari)) return { ok: false, sebab: "Pilih 3 atau 4 hari seminggu." };
-  if (!(tahap in LEVELS)) return { ok: false, sebab: "Pilih tahap sekarang." };
+  if (!Object.hasOwn(LEVELS, tahap)) return { ok: false, sebab: "Pilih tahap sekarang." };
 
   const jumlahMinggu = mingguLumba ?? bulan * 4;
   const tempoh = mingguLumba ? `${mingguLumba} minggu` : `${bulan} bulan`;

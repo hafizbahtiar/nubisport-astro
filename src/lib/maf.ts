@@ -40,7 +40,7 @@ export type MafResult =
 export function calcMaf(umur: number, kategori: Condition): MafResult {
   if (!Number.isInteger(umur) || umur < AGE_MIN || umur > AGE_MAX)
     return { ok: false, sebab: `Masukkan umur dalam tahun (${AGE_MIN}-${AGE_MAX}).` };
-  if (!(kategori in CONDITIONS)) return { ok: false, sebab: "Pilih keadaan anda sekarang." };
+  if (!Object.hasOwn(CONDITIONS, kategori)) return { ok: false, sebab: "Pilih keadaan anda sekarang." };
 
   const nota: string[] = [];
   let maf: number;

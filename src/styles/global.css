@@ -1,7 +1,7 @@
-/* Nubi Sport - asas UI. Satu fail, dimuat oleh Layout.astro untuk semua page.
-   Komponen (src/components/ui/) hanya menyusun markup; gaya ada di sini supaya
-   HTML yang dirender skrip (innerHTML) dapat gaya yang sama.
-   Susunan: token · asas · susun atur · tipografi · butang · borang · kad · alert · permukaan gelap · cetak */
+/* Nubi Sport - asas UI. Dimuat oleh Layout dan AccountLayout.
+   Borang: forms.css. Date/time/dropdown: overlays.css. Panel akaun: panel.css.
+   Pelan: plan.css. Susunan: token · asas · susun atur · tipografi · butang · kad · alert ·
+   permukaan gelap · cetak. */
 
 /* ---------- Token ---------- */
 /* Palet = scripts/brand/gen.py: navy pekat + oren tenaga. */
@@ -20,6 +20,12 @@
   --on-dark: #cbd5e1;
   /* teks biasa atas navy */
   --on-dark-line: rgb(255 255 255 / 0.25);
+  --on-dark-muted: #94a3b8;
+
+  --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.04);
+  --shadow-popover: 0 1px 2px rgb(10 26 51 / 0.06),
+    0 24px 48px -16px rgb(10 26 51 / 0.35);
+  --scrim: rgb(10 26 51 / 0.55);
 
   --info-bg: #eff6ff;
   --info-line: #bfdbfe;
@@ -114,6 +120,31 @@ a {
   text-underline-offset: 0.2em;
 }
 
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--navy);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
+
+.back-link--accent {
+  color: var(--orange-ink);
+}
+
+.back-link--spaced {
+  margin-bottom: 1rem;
+}
+
+.back-link-row {
+  margin: 0 0 1rem;
+}
+
 :focus-visible {
   outline: 3px solid var(--orange);
   outline-offset: 3px;
@@ -162,6 +193,15 @@ section {
   gap: 1.25rem;
 }
 
+.card-grid {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+  gap: 1rem;
+}
+
 /* ---------- Tipografi ---------- */
 .display {
   font-family: var(--display);
@@ -205,6 +245,12 @@ section {
 
 .prose>*+* {
   margin-top: 1rem;
+}
+
+.prose h2 {
+  font-size: 1.75rem;
+  color: var(--navy);
+  margin: 2.5rem 0 0;
 }
 
 .prose h3 {
@@ -291,542 +337,6 @@ section {
   gap: 0.75rem;
 }
 
-/* ---------- Borang ---------- */
-.form {
-  display: grid;
-  gap: 1.5rem;
-  max-width: 44rem;
-}
-
-.form>.btn {
-  justify-self: start;
-}
-
-/* Kumpulan medan dalam .form (contoh medan yang terbuka bila kotak semak ditanda). */
-.form-group {
-  display: grid;
-  gap: 1.5rem;
-}
-
-fieldset {
-  border: 0;
-  padding: 0;
-  margin: 0;
-  min-width: 0;
-}
-
-legend,
-.field-label {
-  display: block;
-  margin-bottom: 0.6rem;
-  font-family: var(--display);
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--navy);
-}
-
-.field {
-  display: grid;
-  justify-items: start;
-}
-
-.field-hint {
-  margin-top: 0.35rem;
-  font-size: 0.88rem;
-  color: var(--muted);
-}
-
-.input {
-  font: inherit;
-  width: min(100%, 22rem);
-  padding: 0.65rem 0.9rem;
-  border-radius: var(--radius);
-  border: 2px solid var(--line);
-  background: var(--paper);
-  color: var(--ink);
-}
-
-.input:focus-visible {
-  outline: none;
-  border-color: var(--orange);
-}
-
-.input[aria-invalid="true"] {
-  border-color: var(--danger-ink);
-}
-
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.chip input {
-  position: absolute;
-  opacity: 0;
-}
-
-.chip span {
-  display: inline-block;
-  padding: 0.55rem 1rem;
-  border-radius: 999px;
-  box-shadow: inset 0 0 0 2px var(--line);
-  cursor: pointer;
-}
-
-.chip input:checked+span {
-  background: var(--orange);
-  color: var(--navy);
-  box-shadow: none;
-  font-weight: 600;
-}
-
-.chip input:focus-visible+span {
-  outline: 3px solid var(--orange);
-  outline-offset: 3px;
-}
-
-.chips-stacked {
-  flex-direction: column;
-  max-width: 40rem;
-}
-
-.chips-stacked .chip span {
-  display: block;
-  border-radius: var(--radius);
-}
-
-/* ---------- Kotak semak (Checkbox.astro / .check) ---------- */
-.check {
-  display: flex;
-  gap: 0.75rem;
-  align-items: flex-start;
-  cursor: pointer;
-}
-
-.check input {
-  appearance: none;
-  flex: none;
-  width: 1.35rem;
-  height: 1.35rem;
-  margin: 0.15rem 0 0;
-  border: 2px solid var(--line);
-  border-radius: 0.4rem;
-  background: var(--paper) center / 0.85rem no-repeat;
-  cursor: pointer;
-  transition:
-    background-color 0.12s ease,
-    border-color 0.12s ease;
-}
-
-.check input:checked {
-  background-color: var(--orange);
-  border-color: var(--orange);
-  /* tanda semak navy = path Lucide `check` (garis 3: kotak kecil) */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20 6 9 17l-5-5' fill='none' stroke='%230a1a33' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-}
-
-.check input:focus-visible {
-  outline: 3px solid var(--orange);
-  outline-offset: 2px;
-}
-
-.check-teks {
-  display: grid;
-}
-
-.check-label {
-  font-weight: 600;
-}
-
-.surface-dark .check input {
-  background-color: var(--navy-2);
-  border-color: var(--on-dark-line);
-}
-
-.surface-dark .check input:checked {
-  background-color: var(--orange);
-  border-color: var(--orange);
-}
-
-/* ---------- Masa (TimePicker.astro, lib/time-picker.ts) ----------
-   Guna kelas Tarikh (dp-*) untuk medan, panel, butang dan kaki - di sini hanya grid Jam / Minit. */
-.tp {
-  width: min(100%, 12rem);
-}
-
-.tp-panel {
-  width: 18rem;
-}
-
-.tp-lajur+.tp-lajur {
-  margin-top: 0.6rem;
-}
-
-.tp-tajuk {
-  margin: 0 0 0.35rem;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.tp-grid {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 2px;
-  justify-items: center;
-}
-
-/* ---------- Tarikh (DatePicker.astro) ---------- */
-.dp {
-  position: relative;
-  width: min(100%, 22rem);
-}
-
-.dp-medan {
-  position: relative;
-}
-
-.dp-teks {
-  width: 100%;
-  padding-right: 3rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.dp-buka {
-  position: absolute;
-  inset: 0 0 0 auto;
-  width: 3rem;
-  display: grid;
-  place-items: center;
-  border: 0;
-  background: none;
-  color: var(--muted);
-  cursor: pointer;
-  border-radius: 0 var(--radius) var(--radius) 0;
-}
-
-.dp-buka .lucide {
-  width: 1.15rem;
-  height: 1.15rem;
-}
-
-.dp-buka:hover,
-.dp-buka[aria-expanded="true"] {
-  color: var(--orange);
-}
-
-.surface-dark .dp-buka {
-  color: var(--on-dark);
-}
-
-.dp-ralat {
-  margin: 0.35rem 0 0;
-  font-size: 0.88rem;
-  color: var(--danger-ink);
-}
-
-.surface-dark .dp-ralat {
-  color: #fca5a5;
-}
-
-.dp-ralat:empty {
-  display: none;
-}
-
-/* Panel sentiasa putih - menonjol atas permukaan gelap juga. */
-.dp-panel {
-  position: absolute;
-  z-index: 30;
-  top: calc(100% + 0.5rem);
-  left: 0;
-  width: 19.5rem;
-  max-width: calc(100vw - 2.5rem);
-  padding: 1rem;
-  background: var(--paper);
-  color: var(--ink);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  box-shadow:
-    0 1px 2px rgb(10 26 51 / 0.06),
-    0 24px 48px -16px rgb(10 26 51 / 0.35);
-  animation: dp-masuk 0.14s ease-out;
-}
-
-@keyframes dp-masuk {
-  from {
-    opacity: 0;
-    transform: translateY(-4px) scale(0.98);
-  }
-}
-
-.dp-kepala {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.dp-tajuk {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-}
-
-.dp-pilih {
-  appearance: none;
-  border: 0;
-  background: none;
-  padding: 0.2rem 0.35rem;
-  border-radius: 0.4rem;
-  font-family: var(--display);
-  font-style: italic;
-  font-weight: 800;
-  font-size: 1.3rem;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  color: var(--navy);
-  cursor: pointer;
-}
-
-.dp-pilih:hover {
-  background: var(--paper-2);
-}
-
-.dp-nav {
-  width: 2.25rem;
-  height: 2.25rem;
-  display: grid;
-  place-items: center;
-  border: 0;
-  border-radius: 999px;
-  background: none;
-  color: var(--muted);
-  cursor: pointer;
-}
-
-.dp-nav .lucide {
-  width: 1.1rem;
-  height: 1.1rem;
-}
-
-.dp-nav:hover {
-  background: var(--paper-2);
-  color: var(--navy);
-}
-
-.dp-grid {
-  width: 100%;
-  margin-top: 0.5rem;
-  border-collapse: collapse;
-}
-
-.dp-grid th {
-  padding-bottom: 0.35rem;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.dp-grid td {
-  padding: 1px;
-  text-align: center;
-}
-
-.dp-hari {
-  width: 2.4rem;
-  height: 2.4rem;
-  border: 0;
-  border-radius: 999px;
-  background: none;
-  color: var(--ink);
-  font: inherit;
-  font-size: 0.92rem;
-  font-variant-numeric: tabular-nums;
-  cursor: pointer;
-  transition: background-color 0.12s ease;
-}
-
-.dp-hari:hover {
-  background: var(--paper-2);
-}
-
-.dp-hari:focus-visible {
-  outline: 2px solid var(--navy);
-  outline-offset: 1px;
-}
-
-.dp-hari[data-outside] {
-  color: #94a3b8;
-}
-
-.dp-hari[data-today] {
-  box-shadow: inset 0 0 0 2px var(--orange);
-  color: var(--orange-ink);
-  font-weight: 700;
-}
-
-.dp-hari[aria-selected="true"] {
-  background: var(--orange);
-  color: var(--navy);
-  font-weight: 700;
-  box-shadow: none;
-}
-
-.dp-hari:disabled {
-  opacity: 0.3;
-  cursor: default;
-  background: none;
-}
-
-.dp-kaki {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--line);
-}
-
-.dp-kaki button {
-  border: 0;
-  background: none;
-  padding: 0.35rem 0.6rem;
-  border-radius: 0.4rem;
-  font: inherit;
-  font-size: 0.9rem;
-  cursor: pointer;
-}
-
-.dp-hari-ini {
-  color: var(--orange-ink);
-  font-weight: 600;
-}
-
-.dp-kosong {
-  color: var(--muted);
-}
-
-.dp-kaki button:hover {
-  background: var(--paper-2);
-}
-
-/* ---------- Dropdown (components/ui/Dropdown.astro) - menu sama gaya dengan .dp-panel ---------- */
-.dd {
-  position: relative;
-  width: min(100%, 22rem);
-}
-
-.dd-butang {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  text-align: left;
-  cursor: pointer;
-}
-
-.dd-butang .lucide {
-  flex: none;
-  width: 1.15rem;
-  height: 1.15rem;
-  color: var(--muted);
-  transition: transform 0.15s;
-}
-
-.dd-butang[aria-expanded="true"] {
-  border-color: var(--orange);
-}
-
-.dd-butang[aria-expanded="true"] .lucide {
-  transform: rotate(180deg);
-}
-
-.dd-kosong {
-  color: var(--muted);
-}
-
-/* Lebar menu ikut item terpanjang (bukan lebar medan): min 10rem, max 20rem atau skrin tolak gutter
-   16px. Label lebih panjang dibalut. Terlalu dekat tepi kanan: JS tambah .dd-kanan (jajar kanan). */
-.dd-menu {
-  position: absolute;
-  z-index: 30;
-  top: calc(100% + 0.5rem);
-  left: 0;
-  width: max-content;
-  min-width: 10rem;
-  max-width: min(20rem, calc(100vw - 2rem));
-  max-height: min(20rem, 60vh);
-  overflow-y: auto;
-  margin: 0;
-  padding: 0.35rem;
-  list-style: none;
-  background: var(--paper);
-  color: var(--ink);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  box-shadow:
-    0 1px 2px rgb(10 26 51 / 0.06),
-    0 24px 48px -16px rgb(10 26 51 / 0.35);
-  animation: dp-masuk 0.14s ease-out;
-}
-
-.dd-menu.dd-kanan {
-  left: auto;
-  right: 0;
-}
-
-/* Dropdown dekat hujung bawah skrin: menu naik ke atas (JS tambah semasa buka). */
-.dd-menu.dd-atas {
-  top: auto;
-  bottom: calc(100% + 0.5rem);
-  animation-name: dp-masuk-atas;
-}
-
-@keyframes dp-masuk-atas {
-  from {
-    opacity: 0;
-    transform: translateY(4px) scale(0.98);
-  }
-}
-
-.dd-menu:focus-visible {
-  outline: none;
-}
-
-.dd-menu [role="option"] {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.55rem 0.75rem;
-  border-radius: var(--radius);
-  cursor: pointer;
-}
-
-.dd-menu [role="option"] .lucide {
-  width: 1rem;
-  height: 1rem;
-  color: var(--orange-ink);
-  visibility: hidden;
-}
-
-.dd-menu [data-aktif] {
-  background: var(--paper-2);
-}
-
-.dd-menu [aria-selected="true"] {
-  font-weight: 600;
-}
-
-.dd-menu [aria-selected="true"] .lucide {
-  visibility: visible;
-}
-
 /* ---------- Kad ---------- */
 .card {
   background: var(--paper-2);
@@ -858,7 +368,7 @@ legend,
 }
 
 .confirm-dialog::backdrop {
-  background: rgb(10 26 51 / 0.55);
+  background: var(--scrim);
 }
 
 .confirm-title {

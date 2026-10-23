@@ -12,6 +12,22 @@ export const planKey = (bulan: number | string, tahap: string, masa: number | st
 export const distancePlanKey = (jarak: string, minggu: number, masa: number, sasaran: number | string | undefined, hari: number) =>
   `pelan-${jarak}:${minggu}-${masa}-${sasaran ?? ""}-${hari}`;
 
+/** Parameter dari kunci bila rekod `#p` tiada (pelan lama). null = kunci tak dikenali. */
+export function paramsFromKey(key: string): Record<string, string> | null {
+  const [kind, body] = key.split(":");
+  if (!kind?.startsWith("pelan-") || !body) return null;
+  const [a, b, c, d, ...rest] = body.split("-");
+  if (!a || !b || !d) return null;
+  if (kind === "pelan-5k") {
+    const pace = rest.find((x) => /^p\d+$/.test(x))?.slice(1);
+    return { bulan: a, tahap: b, ...(c ? { masa: c } : {}), hari: d, ...(pace ? { pace } : {}) };
+  }
+  const distance = kind.slice("pelan-".length);
+  if (distance === "10k" || distance === "21k" || distance === "42k")
+    return { jarak: distance, minggu: a, masa: b, ...(c ? { sasaran: c } : {}), hari: d };
+  return null;
+}
+
 /**
  * Kunci untuk halaman ini: kunci dalam URL (dibuka dari dashboard) hanya dipakai kalau ia
  * pelan sedia ada dengan jenis yang sama. Selain itu pelan baharu - jadi "Buat pelan"
@@ -95,6 +111,13 @@ export function writeParams(kunci: string, p: Record<string, string>) {
     /* mod peribadi */
   }
 }
+
+/**
+ * Params pelan untuk page view: kunci mesti jenis page ini (`pelan-5k`, `pelan-10k`...) dan ada dalam
+ * CREATED_KEY - kunci asing dari URL tak cipta pelan baharu. null = bukan pelan tersimpan.
+ */
+export const savedPlanParams = (kunci: string | null, jenis: string): Record<string, string> | null =>
+  kunci?.startsWith(`${jenis}:`) && readList(CREATED_KEY).includes(kunci) ? (readParams(kunci) ?? paramsFromKey(kunci)) : null;
 
 /** Buang pelan, tanda siap dan parameternya (pelayar ini sahaja - awan: lib/cloud-sync.ts). */
 export function deletePlan(kunci: string) {

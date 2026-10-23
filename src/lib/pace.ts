@@ -55,13 +55,13 @@ export interface NextStep {
 
 /**
  * Selepas hari ujian 5K / lumba 10K / 21K / 42K: cadang pelan seterusnya dari masa sebenar.
- * `pelan5k` = laluan page 5K yang sedang dibuka (/plan-5k atau /account/plan-5k).
+ * `pelan5k` = laluan page 5K yang sedang dibuka (/plan-5k atau /account/plans/5k/new).
  */
 export function nextPlan(dari: TestDistance, minitSebenar: number, hari: number, pelan5k = "/plan-5k"): NextStep {
   const m = Math.ceil(minitSebenar - 1e-9); // bundar ke atas: lebih selamat untuk pelan
   const q = (o: Record<string, string | number>) =>
     new URLSearchParams(Object.entries(o).map(([k, v]) => [k, String(v)])).toString();
-  const ke10k = (label: string) => ({ href: `/account/distance-plan?${q({ jarak: "10k", minggu: 10, hari, masa: m })}`, label });
+  const ke10k = (label: string) => ({ href: `${DISTANCES["10k"].halaman}?${q({ jarak: "10k", minggu: 10, hari, masa: m })}`, label });
 
   if (dari === "5k") {
     if (m < TIME_MIN || m > TIME_MAX) return { teks: `Masa 5K ${formatTime(minitSebenar)}? Semak semula - pelan perlukan ${TIME_MIN}-${TIME_MAX} minit.`, pautan: [] };
@@ -85,7 +85,7 @@ export function nextPlan(dari: TestDistance, minitSebenar: number, hari: number,
     if (m < p.min || m > p.max) return { teks: `Masa 10K ${formatTime(minitSebenar)}? Pelan 21K perlukan ${p.min}-${p.max} minit.`, pautan: [] };
     return {
       teks: `10K dalam ${formatTime(minitSebenar)}. Tahniah! Langkah seterusnya: separuh maraton (anggaran sekarang ~${formatTime(riegel(minitSebenar, 10, 21.0975))}).`,
-      pautan: [{ href: `/account/distance-plan?${q({ jarak: "21k", minggu: 16, hari, masa: m })}`, label: "Buat pelan 21K" }],
+      pautan: [{ href: `${DISTANCES["21k"].halaman}?${q({ jarak: "21k", minggu: 16, hari, masa: m })}`, label: "Buat pelan 21K" }],
     };
   }
   if (dari === "21k") {

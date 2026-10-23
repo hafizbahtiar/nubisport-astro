@@ -1,158 +1,57 @@
 ---
 import PageHero from "./ui/PageHero.astro";
 import Section from "./ui/Section.astro";
-import ChipGroup from "./ui/ChipGroup.astro";
-import Field from "./ui/Field.astro";
-import DatePicker from "./ui/DatePicker.astro";
-import Checkbox from "./ui/Checkbox.astro";
 import Timer from "./Timer.astro";
 import RunCheck from "./RunCheck.astro";
-import RaceDateField from "./RaceDateField.astro";
-import { CONDITIONS, AGE_MAX, AGE_MIN } from "../lib/maf";
-import {
-  PLAN_MONTHS,
-  DAYS_PER_WEEK,
-  TIME_MAX,
-  TIME_MIN,
-  MIN_WEEKS,
-  WEEKS_PER_MINUTE,
-  LEVELS,
-} from "../lib/plan-5k";
+import Plan5kForm from "./Plan5kForm.astro";
+import { MIN_WEEKS, WEEKS_PER_MINUTE } from "../lib/plan-5k";
 import "../styles/plan.css";
 
-// Kandungan sahaja - page memilih layout. Satu borang, dua page: /plan-5k (awam - pelan ringkas) dan /account/plan-5k (log masuk -
-// `full`: pecahan "Realistik tak?", ikut nadi MAF, simpan ke kalendar).
+// Kandungan sahaja - page memilih layout. Borang awam /plan-5k; akaun:
+// mode="new" (/account/plans/5k/new) dan mode="view" (/account/plans/5k/view).
+// `full`: pecahan "Realistik tak?", ikut nadi MAF, simpan ke kalendar.
 // ponytail: had dibuat di pelayar (laman statik) - kod versi penuh tetap boleh dibaca. Ini dorongan
 // untuk daftar, bukan kawalan. Kandungan berbayar sebenar = jana di server.
 interface Props {
   full?: boolean;
+  /** public = borang + hasil; new = borang sahaja (redirect ke view); view = paparan + edit. */
+  mode?: "public" | "new" | "view";
 }
-const { full = false } = Astro.props;
+const { full = false, mode = "public" } = Astro.props;
 const maf = full ? "/account/maf" : "/maf";
-// Julat tarikh mula: dikira semasa build (laman statik - setiap deploy menyegarkannya).
-const tahun = new Date().getFullYear();
 ---
 
-<PageHero
-  eyebrow="Pelan latihan"
-  title="5K bawah"
-  accent="30 minit."
-  lead={full
-    ? "Versi penuh: pecahan kenapa sasaran anda realistik atau tak, latihan ikut nadi, simpan ke kalendar, dan simpan pelan ke awan (1 pelan, ahli 5)."
-    : "Pilih tempoh dan tahap anda sekarang. Pelan dikira dalam pelayar anda - tanpa pendaftaran, tiada data dihantar ke mana-mana."}
->
-  <form
-    class="form"
-    method="get"
-    id="borang"
-    data-full={full ? "1" : undefined}
-  >
-    <RaceDateField jarak={["5K"]} />
-    <fieldset class="form-group" id="tempoh-medan">
-      <ChipGroup
-        legend="Tempoh"
-        name="bulan"
-        checked={3}
-        options={PLAN_MONTHS.map((b) => ({ value: b, label: `${b} bulan` }))}
-      />
-    </fieldset>
-    <ChipGroup
-      legend="Tahap sekarang"
-      name="tahap"
-      checked="jalan"
-      options={Object.entries(LEVELS).map(([value, label]) => ({
-        value,
-        label,
-      }))}
-    />
-    <Field label="Masa 5K sekarang (minit)" id="masa-medan" hidden>
-      <input
-        class="input"
-        type="number"
-        name="masa"
-        min={TIME_MIN}
-        max={TIME_MAX}
-        step="1"
-        inputmode="numeric"
-        placeholder="cth. 36"
-      />
-    </Field>
-    <ChipGroup
-      legend="Sasaran 5K"
-      name="pace"
-      checked=""
-      required={false}
-      options={[
-        { value: "", label: "Bawah 30 minit (6:00/km)" },
-        { value: 336, label: "Bawah 28 minit (5:36/km)" },
-        { value: 300, label: "Bawah 25 minit (5:00/km)" },
-      ]}
-    />
-    <ChipGroup
-      legend="Hari seminggu"
-      name="hari"
-      checked={3}
-      options={DAYS_PER_WEEK.map((h) => ({ value: h, label: `${h} hari` }))}
-    />
-    {
-      full && (
-        <Fragment>
-          <Checkbox
-            name="maf"
-            id="maf"
-            label="Ikut nadi (MAF)"
-            hint="Sesi mudah dan larian panjang dikawal had kadar nadi anda. Perlu jam atau tali dada pengukur nadi."
-          />
-          <fieldset class="form-group" id="maf-medan" hidden disabled>
-            <Field label="Umur (tahun)">
-              <input
-                class="input"
-                type="number"
-                name="umur"
-                min={AGE_MIN}
-                max={AGE_MAX}
-                step="1"
-                inputmode="numeric"
-                required
-                placeholder="cth. 32"
-              />
-            </Field>
-            <ChipGroup
-              legend="Keadaan anda sekarang"
-              name="keadaan"
-              checked="terganggu"
-              stacked
-              options={Object.entries(CONDITIONS).map(([value, k]) => ({
-                value,
-                label: k.label,
-              }))}
-            />
-            <p class="field-hint">
-              Apa itu MAF?{" "}
-              <a class="link" href={maf}>
-                Baca panduan lari ikut nadi
-              </a>
-              .
-            </p>
-          </fieldset>
-        </Fragment>
-      )
-    }
-    <Field
-      label="Tarikh mula (pilihan)"
-      for="mula-text"
-      hint="Pelan bermula pada hari Isnin pada atau lepas tarikh ini."
+{
+  mode === "public" ? (
+    <PageHero
+      eyebrow="Pelan latihan"
+      title="5K bawah"
+      accent="30 minit."
+      lead="Pilih tempoh dan tahap anda sekarang. Pelan dikira dalam pelayar anda - tanpa pendaftaran, tiada data dihantar ke mana-mana."
     >
-      <DatePicker
-        id="mula"
-        name="mula"
-        min={`${tahun - 1}-01-01`}
-        max={`${tahun + 2}-12-31`}
-      />
-    </Field>
-    <button class="btn btn-primary" type="submit">Buat pelan</button>
-  </form>
-</PageHero>
+      <Plan5kForm full={full} mode={mode} />
+    </PageHero>
+  ) : (
+    <section class="plan-form" data-plan-form hidden={mode === "view"}>
+      <header class="plan-form-head">
+        {mode === "new" && (
+          <a class="back-link back-link--accent" href="/account/plans">
+            ← Semua pelan
+          </a>
+        )}
+        <h2 class="display">
+          {mode === "new" ? "Buat pelan 5K" : "Edit pelan 5K"}
+        </h2>
+        <p class="muted">
+          {mode === "new"
+            ? "Isi butiran di bawah. Lepas pelan dibuat, anda boleh ubah atau simpan ke awan."
+            : "Ubah butiran di bawah, kemudian tekan Kemas kini pelan."}
+        </p>
+      </header>
+      <Plan5kForm full={full} mode={mode} />
+    </section>
+  )
+}
 
 <section class="hasil" id="hasil" hidden aria-live="polite">
   <div class="container" id="pelan"></div>
@@ -206,6 +105,8 @@ const tahun = new Date().getFullYear();
     planKey,
     deletePlan,
     planParams,
+    readParams,
+    savedPlanParams,
     pickPlanKey,
     planParamsFromForm,
     writeList,
@@ -213,6 +114,7 @@ const tahun = new Date().getFullYear();
     remapProgress,
   } from "../lib/saved-plans";
   import {
+    pullCloud,
     removeFromCloud,
     mountCloudBox,
     listCloud,
@@ -269,13 +171,15 @@ const tahun = new Date().getFullYear();
     keadaan: "keadaan MAF",
   };
   const borang = document.getElementById("borang") as HTMLFormElement;
+  const formPanel = document.querySelector<HTMLElement>("[data-plan-form]");
   const full = borang.dataset.full === "1";
+  const mode = borang.dataset.mode ?? "public";
   const logMasuk = /(?:^|; )session_active=1/.test(document.cookie);
   const ke = (path: string) => `${path}${location.search}${location.hash}`;
   const LOGIN = () =>
-    `/login?next=${encodeURIComponent(ke("/account/plan-5k"))}`;
-  // Log masuk -> versi penuh (pengawal sesi versi penuh = AccountLayout).
-  if (!full && logMasuk) location.replace(ke("/account/plan-5k"));
+    `/login?next=${encodeURIComponent(ke("/account/plans/5k/new"))}`;
+  // Log masuk -> borang 5K akaun (tiada redirect dari URL lama).
+  if (!full && logMasuk) location.replace(ke("/account/plans/5k/new"));
   const masaMedan = document.getElementById("masa-medan")!;
   const masaInput = borang.elements.namedItem("masa") as HTMLInputElement;
   const mafBox = document.getElementById("maf") as HTMLInputElement | null;
@@ -292,6 +196,24 @@ const tahun = new Date().getFullYear();
   ) as HTMLFieldSetElement;
 
   const q = new URLSearchParams(location.search);
+  // View: URL hanya bawa `kunci`; isi parameter dari salinan tempatan (atau kunci lama).
+  const keyFromUrl = q.get("kunci");
+  // View terus (bookmark/peranti baru): tarik pelan awan dulu supaya params ada.
+  if (mode === "view" && keyFromUrl && !readParams(keyFromUrl))
+    await pullCloud();
+  const viewParams =
+    mode === "view" ? savedPlanParams(keyFromUrl, "pelan-5k") : null;
+  // Tiada kunci / bukan pelan tersimpan: balik ke senarai, tiada pelan dicipta.
+  if (mode === "view" && !viewParams) location.replace("/account/plans");
+  if (viewParams) {
+    for (const [k, v] of Object.entries(viewParams)) if (!q.has(k)) q.set(k, v);
+    // Enter dalam borang edit kekal pada pelan yang sama (bukan cipta pelan baharu).
+    const keyInput = document.createElement("input");
+    keyInput.type = "hidden";
+    keyInput.name = "kunci";
+    keyInput.value = keyFromUrl!;
+    borang.append(keyInput);
+  }
   // Pelan terakhir dipapar: "Kemas kini pelan" petakan tanda siap ke struktur baharu (remapProgress).
   let lalu: { kunci: string; minggu: Week[] } | null = null;
   if (full) void prefillForm(borang, q, (p) => p.masa5k);
@@ -305,6 +227,37 @@ const tahun = new Date().getFullYear();
       el.dispatchEvent(new Event("change")); // DatePicker: kotak dd/mm/yyyy ikut
     }
   }
+
+  // "Kemas kini pelan" dari borang edit (view). Kunci datang dari dataset yang papar() set.
+  function updatePlan() {
+    const key = borang.dataset.planKey;
+    if (!key) return;
+    const next = planParamsFromForm(borang, q, key);
+    for (const k of [...q.keys()]) q.delete(k);
+    next.forEach((v, k) => q.set(k, v));
+    if (!papar()) return; // ralat dipapar, borang kekal terbuka
+    history.replaceState(null, "", `?${q}`);
+    if (formPanel) formPanel.hidden = true;
+    hasil.scrollIntoView();
+    pelanEl.querySelector("h2")?.focus({ preventScroll: true });
+    // Pelan ini mungkin sudah di awan: hantar params/tanda siap baharu (update, bukan slot baharu).
+    void listCloud().then((a) => {
+      if (a?.items.some((item) => item.key === key)) void saveToCloud(key);
+    });
+  }
+  // New: cipta hanya bila "Buat pelan" ditekan (bukan bila link bawa params) - tiada muat semula.
+  if (mode === "new")
+    borang.addEventListener("submit", (event) => {
+      event.preventDefault();
+      for (const k of [...q.keys()]) q.delete(k);
+      new FormData(borang).forEach((v, k) => q.set(k, String(v)));
+      papar();
+    });
+  if (mode === "view")
+    borang.addEventListener("submit", (event) => {
+      event.preventDefault();
+      updatePlan();
+    });
 
   const masaLabel = masaMedan.querySelector(".field-label")!;
   const ikutTahap = () => {
@@ -338,7 +291,17 @@ const tahun = new Date().getFullYear();
   borang.addEventListener("change", ikutTahap);
   ikutTahap();
 
-  if (q.has("bulan") || q.has("lumba")) papar();
+  // View papar pelan tersimpan tanpa auto-scroll; awam papar bila URL bawa params (tanpa akaun saja -
+  // log masuk sedang dilencong ke /new).
+  if (viewParams) {
+    if (!papar() && formPanel) formPanel.hidden = false; // params rosak: buka borang
+  } else if (
+    mode === "public" &&
+    !logMasuk &&
+    (q.has("bulan") || q.has("lumba")) &&
+    papar()
+  )
+    (pelanEl.querySelector(".kad.kini") ?? hasil).scrollIntoView();
 
   // Awam: kotak promosi versi penuh (selepas analisis ringkas).
   function htmlPromosi() {
@@ -370,7 +333,7 @@ const tahun = new Date().getFullYear();
     );
   }
 
-  function papar() {
+  function papar(): boolean {
     const tahap = q.get("tahap") as Level;
     const bulan = Number(q.get("bulan"));
     const hari = Number(q.get("hari"));
@@ -414,8 +377,8 @@ const tahun = new Date().getFullYear();
       const m = calcMaf(Number(q.get("umur")), q.get("keadaan") as Condition);
       if (!m.ok) {
         pelanEl.innerHTML = `<div class="alert alert-warning"><p>Ikut nadi: ${m.sebab}</p></div>`;
-        hasil.scrollIntoView({ behavior: "smooth" });
-        return;
+        hasil.scrollIntoView();
+        return false;
       }
       nadi = { maf: m.maf, bawah: m.bawah };
     }
@@ -437,8 +400,8 @@ const tahun = new Date().getFullYear();
             ? `<a class="btn btn-primary" href="?${new URLSearchParams({ ...Object.fromEntries(q), bulan: String(h.cadanganBulan) })}">Cuba ${h.cadanganBulan} bulan</a>`
             : ""
       }</div>`;
-      hasil.scrollIntoView({ behavior: "smooth" });
-      return;
+      hasil.scrollIntoView();
+      return false;
     }
 
     // Pelan lumba: minggu dalam kunci ("14w"). Sasaran pace (sub-28/25) masuk kunci supaya
@@ -450,6 +413,7 @@ const tahun = new Date().getFullYear();
       dibuat,
       planKey(lumba ? `${minggu}w` : bulan, tahap, masa5k, hari, pace),
     );
+    borang.dataset.planKey = kunci;
     // Had tanpa akaun kira pelan 5K sahaja (10K/21K = akaun).
     if (
       !canBuildPlan(
@@ -467,11 +431,18 @@ const tahun = new Date().getFullYear();
           <a class="btn btn-outline" href="${LOGIN()}">Log masuk</a>
         </div>
       </div>`;
-      hasil.scrollIntoView({ behavior: "smooth" });
-      return;
+      hasil.scrollIntoView();
+      return false;
     }
     if (!dibuat.includes(kunci)) writeList(CREATED_KEY, [...dibuat, kunci]);
     if (full) writeParams(kunci, planParams(q));
+    // Halaman /new: pelan sudah disimpan - terus ke paparan (bukan kekal pada borang).
+    if (mode === "new") {
+      location.replace(
+        `/account/plans/5k/view?kunci=${encodeURIComponent(kunci)}`,
+      );
+      return true;
+    }
     // Kemas kini pelan: tanda siap ikut sesi yang sama (bukan indeks); yang tiada lagi dibuang.
     const sah = new Set(
       h.minggu.flatMap((w) => w.sesi.map((_, i) => `${w.no}.${i}`)),
@@ -498,10 +469,11 @@ const tahun = new Date().getFullYear();
     );
 
     pelanEl.innerHTML = `
+      ${mode === "view" ? `<p class="no-print"><a class="back-link back-link--accent" href="/account/plans">← Semua pelan</a></p>` : ""}
       <div class="ringkas">
         <div>
           <p class="eyebrow">Pelan anda</p>
-          <h2 class="display section-title">${tempoh} · ${hari} hari seminggu</h2>
+          <h2 class="display section-title" tabindex="-1">${tempoh} · ${hari} hari seminggu</h2>
           <p class="lead">${LEVELS[tahap]}${masa5k ? ` (${masa5k} minit)` : ""} → 5K bawah ${sasaranTeks}.
             ${nadi ? `Ikut nadi: had MAF <strong>${nadi.maf}</strong>, julat ${nadi.bawah}-${nadi.maf} denyut/min.` : ""}
             ${isnin ? `Bermula ${tarikhPanjang(sessionDate(isnin, 1, hari, 0, lumba))}.` : ""}
@@ -510,7 +482,7 @@ const tahun = new Date().getFullYear();
         <div class="actions no-print">
           <button class="btn btn-outline" type="button" data-kongsi>Kongsi</button>
           <button class="btn btn-outline" type="button" onclick="print()">Cetak</button>
-          ${full ? `<button class="btn btn-outline" type="button" data-kemas>Kemas kini pelan</button>` : ""}
+          ${full && mode === "view" ? `<button class="btn btn-outline" type="button" data-edit aria-expanded="false">Edit pelan</button>` : ""}
           ${full ? `<button class="btn btn-outline" type="button" data-padam>Padam pelan</button>` : ""}
         </div>
       </div>
@@ -626,7 +598,7 @@ const tahun = new Date().getFullYear();
         if (!ya) return;
         deletePlan(kunci);
         await removeFromCloud(kunci);
-        location.href = "/account";
+        location.href = "/account/plans";
       });
     mountShare(
       pelanEl.querySelector<HTMLButtonElement>("[data-kongsi]")!,
@@ -640,18 +612,16 @@ const tahun = new Date().getFullYear();
       ),
       `Mari berlari bersama: pelan 5K bawah ${sasaranTeks} (${tempoh}, ${hari} hari seminggu) dari Nubi Sport.`,
     );
-    // Ubah masa/pace/tarikh pada borang, kemudian tulis params di bawah kunci yang sama.
-    pelanEl.querySelector("[data-kemas]")?.addEventListener("click", () => {
-      const baru = planParamsFromForm(borang, q, kunci);
-      for (const k of [...q.keys()]) q.delete(k);
-      baru.forEach((v, k) => q.set(k, v));
-      papar();
-      history.replaceState(null, "", `?${q}`);
-      // Pelan ini mungkin sudah di awan: hantar params/tanda siap baharu (update, bukan slot baharu).
-      if (pelanEl.querySelector("[data-kemas]"))
-        void listCloud().then((a) => {
-          if (a?.items.some((p) => p.key === kunci)) void saveToCloud(kunci);
-        });
+    // View: tunjuk panel borang edit (panel tersembunyi pada mulanya).
+    pelanEl.querySelector("[data-edit]")?.addEventListener("click", (e) => {
+      if (!formPanel) return;
+      formPanel.hidden = false;
+      (e.currentTarget as HTMLElement).setAttribute("aria-expanded", "true");
+      formPanel.scrollIntoView();
+      // preventScroll: fokus tak potong skrol lancar di atas.
+      borang
+        .querySelector<HTMLElement>('input:not([type="hidden"]), select')
+        ?.focus({ preventScroll: true });
     });
     const buatIcs = () => {
       const jam =
@@ -788,9 +758,6 @@ const tahun = new Date().getFullYear();
       hasilLanggan.replaceChildren("Kalendar automatik aktif. ", batal);
       hasilLanggan.hidden = false;
     }
-    // Minggu semasa (bila tarikh mula diisi) lebih berguna daripada atas pelan.
-    (pelanEl.querySelector(".kad.kini") ?? hasil).scrollIntoView({
-      behavior: "smooth",
-    });
+    return true;
   }
 </script>

@@ -1,165 +1,49 @@
 ---
-// Pelan 10K / 21K (/account/distance-plan) dan 42K (/account/plan-42k) - akaun sahaja, pengawal sesi = AccountLayout.
-// `jarak` = jarak yang page itu tawarkan (satu = tiada pilihan jarak). Bertangga: 10K dari masa 5K,
+// Pelan 10K / 21K / 42K - akaun sahaja, pengawal sesi = AccountLayout.
+// Satu jarak setiap page; borang panel untuk new, view/edit. Bertangga: 10K dari masa 5K,
 // 21K dari masa 10K, 42K dari masa 21K. Sasaran lalai = habis; masa sasaran pilihan.
 // Enjin: src/lib/distance-plan.ts. Render kad minggu dikongsi dengan Pelan 5K (lib/plan-render.ts).
-import PageHero from "./ui/PageHero.astro";
 import Section from "./ui/Section.astro";
-import ChipGroup from "./ui/ChipGroup.astro";
-import Field from "./ui/Field.astro";
-import DatePicker from "./ui/DatePicker.astro";
-import Checkbox from "./ui/Checkbox.astro";
-import Alert from "./ui/Alert.astro";
 import Timer from "./Timer.astro";
 import RunCheck from "./RunCheck.astro";
-import RaceDateField from "./RaceDateField.astro";
-import { CONDITIONS, AGE_MAX, AGE_MIN } from "../lib/maf";
+import DistancePlanForm from "./DistancePlanForm.astro";
 import { DISTANCES, type Distance } from "../lib/distance-plan";
 import "../styles/plan.css";
 
 interface Props {
-  jarak?: Distance[];
+  jarak: Distance;
+  mode: "new" | "view";
 }
-const { jarak = ["10k", "21k"] } = Astro.props;
-const maraton = jarak.length === 1 && jarak[0] === "42k";
-const LABEL: Record<Distance, string> = {
-  "10k": "10K",
-  "21k": "21K (separuh maraton)",
-  "42k": "42K (maraton)",
-};
-const tahun = new Date().getFullYear();
+const { jarak, mode } = Astro.props;
+const maraton = jarak === "42k";
 ---
 
-<PageHero
-  eyebrow="Pelan latihan"
-  title={maraton ? "Maraton" : "10K dan"}
-  accent={maraton ? "42K." : "21K."}
-  lead={maraton
-    ? "Langkah seterusnya lepas 21K. Larian panjang naik perlahan hingga 32 km. Sasaran utama habis dengan selamat - masukkan masa sasaran kalau nak sesi laju dan pecahan 'Realistik tak?'."
-    : "Langkah seterusnya lepas 5K. Sasaran utama habis dengan selamat - masukkan masa sasaran kalau nak sesi laju dan pecahan 'Realistik tak?'."}
->
-  <form class="form" method="get" id="borang" data-jarak={jarak.join(",")}>
+<section class="plan-form" data-plan-form hidden={mode === "view"}>
+  <header class="plan-form-head">
     {
-      jarak.length > 1 ? (
-        <ChipGroup
-          legend="Jarak"
-          name="jarak"
-          checked={jarak[0]}
-          options={jarak.map((j) => ({ value: j, label: LABEL[j] }))}
-        />
-      ) : (
-        <input type="hidden" name="jarak" value={jarak[0]} />
+      mode === "new" && (
+        <a class="back-link back-link--accent" href="/account/plans">
+          ← Semua pelan
+        </a>
       )
     }
-    <RaceDateField jarak={jarak.map((j) => DISTANCES[j].nama)} />
-    {
-      jarak.map((j) => (
-        <fieldset class="form-group" data-untuk={j} hidden disabled>
-          <ChipGroup
-            legend="Tempoh"
-            name="minggu"
-            options={DISTANCES[j].minggu.map((m) => ({
-              value: m,
-              label: `${m} minggu`,
-            }))}
-          />
-        </fieldset>
-      ))
-    }
-    <Checkbox
-      name="pemula"
-      id="pemula"
-      label="Saya pemula - belum tahu masa saya"
-      hint="Pelan ini dikira dari masa larian anda sekarang."
-    />
-    <Alert
-      variant="warning"
-      title="Mula dari Pelan 5K"
-      id="pemula-nasihat"
-      hidden
-    >
-      <p id="pemula-teks"></p>
-      <p>
-        <a class="btn btn-primary btn-sm" href="/account/plan-5k?tahap=sifar"
-          >Buka Pelan 5K</a
-        >
-      </p>
-    </Alert>
-    <Field label="Masa 5K sekarang (minit)" id="masa-medan">
-      <input
-        class="input"
-        type="number"
-        name="masa"
-        step="1"
-        inputmode="numeric"
-        required
-      />
-    </Field>
-    <Field
-      label="Masa sasaran (minit, pilihan)"
-      id="sasaran-medan"
-      hint="Kosongkan untuk sasaran habis dengan selamat."
-    >
-      <input
-        class="input"
-        type="number"
-        name="sasaran"
-        step="1"
-        inputmode="numeric"
-      />
-    </Field>
-    <ChipGroup
-      legend="Hari seminggu"
-      name="hari"
-      checked={3}
-      options={[3, 4].map((h) => ({ value: h, label: `${h} hari` }))}
-    />
-    <Checkbox
-      name="maf"
-      id="maf"
-      label="Ikut nadi (MAF)"
-      hint="Sesi mudah dan larian panjang dikawal had kadar nadi anda. Perlu jam atau tali dada pengukur nadi."
-    />
-    <fieldset class="form-group" id="maf-medan" hidden disabled>
-      <Field label="Umur (tahun)">
-        <input
-          class="input"
-          type="number"
-          name="umur"
-          min={AGE_MIN}
-          max={AGE_MAX}
-          step="1"
-          inputmode="numeric"
-          required
-          placeholder="cth. 32"
-        />
-      </Field>
-      <ChipGroup
-        legend="Keadaan anda sekarang"
-        name="keadaan"
-        checked="terganggu"
-        stacked
-        options={Object.entries(CONDITIONS).map(([value, k]) => ({
-          value,
-          label: k.label,
-        }))}
-      />
-    </fieldset>
-    <Field
-      label="Tarikh mula (pilihan)"
-      for="mula-text"
-      hint="Pelan bermula pada hari Isnin pada atau lepas tarikh ini."
-    >
-      <DatePicker
-        id="mula"
-        name="mula"
-        min={`${tahun - 1}-01-01`}
-        max={`${tahun + 2}-12-31`}
-      />
-    </Field>
-    <button class="btn btn-primary" type="submit">Buat pelan</button>
-  </form>
-</PageHero>
+    <h2 class="display">
+      {
+        mode === "new"
+          ? `Buat pelan ${DISTANCES[jarak].nama}`
+          : `Edit pelan ${DISTANCES[jarak].nama}`
+      }
+    </h2>
+    <p class="muted">
+      {
+        mode === "new"
+          ? "Isi butiran di bawah. Lepas pelan dibuat, anda boleh ubah atau simpan ke awan."
+          : "Ubah butiran di bawah, kemudian tekan Kemas kini pelan."
+      }
+    </p>
+  </header>
+  <DistancePlanForm jarak={jarak} mode={mode} />
+</section>
 
 <section class="hasil" id="hasil" hidden aria-live="polite">
   <div class="container" id="pelan"></div>
@@ -186,7 +70,7 @@ const tahun = new Date().getFullYear();
         <li>
           Bertangga: maraton perlukan masa 21K (boleh habis separuh maraton).
           Belum sampai? Mula dengan{" "}
-          <a class="link" href="/account/distance-plan?jarak=21k">
+          <a class="link" href="/account/plans/21k/new">
             pelan 21K
           </a>{" "}
           dulu. Larian panjang 3-4 jam: latih minum dan makan (gel/kurma) sama
@@ -196,7 +80,7 @@ const tahun = new Date().getFullYear();
         <li>
           Bertangga: 10K perlukan masa 5K (boleh lari 5 km tanpa henti), 21K
           perlukan masa 10K. Belum sampai? Mula dengan{" "}
-          <a class="link" href="/account/plan-5k">
+          <a class="link" href="/account/plans/5k/new">
             Pelan 5K
           </a>{" "}
           atau pelan 10K dulu.
@@ -264,6 +148,8 @@ const tahun = new Date().getFullYear();
     distancePlanKey,
     deletePlan,
     planParams,
+    readParams,
+    savedPlanParams,
     pickPlanKey,
     planParamsFromForm,
     writeList,
@@ -271,6 +157,7 @@ const tahun = new Date().getFullYear();
     remapProgress,
   } from "../lib/saved-plans";
   import {
+    pullCloud,
     removeFromCloud,
     mountCloudBox,
     listCloud,
@@ -284,6 +171,10 @@ const tahun = new Date().getFullYear();
   import { confirmDialog } from "../lib/confirm";
 
   const borang = document.getElementById("borang") as HTMLFormElement;
+  const formPanel = document.querySelector<HTMLElement>("[data-plan-form]");
+  const mode = borang.dataset.mode as "new" | "view";
+  // Satu jarak setiap page - dari markup, bukan URL (`?jarak=` diabaikan).
+  const jarak = borang.dataset.jarak as Distance;
   const el = (n: string) => borang.elements.namedItem(n);
   const masaMedan = document.getElementById("masa-medan")!;
   const masaInput = el("masa") as HTMLInputElement;
@@ -292,13 +183,16 @@ const tahun = new Date().getFullYear();
   const pemulaBox = document.getElementById("pemula") as HTMLInputElement;
   const butangBuat = borang.querySelector<HTMLButtonElement>(
     'button[type="submit"]',
-  )!;
+  );
   const mafMedan = document.getElementById("maf-medan") as HTMLFieldSetElement;
   const hasil = document.getElementById("hasil")!;
   const pelanEl = document.getElementById("pelan")!;
   mountTestForm(pelanEl);
   mountPaceForm(pelanEl, ["sasaran"]); // pace sendiri ganti masa sasaran
   const lumbaInput = el("lumba") as HTMLInputElement;
+  const tempohMedan = document.getElementById(
+    "tempoh-medan",
+  ) as HTMLFieldSetElement;
   const PROFIL_LABEL: Record<string, string> = {
     hari: "hari seminggu",
     masa5k: "masa 5K",
@@ -317,26 +211,59 @@ const tahun = new Date().getFullYear();
     "21k": [65, 140],
     "42k": [130, 290],
   } as const;
-  const PILIHAN = borang.dataset.jarak!.split(",") as Distance[];
-  const dariUrl = (): Distance => {
-    const j = q.get("jarak") as Distance;
-    return PILIHAN.includes(j) ? j : PILIHAN[0];
-  };
-
   const q = new URLSearchParams(location.search);
+  // View: hydrate dari simpanan/awan (bookmark atau peranti baru), bukan redirect URL lama.
+  const keyFromUrl = q.get("kunci");
+  if (mode === "view" && keyFromUrl && !readParams(keyFromUrl))
+    await pullCloud();
+  const viewParams =
+    mode === "view" ? savedPlanParams(keyFromUrl, `pelan-${jarak}`) : null;
+  // Tiada kunci / bukan pelan tersimpan: balik ke senarai, tiada pelan dicipta.
+  if (mode === "view" && !viewParams) location.replace("/account/plans");
+  if (viewParams) {
+    for (const [k, v] of Object.entries(viewParams)) if (!q.has(k)) q.set(k, v);
+    // Enter dalam borang edit kekal pada pelan yang sama (bukan cipta pelan baharu).
+    const keyInput = document.createElement("input");
+    keyInput.type = "hidden";
+    keyInput.name = "kunci";
+    keyInput.value = keyFromUrl!;
+    borang.append(keyInput);
+  }
+  // Kemas kini pelan dari borang panel (view) guna kunci yang sama.
+  function updatePlan() {
+    const key = borang.dataset.planKey;
+    if (!key) return;
+    const next = planParamsFromForm(borang, q, key);
+    for (const k of [...q.keys()]) q.delete(k);
+    next.forEach((v, k) => q.set(k, v));
+    if (!papar()) return; // ralat dipapar, borang kekal terbuka
+    history.replaceState(null, "", `?${q}`);
+    if (formPanel) formPanel.hidden = true;
+    hasil.scrollIntoView();
+    pelanEl.querySelector("h2")?.focus({ preventScroll: true });
+    void listCloud().then((a) => {
+      if (a?.items.some((item) => item.key === key)) void saveToCloud(key);
+    });
+  }
+  if (mode === "view")
+    borang.addEventListener("submit", (event) => {
+      event.preventDefault();
+      updatePlan();
+    });
+  // New: cipta hanya bila "Buat pelan" ditekan (bukan bila link bawa params) - tiada muat semula.
+  if (mode === "new")
+    borang.addEventListener("submit", (event) => {
+      event.preventDefault();
+      for (const k of [...q.keys()]) q.delete(k);
+      new FormData(borang).forEach((v, k) => q.set(k, String(v)));
+      papar();
+    });
   // Pelan terakhir dipapar: "Kemas kini pelan" petakan tanda siap ke struktur baharu (remapProgress).
   let lalu: { kunci: string; minggu: Week[] } | null = null;
   const ikutJarak = () => {
-    const j = ((el("jarak") as RadioNodeList).value || PILIHAN[0]) as Distance;
-    const c = DISTANCES[j];
-    borang
-      .querySelectorAll<HTMLFieldSetElement>("[data-untuk]")
-      .forEach(
-        (f) =>
-          (f.hidden = f.disabled = f.dataset.untuk !== j || !!lumbaInput.value),
-      ); // tarikh lumba = minggu dikira
-    // Dua fieldset kongsi name="minggu", jadi checked server tak boleh dipakai. Set lalai
-    // pada kumpulan aktif sahaja, dan jangan ganggu pilihan dari URL/pengguna.
+    const c = DISTANCES[jarak];
+    tempohMedan.hidden = tempohMedan.disabled = !!lumbaInput.value; // tarikh lumba = minggu dikira
+    // Jangan ganggu pilihan tempoh dari URL/pengguna; set lalai kalau belum ada.
     const tempoh = [
       ...borang.querySelectorAll<HTMLInputElement>(
         'fieldset:not([disabled]) input[name="minggu"]',
@@ -348,10 +275,10 @@ const tahun = new Date().getFullYear();
       `Masa ${c.prasyarat.nama} sekarang (minit)`;
     masaInput.min = String(c.prasyarat.min);
     masaInput.max = String(c.prasyarat.max);
-    masaInput.placeholder = `cth. ${CONTOH[j][0]}`;
+    masaInput.placeholder = `cth. ${CONTOH[jarak][0]}`;
     sasaranInput.min = String(c.sasaran.min);
     sasaranInput.max = String(c.sasaran.max);
-    sasaranInput.placeholder = `cth. ${CONTOH[j][1]}`;
+    sasaranInput.placeholder = `cth. ${CONTOH[jarak][1]}`;
     mafMedan.hidden = mafMedan.disabled = !mafBox.checked;
     // Pemula tanpa masa: pelan ini tak boleh dikira - nasihat mula dari Pelan 5K (tahap sifar), ikut tangga.
     const pemula = pemulaBox.checked;
@@ -362,26 +289,13 @@ const tahun = new Date().getFullYear();
       `Masa itu membuka langkah seterusnya: ${tangga.slice(0, tangga.indexOf(c.nama) + 1).join(" → ")}.`;
     document.getElementById("pemula-nasihat")!.hidden = !pemula;
     masaMedan.hidden = masaInput.disabled = pemula;
-    butangBuat.disabled = pemula;
+    if (butangBuat) butangBuat.disabled = pemula;
   };
-  // Pilih jarak dahulu (tempoh bergantung padanya), kemudian isi medan lain dari URL.
-  if (PILIHAN.length > 1) (el("jarak") as RadioNodeList).value = dariUrl();
   ikutJarak();
-  void prefillForm(
-    borang,
-    q,
-    (p) => p[PROFIL_MASA[(el("jarak") as RadioNodeList).value as Distance]],
-  );
+  void prefillForm(borang, q, (p) => p[PROFIL_MASA[jarak]]);
   for (const [k, v] of q) {
     const e = el(k);
-    // "minggu": nilai 12 wujud dalam kedua-dua kumpulan - tanda dalam kumpulan jarak aktif.
-    if (k === "minggu")
-      borang
-        .querySelectorAll<HTMLInputElement>(
-          `fieldset:not([disabled]) input[name="minggu"]`,
-        )
-        .forEach((r) => (r.checked = r.value === v));
-    else if (e instanceof RadioNodeList) e.value = v;
+    if (e instanceof RadioNodeList) e.value = v;
     else if (e instanceof HTMLInputElement && e.type === "checkbox")
       e.checked = v === e.value;
     else if (e instanceof HTMLInputElement) {
@@ -391,11 +305,11 @@ const tahun = new Date().getFullYear();
   }
   borang.addEventListener("change", ikutJarak);
   ikutJarak();
-  // Tempoh lalai = `mingguLalai` setiap jarak (10K 10, 21K 16, 42K 18), ditanda oleh ikutJarak().
-  if (q.has("jarak")) papar();
+  // View papar pelan tersimpan tanpa auto-scroll; params rosak = buka borang untuk dibetulkan.
+  if (viewParams && !papar() && formPanel) formPanel.hidden = false;
 
-  function papar() {
-    const jarak = dariUrl();
+  function papar(): boolean {
+    q.set("jarak", jarak);
     const c = DISTANCES[jarak];
     let minggu = Number(q.get("minggu"));
     const hari = Number(q.get("hari"));
@@ -451,7 +365,8 @@ const tahun = new Date().getFullYear();
     hasil.hidden = false;
     const amaran = (t: string, lagi = "") => {
       pelanEl.innerHTML = `<div class="alert alert-warning"><p>${t}</p>${lagi}</div>`;
-      hasil.scrollIntoView({ behavior: "smooth" });
+      hasil.scrollIntoView();
+      return false;
     };
     let nadi: { maf: number; bawah: number } | undefined;
     if (q.get("maf") === "1") {
@@ -480,7 +395,14 @@ const tahun = new Date().getFullYear();
     const sasaranMinit = pace ? (pace * c.km) / 60 : sasaran;
     const perlu = distanceWeeksNeeded(input);
     if (!dibuat.includes(kunci)) writeList(CREATED_KEY, [...dibuat, kunci]);
+    borang.dataset.planKey = kunci;
     writeParams(kunci, planParams(q));
+    if (mode === "new") {
+      location.replace(
+        `/account/plans/${jarak}/view?kunci=${encodeURIComponent(kunci)}`,
+      );
+      return true;
+    }
     // Kemas kini pelan: tanda siap ikut sesi yang sama (bukan indeks); yang tiada lagi dibuang.
     const sah = new Set(
       h.minggu.flatMap((w) => w.sesi.map((_, i) => `${w.no}.${i}`)),
@@ -502,10 +424,11 @@ const tahun = new Date().getFullYear();
     const tajuk = `${c.nama} · ${tempoh} · ${hari} hari seminggu`;
 
     pelanEl.innerHTML = `
+      <p class="no-print"><a class="back-link back-link--accent" href="/account/plans">← Semua pelan</a></p>
       <div class="ringkas">
         <div>
           <p class="eyebrow">Pelan anda</p>
-          <h2 class="display section-title">${tajuk}</h2>
+          <h2 class="display section-title" tabindex="-1">${tajuk}</h2>
           <p class="lead">${c.prasyarat.nama} ${masa} minit → ${c.nama} ${sasaranMinit ? `bawah ${formatTime(sasaranMinit)}${pace ? ` (pace ${formatPace(pace)}/km)` : ""}` : `habis (anggaran ~${formatTime(h.ramalan)})`}.
             ${nadi ? `Ikut nadi: had MAF <strong>${nadi.maf}</strong>, julat ${nadi.bawah}-${nadi.maf} denyut/min.` : ""}
             ${isnin ? `Bermula ${tarikhPanjang(sessionDate(isnin, 1, hari, 0, lumba))}.` : ""}
@@ -514,7 +437,7 @@ const tahun = new Date().getFullYear();
         <div class="actions no-print">
           <button class="btn btn-outline" type="button" data-kongsi>Kongsi</button>
           <button class="btn btn-outline" type="button" onclick="print()">Cetak</button>
-          <button class="btn btn-outline" type="button" data-kemas>Kemas kini pelan</button>
+          <button class="btn btn-outline" type="button" data-edit aria-expanded="false">Edit pelan</button>
           <button class="btn btn-outline" type="button" data-padam>Padam pelan</button>
         </div>
       </div>
@@ -556,18 +479,16 @@ const tahun = new Date().getFullYear();
       ),
       `Mari berlari bersama: pelan ${tajuk} dari Nubi Sport (perlu akaun percuma).`,
     );
-    // Ubah masa/pace/tarikh pada borang, kemudian tulis params di bawah kunci yang sama.
-    pelanEl.querySelector("[data-kemas]")?.addEventListener("click", () => {
-      const baru = planParamsFromForm(borang, q, kunci);
-      for (const k of [...q.keys()]) q.delete(k);
-      baru.forEach((v, k) => q.set(k, v));
-      papar();
-      history.replaceState(null, "", `?${q}`);
-      // Pelan ini mungkin sudah di awan: hantar params/tanda siap baharu (update, bukan slot baharu).
-      if (pelanEl.querySelector("[data-kemas]"))
-        void listCloud().then((a) => {
-          if (a?.items.some((p) => p.key === kunci)) void saveToCloud(kunci);
-        });
+    // View: borang tersembunyi; Edit buka semula panel borang.
+    pelanEl.querySelector("[data-edit]")?.addEventListener("click", (e) => {
+      if (!formPanel) return;
+      formPanel.hidden = false;
+      (e.currentTarget as HTMLElement).setAttribute("aria-expanded", "true");
+      formPanel.scrollIntoView();
+      // preventScroll: fokus tak potong skrol lancar di atas.
+      borang
+        .querySelector<HTMLElement>('input:not([type="hidden"]), select')
+        ?.focus({ preventScroll: true });
     });
     // Pelan lumba tak dianjak - tarikh lumba tetap.
     const sambung =
@@ -635,7 +556,7 @@ const tahun = new Date().getFullYear();
         if (!ya) return;
         deletePlan(kunci);
         await removeFromCloud(kunci);
-        location.href = "/account";
+        location.href = "/account/plans";
       });
     pelanEl
       .querySelector<HTMLButtonElement>("[data-ics]")
@@ -666,8 +587,6 @@ const tahun = new Date().getFullYear();
         link.click();
         setTimeout(() => URL.revokeObjectURL(link.href), 60e3);
       });
-    (pelanEl.querySelector(".kad.kini") ?? hasil).scrollIntoView({
-      behavior: "smooth",
-    });
+    return true;
   }
 </script>

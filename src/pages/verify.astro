@@ -13,7 +13,7 @@ import { TURNSTILE_SITE_KEY } from "../data/site";
   <PageHero eyebrow="Akaun" title="Sahkan" accent="e-mel.">
     <p class="lead" id="memuat">Mengesahkan...</p>
 
-    <div class="form verify-box" id="berjaya" hidden>
+    <div class="form form-narrow" id="berjaya" hidden>
       <Alert variant="success" title="E-mel disahkan">
         <p>Akaun anda dah aktif. Anda boleh log masuk sekarang.</p>
       </Alert>
@@ -21,12 +21,8 @@ import { TURNSTILE_SITE_KEY } from "../data/site";
     </div>
 
     <!-- Tanpa token, atau token tamat / tidak sah: borang hantar semula. -->
-    <form class="form verify-box" id="semula" novalidate hidden>
-      <Alert
-        variant="warning"
-        id="gagal"
-        title="Pautan tak sah atau dah tamat"
-      >
+    <form class="form form-narrow" id="semula" novalidate hidden>
+      <Alert variant="warning" id="gagal" title="Pautan tak sah atau dah tamat">
         <p>
           Pautan pengesahan hanya sah 24 jam dan sekali guna. Masukkan e-mel
           anda untuk pautan baru.
@@ -56,8 +52,7 @@ import { TURNSTILE_SITE_KEY } from "../data/site";
           e-mel anda.
         </p>
       </Alert>
-      <button class="btn btn-primary" type="submit">Hantar pautan baru</button
-      >
+      <button class="btn btn-primary" type="submit">Hantar pautan baru</button>
       <p class="lead">
         Belum ada akaun? <a class="link" href="/register">Daftar</a>.
       </p>
@@ -129,9 +124,3 @@ import { TURNSTILE_SITE_KEY } from "../data/site";
     dihantar.hidden = !!salah;
   });
 </script>
-
-<style>
-  .verify-box {
-    max-width: 26rem;
-  }
-</style>

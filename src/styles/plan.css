@@ -1,4 +1,4 @@
-/* Pelan latihan (5K, 10K, 21K): dirender melalui innerHTML, jadi gaya scoped Astro tak sampai.
+/* Pelan latihan (5K, 10K, 21K, 42K): dirender melalui innerHTML, jadi gaya scoped Astro tak sampai.
    Diimport oleh Plan5k.astro dan DistancePlan.astro sahaja. */
 .hasil {
   padding-block: clamp(3rem, 7vw, 5rem);
@@ -11,6 +11,20 @@
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1.5rem;
+}
+
+/* Telefon: butang tindakan sama lebar (2 lajur), bukan ikut panjang label. */
+@media (max-width: 40rem) {
+  .ringkas .actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+
+  .ringkas .actions .btn {
+    padding-inline: 0.75rem;
+    /* label 2 perkataan muat sebaris */
+  }
 }
 
 /* Julat pace ("~8:27-8:57/km") tidak dipatahkan di tengah. */
@@ -442,4 +456,34 @@
   margin: 0;
   color: var(--danger-ink);
   font-size: 0.85rem;
+}
+
+/* ---------- Panel borang pelan (akaun) ---------- */
+.plan-form {
+  display: grid;
+  gap: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.plan-form-head {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.plan-form-head h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--navy);
+}
+
+.plan-form-head p {
+  margin: 0;
+}
+
+.plan-form .form {
+  max-width: none;
 }

@@ -1,0 +1,175 @@
+---
+// One list for all running plans (5K, 10K, 21K, 42K) -> /account/plans/<distance>/view. Index = reusable Table.
+import AccountLayout from "../../../layouts/AccountLayout.astro";
+import Table from "../../../components/ui/Table.astro";
+---
+
+<AccountLayout title="Pelan larian">
+  <section class="plans-header">
+    <div>
+      <p class="eyebrow">Pelan latihan</p>
+      <h2 class="display">Pelan larian</h2>
+      <p class="muted">
+        Semua pelan anda - 5K, 10K, 21K dan 42K. Lihat, edit atau padam.
+      </p>
+    </div>
+    <div class="actions">
+      <a class="btn btn-primary" href="/account/plans/5k/new">Buat pelan 5K</a>
+      <a class="btn btn-outline" href="/account/plans/10k/new">Buat pelan 10K</a
+      >
+      <a class="btn btn-outline" href="/account/plans/21k/new">Buat pelan 21K</a
+      >
+      <a class="btn btn-outline" href="/account/plans/42k/new">Buat pelan 42K</a
+      >
+    </div>
+  </section>
+
+  <Table
+    id="plans-table"
+    columns={[
+      { label: "Pelan" },
+      { label: "Kemajuan" },
+      { label: "Storan" },
+      { label: "Status" },
+      { label: "Tindakan", srOnly: true },
+    ]}
+    searchPlaceholder="Cari pelan…"
+    empty="Belum ada pelan larian."
+    emptyHint="Mulakan dengan pelan 5K atau 10K pertama anda."
+    emptyIcon="pemasa"
+  />
+</AccountLayout>
+
+<script>
+  import { createTable } from "../../../lib/table";
+  import { confirmDialog } from "../../../lib/confirm";
+  import { activePlan } from "../../../lib/plan-sync";
+  import { savedPlans, type SavedPlan } from "../../../lib/plan-list";
+  import {
+    pullCloud,
+    listCloud,
+    removeFromCloud,
+  } from "../../../lib/cloud-sync";
+  import { deletePlan } from "../../../lib/saved-plans";
+
+  const textSpan = (text: string, className?: string) => {
+    const span = document.createElement("span");
+    if (className) span.className = className;
+    span.textContent = text;
+    return span;
+  };
+  const planCell = (row: SavedPlan) => {
+    const cell = document.createElement("div");
+    cell.className = "plan-cell";
+    const name = document.createElement("strong");
+    name.textContent = row.name;
+    cell.append(name, textSpan(row.detail, "muted"));
+    return cell;
+  };
+  const progressCell = (row: SavedPlan) =>
+    textSpan(
+      `${row.done} / ${row.total} sesi`,
+      row.done === row.total && row.total > 0 ? "" : "muted",
+    );
+  const storageCell = (row: SavedPlan) =>
+    textSpan(
+      cloudKeys.has(row.key) ? "Awan" : "Peranti",
+      cloudKeys.has(row.key) ? "lencana lencana-awan" : "lencana",
+    );
+  const statusCell = (row: SavedPlan) =>
+    row.key === activeKey
+      ? textSpan("Aktif", "lencana")
+      : textSpan("—", "muted");
+
+  let cloudKeys = new Set<string>();
+  let activeKey: string | null = null;
+
+  const confirmDelete = async (row: SavedPlan) => {
+    const yes = await confirmDialog({
+      title: "Padam pelan ini?",
+      message: `Pelan ${row.name} dan ${row.done} tanda siap akan dibuang dari pelayar ini${cloudKeys.has(row.key) ? " dan dari awan" : ""}. Tindakan ini tak boleh dibatalkan.`,
+      confirmLabel: "Padam",
+      danger: true,
+    });
+    if (!yes) return;
+    deletePlan(row.key);
+    if (cloudKeys.has(row.key)) await removeFromCloud(row.key);
+    await load();
+  };
+
+  const actionsCell = (row: SavedPlan) => {
+    const actions = document.createElement("div");
+    actions.className = "actions";
+    const open = document.createElement("a");
+    open.className = "btn btn-outline btn-sm";
+    open.href = row.href;
+    open.textContent = "Lihat";
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "btn btn-outline btn-sm";
+    remove.textContent = "Padam";
+    remove.addEventListener("click", () => void confirmDelete(row));
+    actions.append(open, remove);
+    return actions;
+  };
+
+  const table = createTable<SavedPlan>("plans-table", {
+    columns: [
+      (row) => planCell(row),
+      (row) => progressCell(row),
+      (row) => storageCell(row),
+      (row) => statusCell(row),
+      (row) => actionsCell(row),
+    ],
+    search: (row) => `${row.name} ${row.detail} ${row.kind}`,
+  });
+
+  async function load() {
+    table.loading();
+    await pullCloud(); // cloud plans join the local list
+    const [cloud, current] = await Promise.all([listCloud(), activePlan()]);
+    cloudKeys = new Set(cloud?.items.map((item) => item.key) ?? []);
+    activeKey = current?.kunci ?? null;
+    table.data(savedPlans());
+  }
+
+  await load();
+</script>
+
+<style>
+  .plans-header {
+    padding: 0; /* bukan section awam (global.css beri padding besar) */
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .plans-header h2 {
+    margin: 0.15rem 0;
+    font-size: clamp(2rem, 4vw, 2.75rem);
+    color: var(--navy);
+  }
+  .plans-header p {
+    margin: 0;
+  }
+  /* Sel dijana skrip (tiada atribut skop Astro) - perlu :global. */
+  :global(.plan-cell) {
+    display: grid;
+    gap: 0.1rem;
+  }
+  :global(.plan-cell strong) {
+    color: var(--navy);
+  }
+  @media (max-width: 40rem) {
+    .plans-header .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      width: 100%;
+    }
+    .plans-header .btn {
+      padding-inline: 0.75rem; /* label muat sebaris */
+    }
+  }
+</style>

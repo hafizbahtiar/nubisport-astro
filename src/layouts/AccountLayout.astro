@@ -3,6 +3,9 @@
 // Satu-satunya pengawal sesi bagi /account/*: tiada sesi -> /login?next=<page ini>.
 // Page di dalamnya ambil pengguna dengan currentUser() (src/lib/api.ts) - promise yang sama, satu /me.
 import "../styles/global.css";
+import "../styles/forms.css";
+import "../styles/overlays.css";
+import "../styles/panel.css";
 import Head from "../components/layout/Head.astro";
 import ConfirmDialog from "../components/ui/ConfirmDialog.astro";
 import Icon from "../components/ui/Icon.astro";
@@ -44,13 +47,7 @@ const NAV: { tajuk: string; items: NavItem[] }[] = [
   {
     tajuk: "Latihan",
     items: [
-      { href: "/account/plan-5k", label: "Pelan 5K", ikon: "pemasa" },
-      {
-        href: "/account/distance-plan",
-        label: "Pelan 10K / 21K",
-        ikon: "bendera",
-      },
-      { href: "/account/plan-42k", label: "Pelan 42K", ikon: "bendera" },
+      { href: "/account/plans", label: "Pelan larian", ikon: "pemasa" },
       { href: "/account/maf", label: "Kira MAF", ikon: "nadi" },
     ],
   },
@@ -541,12 +538,6 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
     }
     .app-navbar {
       padding: 0 1rem;
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .app-utama,
-    .app-sidebar {
-      transition: none !important;
     }
   }
 </style>

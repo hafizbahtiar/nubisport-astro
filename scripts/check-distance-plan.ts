@@ -110,5 +110,9 @@ ok(analyzeDistancePlan({ jarak: "21k", minggu: 20, hari: 4, masa: 60, sasaran: 1
   ok(!habis.tempo && !habis.interval && Math.round(habis.lumba) === 375, `planDistancePaces habis: ${JSON.stringify(habis)}`);
 }
 
+// `jarak=__proto__` dari URL ditolak, bukan TypeError.
+ok(!buildDistancePlan({ jarak: "__proto__" as Distance, minggu: 10, hari: 3, masa: 30 }).ok, "jarak __proto__ ditolak");
+ok(analyzeDistancePlan({ jarak: "constructor" as Distance, minggu: 10, hari: 3, masa: 30, pace: 360 }) === null, "jarak constructor = null");
+
 if (gagal) throw new Error(`${gagal} semakan gagal`);
 console.log(`ok - ${pelan} pelan disemak`);

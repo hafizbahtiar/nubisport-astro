@@ -28,7 +28,7 @@ ok(!calcPace(5, 5).ok && !calcPace(5, 200).ok && !calcPace(0.1, 1).ok && !calcPa
 const semakPautan = (nama: string, href: string) => {
   const u = new URL(href, "https://x");
   const g = (k: string) => u.searchParams.get(k);
-  if (u.pathname.endsWith("plan-5k")) {
+  if (u.pathname.endsWith("plan-5k") || u.pathname.startsWith("/account/plans/5k/")) {
     const h = buildPlan({ bulan: Number(g("bulan")), tahap: g("tahap") as Level, hari: Number(g("hari")), masa5k: Number(g("masa")) });
     ok(h.ok, `${nama}: ${href} -> ${h.ok ? "" : h.sebab}`);
   } else {
@@ -39,7 +39,7 @@ const semakPautan = (nama: string, href: string) => {
 let pautan = 0;
 for (const hari of [3, 4]) {
   for (let m = 15; m <= 60; m += 0.5)
-    for (const p of nextPlan("5k", m, hari, "/account/plan-5k").pautan) (pautan++, semakPautan(`5k ${m}`, p.href));
+    for (const p of nextPlan("5k", m, hari, "/account/plans/5k/new").pautan) (pautan++, semakPautan(`5k ${m}`, p.href));
   for (let m = 35; m <= 110; m += 1) for (const p of nextPlan("10k", m, hari).pautan) (pautan++, semakPautan(`10k ${m}`, p.href));
   for (let m = 75; m <= 240; m += 1) for (const p of nextPlan("21k", m, hari).pautan) (pautan++, semakPautan(`21k ${m}`, p.href));
 }
@@ -48,8 +48,10 @@ ok(s30.pautan.length === 1 && s30.pautan[0].href.includes("jarak=10k") && s30.pa
 const s33 = nextPlan("5k", 32.2, 4, "/plan-5k");
 ok(s33.pautan[0].href.startsWith("/plan-5k?") && s33.pautan[0].href.includes("masa=33") && s33.pautan[0].href.includes("hari=4"), "5K 32:12 -> 5K baru 33 min, hari kekal");
 ok(nextPlan("5k", 70, 3).pautan.length === 0 && nextPlan("21k", 60, 3).pautan.length === 0 && nextPlan("42k", 300, 3).pautan.length === 0, "luar julat / 42K = tiada pautan");
+const s10 = nextPlan("10k", 70, 3);
+ok(s10.pautan.length === 1 && s10.pautan[0].href.startsWith("/account/plans/21k/new?") && s10.pautan[0].href.includes("masa=70"), "10K 1:10 -> pelan 21K, masa 70");
 const s21 = nextPlan("21k", 129.5, 3);
-ok(s21.pautan.length === 1 && s21.pautan[0].href.startsWith("/account/plan-42k?") && s21.pautan[0].href.includes("masa=130"), "21K 2:09:30 -> pelan 42K, masa 130");
+ok(s21.pautan.length === 1 && s21.pautan[0].href.startsWith("/account/plans/42k/new?") && s21.pautan[0].href.includes("masa=130"), "21K 2:09:30 -> pelan 42K, masa 130");
 
 if (gagal) throw new Error(`${gagal} semakan gagal`);
 console.log(`ok - pace + ${pautan} pautan pelan seterusnya disemak`);

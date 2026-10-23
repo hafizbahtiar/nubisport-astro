@@ -101,8 +101,7 @@ import { STATES } from "../lib/run-check";
       bahagian.push(`<p class="muted">Bacaan IPU tak tersedia sekarang.</p>`);
     }
 
-    const hari =
-      cuaca?.find((d) => d.date === todayMY()) ?? cuaca?.[0] ?? null;
+    const hari = cuaca?.find((d) => d.date === todayMY()) ?? cuaca?.[0] ?? null;
     if (hari) {
       const butir = [
         hari.morning ? `Pagi: ${esc(hari.morning)}.` : "",

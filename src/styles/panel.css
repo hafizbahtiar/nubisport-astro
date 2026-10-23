@@ -1,6 +1,5 @@
 /* Panel akaun standard: .stat (tiga kad angka), .panel (kotak kandungan), .panel-kepala (tajuk + kawalan).
-   Sumber = dashboard (src/pages/account/index.astro). Dashboard dan Aktiviti masih ada salinan scoped -
-   pindah ke fail ini bila disentuh. Diimport oleh page yang memerlukannya sahaja. */
+   Satu sumber untuk semua halaman akaun; diimport oleh AccountLayout. */
 .stat {
   list-style: none;
   padding: 0;
@@ -9,17 +8,20 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
 }
+
 .stat li,
 .panel {
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
 }
+
 .stat li {
   display: grid;
   gap: 0.25rem;
   padding: 1rem 1.25rem;
 }
+
 .stat span {
   font-size: 0.8rem;
   font-weight: 700;
@@ -27,24 +29,29 @@
   text-transform: uppercase;
   color: var(--muted);
 }
+
 .stat strong {
   font-family: var(--display);
   font-style: italic;
   font-size: 2rem;
   color: var(--navy);
 }
+
 /* Telefon: tiga kad kekal sebaris (bukan tiga skrin), teks lebih kecil. */
 @media (max-width: 36rem) {
   .stat {
     gap: 0.5rem;
   }
+
   .stat li {
     padding: 0.75rem;
   }
+
   .stat span {
     font-size: 0.68rem;
     letter-spacing: 0.06em;
   }
+
   .stat strong {
     font-size: 1.35rem;
     line-height: 1.1;
@@ -57,14 +64,17 @@
   justify-items: start;
   padding: 1.25rem 1.5rem;
 }
+
 .panel h3 {
   margin: 0;
   font-size: 1.5rem;
   color: var(--navy);
 }
+
 .panel p {
   margin: 0;
 }
+
 .panel-kepala {
   justify-self: stretch;
   display: flex;

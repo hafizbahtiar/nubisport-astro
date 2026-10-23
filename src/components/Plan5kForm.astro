@@ -1,0 +1,148 @@
+---
+// Borang 5K - satu markup untuk page awam (dalam PageHero) dan akaun (dalam panel).
+// Ibu bapa (Plan5k.astro) uruskan layout + script (#borang).
+import ChipGroup from "./ui/ChipGroup.astro";
+import Field from "./ui/Field.astro";
+import DatePicker from "./ui/DatePicker.astro";
+import Checkbox from "./ui/Checkbox.astro";
+import RaceDateField from "./RaceDateField.astro";
+import { CONDITIONS, AGE_MAX, AGE_MIN } from "../lib/maf";
+import {
+  PLAN_MONTHS,
+  DAYS_PER_WEEK,
+  TIME_MAX,
+  TIME_MIN,
+  LEVELS,
+} from "../lib/plan-5k";
+
+interface Props {
+  full?: boolean;
+  mode?: "public" | "new" | "view";
+}
+const { full = false, mode = "public" } = Astro.props;
+const maf = full ? "/account/maf" : "/maf";
+const tahun = new Date().getFullYear();
+---
+
+<form
+  class="form"
+  method="get"
+  id="borang"
+  data-full={full ? "1" : undefined}
+  data-mode={mode}
+>
+  <RaceDateField jarak={["5K"]} />
+  <fieldset class="form-group" id="tempoh-medan">
+    <ChipGroup
+      legend="Tempoh"
+      name="bulan"
+      checked={3}
+      options={PLAN_MONTHS.map((b) => ({ value: b, label: `${b} bulan` }))}
+    />
+  </fieldset>
+  <ChipGroup
+    legend="Tahap sekarang"
+    name="tahap"
+    checked="jalan"
+    options={Object.entries(LEVELS).map(([value, label]) => ({
+      value,
+      label,
+    }))}
+  />
+  <Field label="Masa 5K sekarang (minit)" id="masa-medan" hidden>
+    <input
+      class="input"
+      type="number"
+      name="masa"
+      min={TIME_MIN}
+      max={TIME_MAX}
+      step="1"
+      inputmode="numeric"
+      placeholder="cth. 36"
+    />
+  </Field>
+  <ChipGroup
+    legend="Sasaran 5K"
+    name="pace"
+    checked=""
+    required={false}
+    options={[
+      { value: "", label: "Bawah 30 minit (6:00/km)" },
+      { value: 336, label: "Bawah 28 minit (5:36/km)" },
+      { value: 300, label: "Bawah 25 minit (5:00/km)" },
+    ]}
+  />
+  <ChipGroup
+    legend="Hari seminggu"
+    name="hari"
+    checked={3}
+    options={DAYS_PER_WEEK.map((h) => ({ value: h, label: `${h} hari` }))}
+  />
+  {
+    full && (
+      <Fragment>
+        <Checkbox
+          name="maf"
+          id="maf"
+          label="Ikut nadi (MAF)"
+          hint="Sesi mudah dan larian panjang dikawal had kadar nadi anda. Perlu jam atau tali dada pengukur nadi."
+        />
+        <fieldset class="form-group" id="maf-medan" hidden disabled>
+          <Field label="Umur (tahun)">
+            <input
+              class="input"
+              type="number"
+              name="umur"
+              min={AGE_MIN}
+              max={AGE_MAX}
+              step="1"
+              inputmode="numeric"
+              required
+              placeholder="cth. 32"
+            />
+          </Field>
+          <ChipGroup
+            legend="Keadaan anda sekarang"
+            name="keadaan"
+            checked="terganggu"
+            stacked
+            options={Object.entries(CONDITIONS).map(([value, k]) => ({
+              value,
+              label: k.label,
+            }))}
+          />
+          <p class="field-hint">
+            Apa itu MAF?{" "}
+            <a class="link" href={maf}>
+              Baca panduan lari ikut nadi
+            </a>
+            .
+          </p>
+        </fieldset>
+      </Fragment>
+    )
+  }
+  <Field
+    label="Tarikh mula (pilihan)"
+    for="mula-text"
+    hint="Pelan bermula pada hari Isnin pada atau lepas tarikh ini."
+  >
+    <DatePicker
+      id="mula"
+      name="mula"
+      min={`${tahun - 1}-01-01`}
+      max={`${tahun + 2}-12-31`}
+    />
+  </Field>
+  {
+    mode === "view" ? (
+      <button class="btn btn-primary" type="submit">
+        Kemas kini pelan
+      </button>
+    ) : (
+      <button class="btn btn-primary" type="submit">
+        Buat pelan
+      </button>
+    )
+  }
+</form>

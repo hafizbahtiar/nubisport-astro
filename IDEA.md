@@ -6,7 +6,7 @@ Semakan terakhir: 2026-10-22.
 
 ## Dah ada
 
-Pelan 5K bawah 30 minit · Pelan 10K / 21K · **Pelan 42K maraton** (`/account/plan-42k`, bertangga dari masa 21K) (akaun) ·
+Pelan 5K bawah 30 minit · Pelan 10K / 21K · **Pelan 42K maraton** (`/account/plans/42k/new`, bertangga dari masa 21K) (akaun) ·
 **nasihat pemula** (pelan 10K/21K/42K: "Saya pemula" -> mula dari Pelan 5K tahap sifar) · **pemasa jalan-lari** · **sambung lepas terlepas sesi** · **kalkulator pace** (`/pace`) · **pelan seterusnya lepas hari ujian/lumba** · **kongsi pelan dengan kawan** · **panduan pemula + senarai semak hari lumba** (`/guide`) · MAF / lari ikut nadi · fail `.ics` · had 3 pelan
 tanpa akaun · daftar + sahkan e-mel · profil (Maklumat / Latihan / Keselamatan) + tukar kata laluan · simpan ke awan
 (percuma 1 slot, ahli 5, admin 10; segerak tanda siap) · **aktiviti Strava** (ahli muat naik `.fit` + `.gpx`,

@@ -53,8 +53,9 @@ import Icon from "./ui/Icon.astro";
         <button class="btn btn-ghost" type="button" data-tutup>Tutup</button>
       </div>
       <p class="pemasa-nota">
-        Biarkan skrin terbuka - bunyi dan getaran tak jalan bila skrin dikunci. Panduan umum, bukan nasihat perubatan: berhenti kalau sakit
-        dada, pening atau sesak nafas.
+        Biarkan skrin terbuka - bunyi dan getaran tak jalan bila skrin dikunci.
+        Panduan umum, bukan nasihat perubatan: berhenti kalau sakit dada, pening
+        atau sesak nafas.
       </p>
     </div>
   </div>
@@ -141,7 +142,9 @@ import Icon from "./ui/Icon.astro";
     tikLalu = detik;
 
     d.dataset.buat = s?.buat ?? "siap";
-    $("[data-buat-teks]").textContent = s ? SEGMENT_LABELS[s.buat] : "Sesi siap!";
+    $("[data-buat-teks]").textContent = s
+      ? SEGMENT_LABELS[s.buat]
+      : "Sesi siap!";
     if (s) $("[data-masa]").textContent = mmss(k.baki);
     else $("[data-masa]").innerHTML = icon("selesai");
     const lepas = segmen[k.i + 1];

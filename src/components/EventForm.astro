@@ -17,7 +17,7 @@ const { id, submitLabel = "Simpan" } = Astro.props;
 const tahun = new Date().getFullYear();
 ---
 
-<form class="form borang-larian" id={id} novalidate>
+<form class="form form-grid" id={id} novalidate>
   <Field label="Tajuk">
     <input
       class="input"
@@ -89,20 +89,3 @@ const tahun = new Date().getFullYear();
     <slot name="actions" />
   </div>
 </form>
-
-<style>
-  @media (min-width: 48rem) {
-    .borang-larian {
-      max-width: none;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      align-items: start;
-    }
-    .borang-larian > :is(:has(textarea), .alert, .actions) {
-      grid-column: 1 / -1;
-    }
-  }
-  .borang-larian :global(.input:not(.dp-teks)),
-  .borang-larian :global(.dp:not(.tp)) {
-    width: 100%;
-  }
-</style>

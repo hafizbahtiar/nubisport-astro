@@ -3,12 +3,13 @@
 import AccountLayout from "../../../layouts/AccountLayout.astro";
 import Alert from "../../../components/ui/Alert.astro";
 import EventForm from "../../../components/EventForm.astro";
-import "../../../styles/panel.css";
 ---
 
 <AccountLayout title="Tambah larian">
-  <p class="balik">
-    <a class="link" href="/account/events">← Larian kumpulan</a>
+  <p class="back-link-row">
+    <a class="back-link back-link--accent" href="/account/events"
+      >← Larian kumpulan</a
+    >
   </p>
   <Alert variant="warning" title="Untuk admin Nubi" id="bukan-admin" hidden>
     <p>Hanya admin Nubi boleh tambah larian.</p>
@@ -41,9 +42,6 @@ import "../../../styles/panel.css";
 </script>
 
 <style>
-  .balik {
-    margin: 0 0 1rem;
-  }
   #isi {
     justify-items: stretch;
   }

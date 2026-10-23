@@ -250,5 +250,11 @@ ok(!buildPlan({ bulan: 0, minggu: RACE_WEEKS[1] + 1, hari: 3, tahap: "5k", masa5
       }
 }
 
+// Param URL `tahap=constructor` (kunci prototaip) ditolak, bukan TypeError yang mematikan page.
+for (const t of ["constructor", "toString", "__proto__"]) {
+  ok(!buildPlan({ bulan: 3, tahap: t as Level, hari: 3 }).ok, `tahap ${t} ditolak`);
+  ok(analyzePlan({ bulan: 3, tahap: t as Level, hari: 3 }) === null, `analisis tahap ${t} = null`);
+}
+
 if (gagal) throw new Error(`${gagal} semakan gagal`);
 console.log(`ok - ${pelan} pelan disemak`);

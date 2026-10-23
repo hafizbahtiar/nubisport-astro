@@ -33,6 +33,19 @@ export async function api(path: string, init: RequestInit = {}): Promise<Respons
   return res;
 }
 
+/**
+ * `?next=` selepas log masuk: laluan dalam laman ini saja, selain itu `/account`. Dinilai dengan URL (bukan
+ * regex) sebab pelayar buang tab/baris baru - "/\t/evil.com" jadi "//evil.com".
+ */
+export function internalPath(next: string | null, origin: string): string {
+  try {
+    const u = new URL(next || "/account", origin);
+    return u.origin === origin ? u.pathname + u.search + u.hash : "/account";
+  } catch {
+    return "/account"; // contoh "http://[" - URL tak sah
+  }
+}
+
 /** Badan JSON respons, atau {} jika bukan JSON (contoh ralat proxy). */
 export const json = (res: Response): Promise<Record<string, any>> => res.json().catch(() => ({}));
 

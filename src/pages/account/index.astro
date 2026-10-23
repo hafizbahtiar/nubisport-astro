@@ -77,11 +77,7 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
     <div class="panel-kepala">
       <h3 class="display">Pelan saya</h3>
       <div class="actions">
-        <a class="btn btn-primary btn-sm" href="/account/plan-5k">Pelan 5K</a>
-        <a class="btn btn-outline btn-sm" href="/account/distance-plan"
-          >Pelan 10K / 21K</a
-        >
-        <a class="btn btn-outline btn-sm" href="/account/plan-42k">Pelan 42K</a>
+        <a class="btn btn-primary btn-sm" href="/account/plans">Pelan larian</a>
       </div>
     </div>
     <div class="awan-meter" id="awan">
@@ -119,26 +115,10 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
     shortWhen,
     started,
   } from "../../lib/events";
-  import {
-    LEVELS,
-    resumePoint,
-    startMonday,
-    isoDate,
-    formatPace,
-    type Level,
-  } from "../../lib/plan-5k";
-  import {
-    DISTANCES,
-    formatTime,
-    type Distance,
-  } from "../../lib/distance-plan";
+  import { resumePoint, startMonday, isoDate } from "../../lib/plan-5k";
+  import { describePlan } from "../../lib/plan-list";
   import { loadBarHtml } from "../../lib/plan-render";
-  import {
-    CREATED_KEY,
-    readList,
-    readParams,
-    deletePlan,
-  } from "../../lib/saved-plans";
+  import { CREATED_KEY, readList, deletePlan } from "../../lib/saved-plans";
   import {
     ENGINE_VERSION,
     removeFromCloud,
@@ -155,7 +135,6 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
     activitiesBetween,
     sessionLabel,
     activePlan,
-    planFromParams,
     weeklyLoad,
     syncActivePlan,
   } from "../../lib/plan-sync";
@@ -236,50 +215,6 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
   // /me pulang). Jangan tunggu /me di sini: senarai pelan (localStorage) dilukis serta-merta.
   const sesi = currentUser();
 
-  // Pelan tersimpan (lib/saved-plans.ts): parameter "<kunci>#p" (v2: lumba, pace, minggu 5K), atau - pelan
-  // lama tanpa parameter - dari kunci "pelan-5k:<bulan>-<tahap>-<masa>-<hari>" / "pelan-10k|21k|42k:<minggu>-<masa>-<sasaran>-<hari>".
-  function butiran(kunci: string) {
-    const [jenis, isi] = kunci.split(":");
-    const [a, b, c, hari] = isi.split("-");
-    const p: Record<string, string> =
-      readParams(kunci) ??
-      (jenis === "pelan-5k"
-        ? { bulan: a, tahap: b, hari, ...(c ? { masa: c } : {}) }
-        : {
-            jarak: jenis.slice("pelan-".length),
-            minggu: a,
-            masa: b,
-            hari,
-            ...(c ? { sasaran: c } : {}),
-          });
-    const h = planFromParams(kunci, p);
-    if (!h) return false;
-    const lumba = p.lumba
-      ? `Lumba ${new Date(`${p.lumba}T00:00:00`).toLocaleDateString("ms-MY", { day: "numeric", month: "short", year: "numeric" })} · ${p.minggu} minggu`
-      : null;
-    if (h.jenis === "5k")
-      return {
-        h,
-        p,
-        nama: `5K · ${lumba ?? `${p.bulan} bulan`} · ${p.hari} hari seminggu`,
-        sub: `${LEVELS[p.tahap as Level]}${p.masa ? ` (${p.masa} min)` : ""}${p.pace ? ` · pace ${formatPace(+p.pace)}/km` : ""}`,
-        href: `/account/plan-5k?${new URLSearchParams({ ...p, kunci })}`,
-      };
-    const k = DISTANCES[h.jenis as Distance];
-    const sasaran = p.pace
-      ? (+p.pace * k.km) / 60
-      : p.sasaran
-        ? +p.sasaran
-        : null;
-    return {
-      h,
-      p,
-      nama: `${k.nama} · ${lumba ?? `${p.minggu} minggu`} · ${p.hari} hari seminggu`,
-      sub: `${k.prasyarat.nama} ${p.masa} min → ${sasaran ? `bawah ${formatTime(sasaran)}` : "habis"}`,
-      href: `${k.halaman}?${new URLSearchParams({ ...p, kunci })}`,
-    };
-  }
-
   const senarai = $("pelan");
   // awan: null = belum tahu / tidak dapat dicapai. menukar = pelan peranti yang menunggu slot awan.
   let awan: CloudList | null = null;
@@ -321,18 +256,16 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
       (x, y) => +diAwan.has(y) - +diAwan.has(x),
     );
     for (const k of kunci) {
-      const p = butiran(k);
+      const p = describePlan(k);
       if (!p) continue;
-      const { h, nama } = p;
-      const jumlah = h.minggu.reduce((n, w) => n + w.sesi.length, 0);
-      const siap = new Set(readList(k)).size;
+      const { done: siap, total: jumlah } = p;
       jumlahSiap += siap;
       const awanIni = diAwan.has(k);
       const li = document.createElement("li");
       if (menukar === k) li.className = "menunggu";
       li.innerHTML = `<a href="${p.href}">
-          <strong>${nama}</strong>
-          <span>${p.sub}</span>
+          <strong>${p.name}</strong>
+          <span>${p.detail}</span>
           <progress max="${jumlah}" value="${siap}"></progress>
           <small>${siap} / ${jumlah} sesi siap · ${Math.round((siap / jumlah) * 100)}%</small>
         </a>
@@ -383,7 +316,7 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
           butang("Padam", async () => {
             const ya = await confirmDialog({
               title: "Padam pelan ini?",
-              message: `Pelan ${nama} dan ${siap} tanda siap akan dibuang dari pelayar ini${awanIni ? " dan dari awan" : ""}. Tindakan ini tak boleh dibatalkan.`,
+              message: `Pelan ${p.name} dan ${siap} tanda siap akan dibuang dari pelayar ini${awanIni ? " dan dari awan" : ""}. Tindakan ini tak boleh dibatalkan.`,
               confirmLabel: "Padam",
               danger: true,
             });
@@ -414,9 +347,7 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
     }
     $("tukar").hidden = !menukar;
     if (menukar)
-      $("tukar-nama").textContent = butiran(menukar)
-        ? (butiran(menukar) as { nama: string }).nama
-        : "";
+      $("tukar-nama").textContent = describePlan(menukar)?.name ?? "";
   }
   $("tukar-batal").addEventListener("click", () => {
     menukar = null;
@@ -467,11 +398,11 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
             todayMY(new Date(a.startedAt)) >= isnin,
         )
         .reduce((n, a) => n + a.movingS / 60, 0);
-      const href = butiran(p.kunci);
+      const href = describePlan(p.kunci);
       if (href) {
         ($("aktif-buka") as HTMLAnchorElement).href = href.href;
         $("aktif-buka").hidden = false;
-        $("aktif-nota").textContent = href.nama;
+        $("aktif-nota").textContent = href.name;
       }
       baris(
         "aktif-seterusnya",
@@ -529,18 +460,17 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
         }
       }
       // Ketinggalan > 1 minggu: "Sambung dari Minggu N" (aliran sama dengan page pelan). Pelan lumba tak dianjak.
-      if (href && !href.p.lumba && href.p.mula) {
+      if (href && !href.params.lumba && href.params.mula) {
         const r = resumePoint(
-          href.h.minggu,
-          startMonday(new Date(`${href.p.mula}T00:00:00`)),
+          href.weeks,
+          startMonday(new Date(`${href.params.mula}T00:00:00`)),
           siap,
         );
         if (r) {
-          const q = new URLSearchParams({ ...href.p, mula: isoDate(r.mula) });
           $("aktif-sambung").innerHTML = `<div class="alert alert-info">
             <p class="alert-title">Terlepas sesi? Tak apa.</p>
             <p>Sambung dari <strong>Minggu ${r.no}</strong> mulai ${r.isninMinggu.toDateString() === new Date().toDateString() ? "hari ini" : "Isnin depan"}, ${r.isninMinggu.toLocaleDateString("ms-MY", { day: "numeric", month: "long" })}. Tarikh pelan dianjak ${r.anjak} minggu; tanda siap kekal.</p>
-            <div class="actions"><a class="btn btn-primary btn-sm" href="${href.href.split("?")[0]}?${q}">Sambung dari Minggu ${r.no}</a></div>
+            <div class="actions"><a class="btn btn-primary btn-sm" href="${href.href}&mula=${isoDate(r.mula)}">Sambung dari Minggu ${r.no}</a></div>
           </div>`;
           $("aktif-sambung").hidden = false;
         }
@@ -560,79 +490,6 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
   }
   .salam {
     padding: 0; /* bukan section awam (global.css beri padding besar) */
-  }
-
-  .stat {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1rem;
-  }
-  .stat li,
-  .panel {
-    background: var(--paper);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-lg);
-  }
-  .stat li {
-    display: grid;
-    gap: 0.25rem;
-    padding: 1rem 1.25rem;
-  }
-  .stat span {
-    font-size: 0.8rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-  .stat strong {
-    font-family: var(--display);
-    font-style: italic;
-    font-size: 2rem;
-    color: var(--navy);
-  }
-  /* Telefon: tiga kad kekal sebaris (bukan tiga skrin), teks lebih kecil. */
-  @media (max-width: 36rem) {
-    .stat {
-      gap: 0.5rem;
-    }
-    .stat li {
-      padding: 0.75rem;
-    }
-    .stat span {
-      font-size: 0.68rem;
-      letter-spacing: 0.06em;
-    }
-    .stat strong {
-      font-size: 1.35rem;
-      line-height: 1.1;
-    }
-  }
-
-  .panel {
-    display: grid;
-    gap: 0.75rem;
-    justify-items: start;
-    padding: 1.25rem 1.5rem;
-  }
-  .panel h3 {
-    margin: 0;
-    font-size: 1.5rem;
-    color: var(--navy);
-  }
-  .panel p {
-    margin: 0;
-  }
-  .panel-kepala {
-    justify-self: stretch;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
   }
 
   .pautan-senarai {
