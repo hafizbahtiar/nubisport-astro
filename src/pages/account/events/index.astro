@@ -89,7 +89,7 @@ import EventList from "../../../components/EventList.astro";
 </AccountLayout>
 
 <script>
-  import { api, currentUser } from "../../../lib/api";
+  import { api, cachedMe, currentUser } from "../../../lib/api";
   import { confirmDialog } from "../../../lib/confirm";
   import { createTable } from "../../../lib/table";
   import { renderEventList } from "../../../lib/event-list";
@@ -119,6 +119,16 @@ import EventList from "../../../components/EventList.astro";
     e.textContent = teks;
     if (kelas) e.className = kelas;
     return e;
+  };
+
+  // Senarai diambil serentak dengan /me, ikut peranan dalam salinan /me terakhir (petunjuk; tekaan
+  // salah = dibuang, diambil semula). Backend tetap semak peranan.
+  const tekaan = isEventAdmin(cachedMe());
+  let awal: Promise<Acara[] | null> | null = fetchEvents(tekaan);
+  const ambil = (recent: boolean) => {
+    const p = recent === tekaan ? awal : null;
+    awal = null;
+    return p ?? fetchEvents(recent);
   };
 
   // Pengawal sesi = AccountLayout; s null bermaksud page sedang dilencong ke /login.
@@ -165,7 +175,7 @@ import EventList from "../../../components/EventList.astro";
 
     const muat = async () => {
       jadual.loading();
-      const items = await fetchEvents(true);
+      const items = await ambil(true);
       if (!items) ralat("Tak dapat muat larian sekarang. Cuba lagi sekejap.");
       const semua = items ?? [];
       const akan = semua.filter((a) => !started(a));
@@ -202,7 +212,7 @@ import EventList from "../../../components/EventList.astro";
     const ahli = isEventMember(s);
     $("bukan-ahli").hidden = ahli;
     const muat = async () => {
-      const items = await fetchEvents(false);
+      const items = await ambil(false);
       const semua = items ?? [];
       const minggu = Date.now() + 7 * 86_400_000;
       $("ahli-bil").textContent = String(semua.length);

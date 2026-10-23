@@ -64,6 +64,15 @@ export function cacheMe(s: CurrentUser | null) {
   }
 }
 
+/** Salinan /me terakhir tab ini - petunjuk untuk mula ambil data awal sahaja, bukan untuk keputusan peranan. */
+export function cachedMe(): CurrentUser | null {
+  try {
+    return JSON.parse(sessionStorage.getItem(ME_CACHE_KEY) || "null")?.s ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** Pengguna semasa dari /me (salinan dikemas kini), atau null jika tidak log masuk. */
 export async function fetchMe(): Promise<CurrentUser | null> {
   if (!adaSesi()) return cacheMe(null), null;

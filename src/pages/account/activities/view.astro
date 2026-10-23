@@ -297,23 +297,24 @@ const GAYA: {
   }
 
   async function mula() {
-    const s = await currentUser();
-    const nubi = s?.apps?.nubi;
-    if (!(s?.role === "owner" || nubi === "ahli" || nubi === "admin")) {
-      $("bukan-ahli").hidden = false;
-      return;
-    }
     const params = new URLSearchParams(location.search);
     const id = Number(params.get("id"));
     const version = params.get("v");
     const sah = Number.isSafeInteger(id) && id > 0;
     const fileUrl = (v: string) =>
       `${BASE}/${id}/file?v=${encodeURIComponent(v)}`;
-    // Row + fail serentak untuk link baharu. Link lama (tiada v) baca row dulu supaya
-    // URL fail guna updatedAt semasa - immutable tak boleh dipakai pada URL tanpa versi.
+    // Row + fail serentak dengan /me (backend tapis ikut pemilik). Link lama (tiada v) baca row
+    // dulu supaya URL fail guna updatedAt semasa - immutable tak boleh dipakai pada URL tanpa versi.
     const fileP =
       sah && version ? api(fileUrl(version)).catch(() => null) : null;
-    const r = sah ? await api(`${BASE}/${id}`) : null;
+    const rowP = sah ? api(`${BASE}/${id}`).catch(() => null) : null;
+    const s = await currentUser();
+    const nubi = s?.apps?.nubi;
+    if (!(s?.role === "owner" || nubi === "ahli" || nubi === "admin")) {
+      $("bukan-ahli").hidden = false;
+      return;
+    }
+    const r = await rowP;
     if (!r?.ok) {
       $("tiada").hidden = false;
       return;

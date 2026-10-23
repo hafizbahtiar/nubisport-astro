@@ -83,9 +83,11 @@ import EventForm from "../../../components/EventForm.astro";
   const borang = $("borang") as HTMLFormElement;
 
   // Pengawal sesi = AccountLayout; s null bermaksud page sedang dilencong ke /login.
+  const id = Number(new URLSearchParams(location.search).get("id")) || 0;
+  // Larian diambil serentak dengan /me (bukan selepasnya); muat() pertama memakainya.
+  let awal: Promise<Acara | null> | null = fetchEvent(id);
   const s = await currentUser();
   const admin = isEventAdmin(s);
-  const id = Number(new URLSearchParams(location.search).get("id")) || 0;
   let semasa: Acara | null = null;
 
   const modEdit = (on: boolean) => {
@@ -99,7 +101,8 @@ import EventForm from "../../../components/EventForm.astro";
   };
 
   async function muat() {
-    const a = await fetchEvent(id);
+    const a = await (awal ?? fetchEvent(id));
+    awal = null;
     semasa = a;
     if (!a) {
       $("isi").hidden = true;

@@ -267,6 +267,14 @@ Item yang dah siap dibuang (lihat git history).
   padanan pelan kemudian. Backend: `Cache-Control: private, max-age=31536000, immutable` pada
   `/activities/:id/file` (fail tak pernah berubah) - dah ditambah. Senarai aktiviti diukur laju secara tempatan (180-225 ms,
   300 baris) - kalau perlahan di production, itu rangkaian/API (`/me` dulu, kemudian 3 panggilan).
+- [x] **Navigasi akaun** (2026-10-23, owner pilih A: kekal MPA). Spinner tab = normal untuk laman statik
+  berbilang page; yang lambat ialah data selepas page dibuka. Senarai aktiviti, detail aktiviti, senarai
+  larian dan detail larian kini mula ambil data **serentak dengan `/me`**, bukan selepasnya (senarai larian
+  ikut peranan dari `cachedMe()` - petunjuk sahaja, backend tetap semak). Diuji dengan API mock 300 ms.
+- [ ] Kalau page akaun masih perlahan di production: sahkan lokasi D1 (`bunx wrangler d1 info hono_workers_db`)
+  dan pertimbang Smart Placement untuk hono-workers (`"placement": { "mode": "smart" }`).
+- [ ] Ditolak buat masa ini: `<ClientRouter />` (setiap skrip page perlu ditulis semula ke `astro:page-load`)
+  dan `clientPrerender` (skrip page berjalan masa hover - panggil API, dan ada page yang menulis bila dibuka).
 - [ ] Favicon 16px: dua garis N terlalu halus di tab - minta pereka versi favicon garis lebih tebal.
 - [ ] Label hero "Running Community · Sejak 2026" - kekal atau buang (wordmark kini "NUBI SPORT").
 - [ ] Gambar sebenar komuniti (larian kumpulan) - laman kini teks + jata saja. Perlu kebenaran orang

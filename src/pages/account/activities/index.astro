@@ -295,6 +295,25 @@ import Table from "../../../components/ui/Table.astro";
     return badan;
   }
 
+  const dari = (hari: number) =>
+    new Date(Date.now() - hari * 86_400_000).toISOString().slice(0, 10);
+
+  // Mula ambil data serentak dengan /me (backend tapis ikut pemilik), bukan selepasnya. Setiap
+  // respons dipakai sekali oleh mula(); tukar tempoh kemudian = panggilan baharu.
+  let setujuAwal: Promise<Response | null> | null = api(
+    "/me/apps/nubi/consent",
+  ).catch(() => null);
+  let senaraiAwal: Promise<Response | null> | null = api(
+    `${BASE}?from=${dari(90)}`,
+  ).catch(() => null);
+  let mingguAwal: Promise<Response | null> | null = api(
+    `${BASE}?from=${dari(7)}`,
+  ).catch(() => null);
+  const sekali = (
+    p: Promise<Response | null> | null,
+    baru: () => Promise<Response | null>,
+  ) => p ?? baru();
+
   const s = await currentUser();
   const nubi = s?.apps?.nubi;
   const ahli = s?.role === "owner" || nubi === "ahli" || nubi === "admin";
@@ -348,22 +367,22 @@ import Table from "../../../components/ui/Table.astro";
     $<HTMLInputElement>("setuju-tanda").addEventListener("change", segarButang);
 
     // Persetujuan sekali (backend: app_items nubi/consent/aktiviti).
-    const [c, ada] = await Promise.all([
-      api("/me/apps/nubi/consent"),
-      senarai(),
-      minggu(),
-    ]);
-    perluSetuju = !(c.ok && ((await json(c)).data?.items?.length ?? 0) > 0);
+    const c = sekali(setujuAwal, () =>
+      api("/me/apps/nubi/consent").catch(() => null),
+    );
+    setujuAwal = null;
+    const [cr, ada] = await Promise.all([c, senarai(), minggu()]);
+    perluSetuju = !(cr?.ok && ((await json(cr)).data?.items?.length ?? 0) > 0);
     // Arahan Strava terbuka untuk ahli yang belum ada aktiviti; selepas itu dilipat.
     $<HTMLDetailsElement>("cara").open = ada === 0;
   }
 
-  const dari = (hari: number) =>
-    new Date(Date.now() - hari * 86_400_000).toISOString().slice(0, 10);
-
   async function minggu() {
-    const r = await api(`${BASE}?from=${dari(7)}`);
-    if (!r.ok) return;
+    const r = await sekali(mingguAwal, () =>
+      api(`${BASE}?from=${dari(7)}`).catch(() => null),
+    );
+    mingguAwal = null;
+    if (!r?.ok) return;
     const t = (await json(r)).data.totals;
     $("bil-minggu").textContent = String(t.count);
     $("jarak-minggu").textContent = formatKm(t.distanceM);
@@ -376,10 +395,13 @@ import Table from "../../../components/ui/Table.astro";
     const pilihan =
       document.querySelector<HTMLInputElement>('input[name="tempoh"]:checked')
         ?.value ?? "90";
-    const r = await api(
-      `${BASE}?from=${pilihan === "semua" ? "2000-01-01" : dari(Number(pilihan))}`,
+    const r = await sekali(pilihan === "90" ? senaraiAwal : null, () =>
+      api(
+        `${BASE}?from=${pilihan === "semua" ? "2000-01-01" : dari(Number(pilihan))}`,
+      ).catch(() => null),
     );
-    if (!r.ok) {
+    senaraiAwal = null;
+    if (!r?.ok) {
       jadualAkt.data([]);
       $("jumlah").textContent =
         "Aktiviti tak dapat dimuatkan. Muat semula halaman.";
