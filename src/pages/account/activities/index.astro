@@ -1,12 +1,8 @@
 ---
-// Aktiviti dari fail Strava (FIT wajib + GPX pilihan). Ahli ke atas sahaja - backend menyekat (403),
-// page ini hanya menyembunyikan borang. Pelan: docs/plans/strava-activities.md.
-// Aliran: seret fail -> dulang (pratonton + status setiap aktiviti) -> Simpan. Persetujuan sebaris
-// dengan butang Simpan (sekali sahaja), bukan langkah berasingan.
+// Senarai aktiviti Strava (ahli+). Borang upload di /account/activities/new; detail di view.
+// Backend tetap pengawal (403) - page hanya menyembunyikan akses.
 import AccountLayout from "../../../layouts/AccountLayout.astro";
 import Alert from "../../../components/ui/Alert.astro";
-import Checkbox from "../../../components/ui/Checkbox.astro";
-import Icon from "../../../components/ui/Icon.astro";
 import Dropdown from "../../../components/ui/Dropdown.astro";
 import Table from "../../../components/ui/Table.astro";
 ---
@@ -15,9 +11,8 @@ import Table from "../../../components/ui/Table.astro";
   <Alert variant="info" title="Ciri untuk ahli" id="bukan-ahli" hidden>
     <p>
       Import aktiviti Strava terbuka untuk ahli Nubi Sport. Keahlian diluluskan
-      pentadbir - hubungi kami melalui kumpulan larian.
+      pentadbir - <a class="link" href="/account/pricing">lihat keahlian</a>.
     </p>
-    <!-- Bekas ahli: data lama kekal milik mereka - boleh dipadam walaupun bukan ahli lagi. -->
     <p id="data-lama" hidden>
       <span id="data-lama-teks"></span>
       <button class="btn btn-bahaya btn-sm" type="button" id="padam-lama">
@@ -26,6 +21,8 @@ import Table from "../../../components/ui/Table.astro";
     </p>
   </Alert>
 
+  <Alert variant="danger" id="status" hidden />
+
   <div id="ahli" hidden>
     <ul class="stat" aria-label="7 hari terakhir">
       <li><span>Aktiviti 7 hari</span><strong id="bil-minggu">0</strong></li>
@@ -33,113 +30,12 @@ import Table from "../../../components/ui/Table.astro";
       <li><span>Masa</span><strong id="masa-minggu">0m</strong></li>
     </ul>
 
-    <section class="panel" aria-labelledby="tajuk-tambah">
-      <div class="panel-kepala">
-        <h3 class="display" id="tajuk-tambah">Tambah aktiviti</h3>
-      </div>
-
-      <details class="cara" id="cara">
-        <summary>Cara dapatkan fail dari Strava</summary>
-        <ol>
-          <li>
-            Buka aktiviti di <strong>strava.com</strong> (laman web, bukan aplikasi),
-            tekan{" "}
-            <strong>⋯</strong>.
-          </li>
-          <li>
-            <strong>Export Original</strong> memberi fail <code>.fit</code> - wajib,
-            nilainya paling tepat.
-          </li>
-          <li>
-            <strong>Export GPX</strong> memberi fail <code>.gpx</code> - pilihan.
-          </li>
-          <li>
-            Seret kedua-duanya ke kotak di bawah. Boleh banyak aktiviti sekali
-            gus, dalam apa-apa susunan.
-          </li>
-        </ol>
-      </details>
-
-      <Alert variant="warning">
-        <p>
-          Hanya fail daripada <strong>Strava</strong> disokong. Fail daripada aplikasi
-          lain (Garmin, Coros dan lain-lain) mungkin tak dapat dipadankan atau nilainya
-          kurang tepat.
-        </p>
-      </Alert>
-
-      <div class="zon-grid">
-        <label class="zon" data-zon="fit">
-          <input type="file" accept=".fit" multiple class="sr-only" />
-          <span class="zon-ikon"><Icon name="muatNaik" /></span>
-          <strong>Fail .fit <small class="wajib">wajib</small></strong>
-          <span class="muted zon-arahan"
-            >Seret ke sini, atau tekan untuk pilih</span
-          >
-          <ul class="zon-fail"></ul>
-        </label>
-        <label class="zon" data-zon="gpx">
-          <input type="file" accept=".gpx" multiple class="sr-only" />
-          <span class="zon-ikon"><Icon name="muatNaik" /></span>
-          <strong>Fail .gpx <small class="muted">pilihan</small></strong>
-          <span class="muted zon-arahan"
-            >Seret ke sini, atau tekan untuk pilih</span
-          >
-          <ul class="zon-fail"></ul>
-        </label>
-      </div>
-
-      <!-- Dulang: satu baris setiap aktiviti (dan setiap fail yang tidak boleh dipakai), dengan statusnya. -->
-      <ol class="dulang" id="dulang" aria-label="Aktiviti untuk disimpan"></ol>
-
-      <div class="hantar" id="hantar" hidden>
-        <div id="setuju" hidden>
-          <Checkbox
-            name="setuju"
-            id="setuju-tanda"
-            label="Saya setuju fail asal disimpan"
-            hint="Termasuk laluan GPS, untuk analitik Nubi secara agregat. Anda boleh padam bila-bila masa. Ditanya sekali saja."
-          />
-        </div>
-        <div class="actions">
-          <button class="btn btn-primary btn-sm" type="button" id="simpan"
-            >Simpan</button
-          >
-          <button class="btn btn-outline btn-sm" type="button" id="kosong"
-            >Kosongkan</button
-          >
-        </div>
-      </div>
-      <div class="alert" id="status" role="status" aria-live="polite" hidden>
-      </div>
-
-      <p class="muted kecil">
-        Kami simpan ringkasan dan fail asal. Tiada peta dipaparkan kepada
-        sesiapa. Laluan GPS boleh mendedahkan alamat rumah, jadi tetapkan <em
-          >privacy zones</em
-        > di Strava sebelum eksport. Ini bukan sambungan terus ke Strava: muat naik
-        setiap aktiviti baru. Had 5,000 aktiviti.
-      </p>
-    </section>
-
     <section class="panel" aria-labelledby="tajuk-saya">
       <div class="panel-kepala">
         <h3 class="display" id="tajuk-saya">Aktiviti saya</h3>
-        <div class="chips" role="radiogroup" aria-label="Tempoh">
-          <label class="chip"
-            ><input type="radio" name="tempoh" value="30" /><span>30 hari</span
-            ></label
-          >
-          <label class="chip"
-            ><input type="radio" name="tempoh" value="90" checked /><span
-              >90 hari</span
-            ></label
-          >
-          <label class="chip"
-            ><input type="radio" name="tempoh" value="semua" /><span>Semua</span
-            ></label
-          >
-        </div>
+        <a class="btn btn-primary btn-sm" href="/account/activities/new"
+          >Tambah aktiviti</a
+        >
       </div>
       <p class="muted" id="jumlah"></p>
       <Table
@@ -147,7 +43,7 @@ import Table from "../../../components/ui/Table.astro";
         variant="full"
         searchPlaceholder="Cari nama aktiviti…"
         empty="Tiada aktiviti dalam tempoh ini."
-        emptyHint="Seret fail .fit daripada Strava ke kotak di atas, atau tukar tempoh / penapis."
+        emptyHint="Tekan Tambah aktiviti untuk muat naik fail Strava, atau tukar tempoh / penapis."
         emptyIcon="aktiviti"
         columns={[
           { label: "Tarikh" },
@@ -160,6 +56,16 @@ import Table from "../../../components/ui/Table.astro";
         ]}
       >
         <div class="penapis-sukan" slot="filters">
+          <label class="sr-only" for="tempoh-butang">Tempoh</label>
+          <Dropdown
+            id="tempoh"
+            value="90"
+            options={[
+              { value: "30", label: "30 hari" },
+              { value: "90", label: "90 hari" },
+              { value: "semua", label: "Semua" },
+            ]}
+          />
           <label class="sr-only" for="sukan-butang">Sukan</label>
           <Dropdown
             id="sukan"
@@ -176,7 +82,7 @@ import Table from "../../../components/ui/Table.astro";
         </div>
       </Table>
       <button
-        class="btn btn-outline btn-sm"
+        class="btn btn-bahaya btn-sm"
         type="button"
         id="padam-semua"
         hidden>Padam semua data aktiviti saya</button
@@ -191,21 +97,12 @@ import Table from "../../../components/ui/Table.astro";
   import { createTable } from "../../../lib/table";
   import {
     SPORT_LABELS,
-    buildUploadForm,
+    formatDuration,
     formatKm,
     paceFromDistance,
-    pairFiles,
-    formatDuration,
-    type ActivityFiles,
     type Sport,
   } from "../../../lib/activity-file";
-  import {
-    sessionLabel,
-    syncActivities,
-    walkedNote,
-    ticksFrom,
-    offerUntick,
-  } from "../../../lib/plan-sync";
+  import { ticksFrom, offerUntick } from "../../../lib/plan-sync";
 
   const $ = <T extends HTMLElement = HTMLElement>(id: string) =>
     document.getElementById(id) as T;
@@ -236,73 +133,25 @@ import Table from "../../../components/ui/Table.astro";
   const el = (tag: string, cls = "", teks = "") => {
     const e = document.createElement(tag);
     if (cls) e.className = cls;
-    if (teks) e.textContent = teks; // teks pengguna (nama aktiviti, nama fail) sentiasa textContent
+    if (teks) e.textContent = teks;
     return e;
   };
-  // Butang teks standard (sama seperti butang() di dashboard).
   const butang = (teks: string, label: string) => {
     const b = el("button", "btn btn-outline btn-sm", teks) as HTMLButtonElement;
     b.type = "button";
     b.setAttribute("aria-label", label);
     return b;
   };
-  /** Mesej keputusan dalam kotak .alert global. Teks kosong = sembunyi. */
-  const papar = (
-    teks: string,
-    jenis: "success" | "danger" | "info" = "info",
-  ) => {
+  const papar = (teks: string, jenis: "success" | "danger" = "danger") => {
     const a = $("status");
     a.className = `alert alert-${jenis}`;
     a.textContent = teks;
     a.hidden = !teks;
   };
 
-  /** Baris aktiviti: jarak besar di kiri, nama + tarikh, kemudian masa / pace / nadi berlabel. */
-  function kad(r: {
-    sport: Sport;
-    name: string | null;
-    startedAt: string;
-    distanceM: number;
-    movingS: number;
-    avgHr: number | null;
-  }) {
-    const badan = el("div", "akt");
-    const jarak = el("p", "akt-jarak display");
-    jarak.append(
-      document.createTextNode(
-        (r.distanceM / 1000).toLocaleString("ms-MY", {
-          maximumFractionDigits: 2,
-        }),
-      ),
-      el("small", "", " km"),
-    );
-    const tajuk = el("div", "akt-tajuk");
-    tajuk.append(
-      el("strong", "akt-nama", r.name || SPORT_LABELS[r.sport]),
-      el("span", "muted", `${SPORT_LABELS[r.sport]}, ${tarikh(r.startedAt)}`),
-    );
-    const nilai = el("dl", "akt-nilai");
-    const tambahNilai = (k: string, v: string | null) => {
-      if (!v) return;
-      const d = el("div");
-      d.append(el("dt", "", k), el("dd", "", v));
-      nilai.append(d);
-    };
-    tambahNilai("Masa", formatDuration(r.movingS));
-    tambahNilai("Pace", paceFromDistance(r.distanceM, r.movingS));
-    tambahNilai("Nadi", r.avgHr ? `${Math.round(r.avgHr)} bpm` : null);
-    badan.append(jarak, tajuk, nilai);
-    return badan;
-  }
-
   const dari = (hari: number) =>
     new Date(Date.now() - hari * 86_400_000).toISOString().slice(0, 10);
 
-  // Mula ambil data serentak dengan /me (backend tapis ikut pemilik), bukan selepasnya. Setiap
-  // respons dipakai sekali oleh mula(); tukar tempoh kemudian = panggilan baharu.
-  let setujuAwal: Promise<Response | null> | null = api(
-    "/me/apps/nubi/consent",
-  ).catch(() => null);
   let senaraiAwal: Promise<Response | null> | null = api(
     `${BASE}?from=${dari(90)}`,
   ).catch(() => null);
@@ -345,38 +194,6 @@ import Table from "../../../components/ui/Table.astro";
     });
   }
 
-  let perluSetuju = true;
-
-  async function mula() {
-    pasangZon();
-    document
-      .querySelectorAll<HTMLInputElement>('input[name="tempoh"]')
-      .forEach((r) => r.addEventListener("change", senarai));
-    $<HTMLSelectElement>("sukan").addEventListener("change", (e) => {
-      const v = (e.target as HTMLSelectElement).value;
-      jadualAkt.filter(v === "semua" ? null : (r) => r.sport === v);
-    });
-    $("padam-semua").addEventListener("click", padamSemua);
-    $("simpan").addEventListener("click", simpanSemua);
-    $("kosong").addEventListener("click", () => {
-      dipilih.length = 0;
-      status.clear();
-      papar("");
-      void kemas();
-    });
-    $<HTMLInputElement>("setuju-tanda").addEventListener("change", segarButang);
-
-    // Persetujuan sekali (backend: app_items nubi/consent/aktiviti).
-    const c = sekali(setujuAwal, () =>
-      api("/me/apps/nubi/consent").catch(() => null),
-    );
-    setujuAwal = null;
-    const [cr, ada] = await Promise.all([c, senarai(), minggu()]);
-    perluSetuju = !(cr?.ok && ((await json(cr)).data?.items?.length ?? 0) > 0);
-    // Arahan Strava terbuka untuk ahli yang belum ada aktiviti; selepas itu dilipat.
-    $<HTMLDetailsElement>("cara").open = ada === 0;
-  }
-
   async function minggu() {
     const r = await sekali(mingguAwal, () =>
       api(`${BASE}?from=${dari(7)}`).catch(() => null),
@@ -389,24 +206,21 @@ import Table from "../../../components/ui/Table.astro";
     $("masa-minggu").textContent = formatDuration(t.movingS);
   }
 
-  /** Senarai aktiviti tersimpan. Pulang bilangan dalam tempoh, atau -1 bila gagal. */
   async function senarai(): Promise<number> {
     jadualAkt.loading();
-    const pilihan =
-      document.querySelector<HTMLInputElement>('input[name="tempoh"]:checked')
-        ?.value ?? "90";
-    const r = await sekali(pilihan === "90" ? senaraiAwal : null, () =>
+    const tempoh = $<HTMLSelectElement>("tempoh").value;
+    const r = await sekali(tempoh === "90" ? senaraiAwal : null, () =>
       api(
-        `${BASE}?from=${pilihan === "semua" ? "2000-01-01" : dari(Number(pilihan))}`,
+        `${BASE}?from=${tempoh === "semua" ? "2000-01-01" : dari(Number(tempoh))}`,
       ).catch(() => null),
     );
     senaraiAwal = null;
     if (!r?.ok) {
       jadualAkt.data([]);
-      $("jumlah").textContent =
-        "Aktiviti tak dapat dimuatkan. Muat semula halaman.";
+      papar("Aktiviti tak dapat dimuatkan. Muat semula halaman.");
       return -1;
     }
+    papar("");
     const { activities, totals } = (await json(r)).data as {
       activities: Baris[];
       totals: { count: number; distanceM: number; movingS: number };
@@ -419,7 +233,6 @@ import Table from "../../../components/ui/Table.astro";
     return activities.length;
   }
 
-  // Jadual "Aktiviti saya" (components/ui/Table.astro): cari nama, penapis sukan, papar N, halaman.
   const jadualAkt = createTable<Baris>("senarai", {
     search: (a) => `${a.name ?? ""} ${SPORT_LABELS[a.sport]}`,
     columns: [
@@ -456,11 +269,10 @@ import Table from "../../../components/ui/Table.astro";
       danger: true,
     });
     if (!ya) return;
-    const tanda = await ticksFrom([a]).catch(() => null); // sebelum padam: padanan perlukan aktiviti ini
+    const tanda = await ticksFrom([a]).catch(() => null);
     const d = await api(`${BASE}/${a.id}`, { method: "DELETE" });
     if (!d.ok && d.status !== 404) {
-      $("jumlah").textContent =
-        "Aktiviti tak dapat dipadam. Semak sambungan dan cuba lagi.";
+      papar("Aktiviti tak dapat dipadam. Semak sambungan dan cuba lagi.");
       return;
     }
     await Promise.all([senarai(), minggu()]);
@@ -479,416 +291,46 @@ import Table from "../../../components/ui/Table.astro";
     const tanda = await ticksFrom("semua").catch(() => null);
     const r = await api(BASE, { method: "DELETE" });
     if (!r.ok) {
-      $("jumlah").textContent =
-        "Data tak dapat dipadam. Semak sambungan dan cuba lagi.";
+      papar("Data tak dapat dipadam. Semak sambungan dan cuba lagi.");
       return;
     }
-    // Backend also removes the consent record: uploads need the checkbox again.
-    perluSetuju = true;
-    $<HTMLInputElement>("setuju-tanda").checked = false;
-    segarButang();
-    papar("Data aktiviti dipadam dan persetujuan ditarik.", "success");
     await Promise.all([senarai(), minggu()]);
+    papar(
+      "Data aktiviti dipadam dan persetujuan ditarik. Muat naik seterusnya akan minta persetujuan semula.",
+      "success",
+    );
     await offerUntick(tanda);
   }
 
-  // ---------- Dulang ----------
-  // Semua fail yang dipilih/diseret dari kedua-dua zon. Fail diasingkan ikut sambungan, bukan
-  // zon: .gpx yang diseret ke zon FIT tetap masuk sebagai GPX.
-  const dipilih: File[] = [];
-  const kunciFail = (f: File) => `${f.name}:${f.size}:${f.lastModified}`;
-  let sedia: ActivityFiles[] = [];
-  let menyimpan = false;
-  /** Status setiap aktiviti (kunci = masa mula) semasa/selepas Simpan. */
-  const status = new Map<
-    string,
-    { jenis: "kerja" | "ok" | "gagal"; teks: string }
-  >();
+  $<HTMLSelectElement>("tempoh").addEventListener(
+    "change",
+    () => void senarai(),
+  );
+  $<HTMLSelectElement>("sukan").addEventListener("change", (e) => {
+    const v = (e.target as HTMLSelectElement).value;
+    jadualAkt.filter(v === "semua" ? null : (r) => r.sport === v);
+  });
+  $("padam-semua").addEventListener("click", padamSemua);
 
-  function tambah(fail: Iterable<File>) {
-    if (menyimpan) return;
-    const ada = new Set(dipilih.map(kunciFail));
-    for (const f of fail)
-      if (!ada.has(kunciFail(f))) (dipilih.push(f), ada.add(kunciFail(f)));
-    // Fail baru = pusingan baru: buang status "disimpan" lama, kekalkan yang gagal untuk dicuba semula.
-    for (const [k, v] of status) if (v.jenis === "ok") status.delete(k);
-    papar("");
-    void kemas();
-  }
-
-  function buang(f: File) {
-    const i = dipilih.indexOf(f);
-    if (i >= 0) dipilih.splice(i, 1);
-    void kemas();
-  }
-
-  function pasangZon() {
-    document.querySelectorAll<HTMLElement>("[data-zon]").forEach((zon) => {
-      const input = zon.querySelector("input")!;
-      input.addEventListener("change", () => {
-        tambah(input.files ?? []);
-        input.value = ""; // fail yang sama boleh dipilih semula
-      });
-      zon.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        zon.classList.add("aktif");
-      });
-      zon.addEventListener("dragleave", () => zon.classList.remove("aktif"));
-      zon.addEventListener("drop", (e) => {
-        e.preventDefault();
-        zon.classList.remove("aktif");
-        tambah(e.dataTransfer?.files ?? []);
-      });
-    });
-    // Fail yang terlepas di luar zon jangan dibuka oleh pelayar (meninggalkan page) - terima sahaja.
-    window.addEventListener("dragover", (e) => e.preventDefault());
-    window.addEventListener("drop", (e) => {
-      e.preventDefault();
-      if (!(e.target as HTMLElement).closest?.("[data-zon]"))
-        tambah(e.dataTransfer?.files ?? []);
-    });
-  }
-
-  function segarButang() {
-    const n = sedia.filter(
-      (a) => status.get(a.ringkasan.startedAt)?.jenis !== "ok",
-    ).length;
-    $("hantar").hidden = dipilih.length === 0;
-    $("setuju").hidden = !perluSetuju || n === 0;
-    const b = $<HTMLButtonElement>("simpan");
-    b.hidden = n === 0;
-    b.textContent = menyimpan ? "Menyimpan…" : `Simpan ${n} aktiviti`;
-    b.disabled =
-      menyimpan ||
-      (perluSetuju && !$<HTMLInputElement>("setuju-tanda").checked);
-    $<HTMLButtonElement>("kosong").disabled = menyimpan;
-  }
-
-  // ponytail: setiap perubahan menghurai semula semua fail - beratus fail sekali gus perlukan cache.
-  async function kemas() {
-    for (const jenis of ["fit", "gpx"] as const) {
-      const zon = document.querySelector<HTMLElement>(`[data-zon="${jenis}"]`)!;
-      const fail = dipilih.filter((f) =>
-        f.name.toLowerCase().endsWith(`.${jenis}`),
-      );
-      zon.classList.toggle("berisi", fail.length > 0);
-      zon.querySelector(".zon-arahan")!.textContent = fail.length
-        ? `${fail.length} fail dipilih. Seret lagi untuk tambah.`
-        : "Seret ke sini, atau tekan untuk pilih";
-      zon.querySelector(".zon-fail")!.replaceChildren(
-        ...fail.map((f) => {
-          const li = el("li");
-          const x = butang("Buang", `Buang ${f.name}`);
-          x.addEventListener("click", (e) => {
-            e.preventDefault(); // dalam <label>: jangan buka pemilih fail
-            buang(f);
-          });
-          li.append(el("span", "", f.name), x);
-          return li;
-        }),
-      );
-    }
-
-    const { aktiviti, gagal } = await pairFiles(dipilih);
-    sedia = aktiviti;
-    const dulang = $("dulang");
-    dulang.replaceChildren(
-      ...aktiviti.map((a) => {
-        const st = status.get(a.ringkasan.startedAt);
-        const li = el("li", st ? `st-${st.jenis}` : "");
-        const hujung = el("div", "akt-hujung");
-        hujung.append(el("span", "lencana", a.gpx ? "FIT + GPX" : "FIT saja"));
-        hujung.append(el("span", "dulang-status", st?.teks ?? "Sedia"));
-        li.append(kad(a.ringkasan), hujung);
-        return li;
-      }),
-      ...gagal.map((g) => {
-        const li = el("li", "st-gagal");
-        const teks = el("div", "akt-tajuk");
-        teks.append(el("strong", "", g.fail), el("span", "", g.sebab));
-        li.append(teks);
-        return li;
-      }),
-    );
-    segarButang();
-  }
-
-  async function simpanSemua() {
-    if (menyimpan) return;
-    menyimpan = true;
-    segarButang();
-
-    if (perluSetuju) {
-      const r = await api("/me/apps/nubi/consent/aktiviti", {
-        method: "PUT",
-        body: JSON.stringify({ engine: 1, data: { v: "1" }, progress: [] }),
-      }).catch(() => null);
-      if (!r?.ok) {
-        menyimpan = false;
-        segarButang();
-        return papar(
-          "Persetujuan tak dapat disimpan. Semak sambungan dan cuba lagi.",
-          "danger",
-        );
-      }
-      perluSetuju = false;
-    }
-
-    let baru = 0,
-      dikemas = 0,
-      gagal = 0;
-    const disimpan: ActivityFiles[] = [];
-    // Satu aktiviti setiap request (backend: multipart, fail ≤ 5 MB). Yang sudah disimpan dilangkau.
-    for (const a of sedia) {
-      const k = a.ringkasan.startedAt;
-      if (status.get(k)?.jenis === "ok") continue;
-      status.set(k, { jenis: "kerja", teks: "Menyimpan…" });
-      await kemas();
-      try {
-        const r = await api(BASE, {
-          method: "POST",
-          body: await buildUploadForm(a),
-        });
-        const b = await json(r);
-        if (r.ok) {
-          b.data.created ? baru++ : dikemas++;
-          disimpan.push(a);
-          status.set(k, {
-            jenis: "ok",
-            teks: b.data.created ? "Disimpan" : "Dikemas kini",
-          });
-        } else if (b.code === "quota_full") {
-          status.set(k, {
-            jenis: "gagal",
-            teks: `Had ${b.limit} aktiviti penuh`,
-          });
-          gagal++;
-          break;
-        } else {
-          status.set(k, {
-            jenis: "gagal",
-            teks:
-              r.status === 400 ? "Fail ditolak" : "Ralat pelayan - cuba lagi",
-          });
-          gagal++;
-        }
-      } catch {
-        status.set(k, { jenis: "gagal", teks: "Tiada sambungan - cuba lagi" });
-        gagal++;
-      }
-    }
-
-    // Pelan aktif (lib/plan-sync.ts): sesi padan ditanda siap. Aktiviti yang disimpan keluar dari
-    // dulang, jadi hasil padanan masuk ke mesej ringkasan di bawah.
-    const padan = disimpan.length
-      ? await syncActivities(disimpan.map((a) => a.ringkasan)).catch(() => null)
-      : null;
-    const tambahan = padan
-      ? disimpan.length - padan.padan.size - padan.tolak.size
-      : 0;
-    const hasilPadan = padan
-      ? [
-          ...[...padan.padan.values()].map(
-            (s) => `${sessionLabel(s)} ditanda siap.`,
-          ),
-          ...[...padan.tolak].map(([a, s]) => walkedNote(a, s)),
-          tambahan
-            ? `${tambahan} aktiviti tambahan (tiada sesi pelan aktif yang padan).`
-            : "",
-        ].join(" ")
-      : "";
-
-    // Fail aktiviti yang berjaya keluar dari zon; yang gagal kekal untuk dicuba semula.
-    const siap = new Set(
-      sedia
-        .filter((a) => status.get(a.ringkasan.startedAt)?.jenis === "ok")
-        .flatMap((a) => [a.fit, a.gpx]),
-    );
-    for (let i = dipilih.length - 1; i >= 0; i--)
-      if (siap.has(dipilih[i])) dipilih.splice(i, 1);
-    menyimpan = false;
-    await kemas();
-    papar(
-      [
-        baru && `${baru} aktiviti disimpan`,
-        dikemas && `${dikemas} dikemas kini`,
-        gagal && `${gagal} gagal - tekan Simpan untuk cuba lagi`,
-      ]
-        .filter(Boolean)
-        .join(", ") + `. ${hasilPadan}`.trimEnd(),
-      gagal ? "danger" : "success",
-    );
-    await Promise.all([senarai(), minggu()]);
-  }
-
-  // Di hujung: mula() guna const di atas (dari, dipilih, status...) - dipanggil lebih awal = TDZ.
-  if (ahli) await mula();
+  if (ahli) await Promise.all([senarai(), minggu()]);
 </script>
 
 <style>
-  /* .stat dan .panel = salinan tepat dashboard (src/pages/account/index.astro). */
-  .stat.stat {
-    margin-bottom: 1rem;
-  }
-  .panel {
-    margin-bottom: 1rem;
-  }
-
-  /* Anak yang lebar diregangkan (panel dashboard: justify-items start). */
-  .panel > :global(.alert),
-  .cara,
-  .zon-grid,
-  .panel > :global(.jadual),
-  .dulang,
-  .hantar {
-    justify-self: stretch;
-  }
-  .kecil {
-    font-size: 0.8rem;
-  }
-
-  /* Arahan Strava - gaya sama seperti .faq di halaman utama. */
-  .cara summary {
-    cursor: pointer;
-    font-weight: 600;
-    color: var(--navy);
-  }
-  .cara ol {
-    margin: 0.5rem 0 0;
-    padding-left: 1.25rem;
-    display: grid;
-    gap: 0.3rem;
-  }
-
-  /* Dua zon sebaris bila muat, bertindan di telefon - tanpa media query. */
-  .zon-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
-    gap: 0.75rem;
-  }
-  .zon {
-    display: grid;
-    justify-items: center;
-    align-content: center;
-    gap: 0.35rem;
-    min-height: 9rem;
-    padding: 1.25rem;
-    text-align: center;
-    border: 2px dashed var(--line);
-    border-radius: var(--radius-lg);
-    background: var(--paper-2);
-    cursor: pointer;
-    transition: border-color 0.12s ease;
-  }
-  .zon:hover,
-  .zon:focus-within,
-  .zon.aktif {
-    border-color: var(--orange);
-  }
-  .zon.berisi {
-    border-style: solid;
-    justify-items: stretch;
-    align-content: start;
-    text-align: left;
-  }
-  .zon-ikon {
-    font-size: 1.5rem;
-    color: var(--orange);
-  }
-  .zon.berisi .zon-ikon {
-    display: none;
-  }
-  .wajib {
-    color: var(--orange);
-    font-weight: 700;
-  }
-  .zon-fail {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    display: grid;
-    gap: 0.35rem;
-    font-size: 0.85rem;
-  }
-  .zon-fail:empty {
-    display: none;
-  }
-  .zon-fail :global(li) {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    overflow-wrap: anywhere;
-  }
-
-  .hantar {
-    display: grid;
-    gap: 0.75rem;
-  }
-
-  /* Baris aktiviti (dulang + senarai) - bentuk item senarai dashboard. */
-  .dulang {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: grid;
-    gap: 0.75rem;
-  }
-  .dulang:empty {
-    display: none;
-  }
-  .dulang :global(li) {
+  .penapis-sukan {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem 1rem;
-    padding: 0.85rem 1rem;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
+    gap: 0.5rem;
   }
-  /* Status = token .alert global (info / success / danger). */
-  .dulang :global(li.st-kerja) {
-    border-color: var(--info-line);
-    background: var(--info-bg);
+  .penapis-sukan :global(.dd) {
+    width: auto;
+    min-width: 10rem;
   }
-  .dulang :global(li.st-ok) {
-    border-color: var(--success-line);
-    background: var(--success-bg);
+  .penapis-sukan :global(.dd-butang) {
+    width: 100%;
   }
-  .dulang :global(li.st-gagal) {
-    border-color: var(--danger-line);
-    background: var(--danger-bg);
+  .panel {
+    justify-items: stretch;
   }
-  .panel :global(.akt) {
-    flex: 1 1 18rem;
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    align-items: center;
-    gap: 0.25rem 1rem;
-  }
-  .panel :global(.akt-jarak) {
-    grid-row: span 2;
-    min-width: 4.5rem;
-    margin: 0;
-    font-style: italic;
-    font-size: 2rem;
-    line-height: 1;
-    color: var(--navy);
-  }
-  .panel :global(.akt-jarak small) {
-    font-size: 0.9rem;
-  }
-  .panel :global(.akt-tajuk) {
-    display: grid;
-    gap: 0.1rem;
-    min-width: 0;
-  }
-  .panel :global(.akt-nama) {
-    font-weight: 700;
-    color: var(--ink);
-    overflow-wrap: anywhere;
-  }
-  /* Sel "Aktiviti" dalam jadual: nama (pautan ke detail), sukan, lencana GPX. */
   .panel :global(.akt-sel) {
     display: inline-flex;
     flex-wrap: wrap;
@@ -897,38 +339,7 @@ import Table from "../../../components/ui/Table.astro";
   }
   .panel :global(a.akt-nama) {
     color: var(--navy);
-  }
-  .panel :global(.akt-tajuk span),
-  .panel :global(.dulang-status) {
-    font-size: 0.85rem;
-  }
-  .panel :global(.akt-nilai) {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem 1.25rem;
-    margin: 0;
-    font-size: 0.85rem;
-  }
-  .panel :global(.akt-nilai div) {
-    display: flex;
-    gap: 0.35rem;
-  }
-  .panel :global(.akt-nilai dt) {
-    color: var(--muted);
-  }
-  .panel :global(.akt-nilai dd) {
-    margin: 0;
-    font-weight: 600;
-  }
-  .panel :global(.akt-hujung) {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem;
-    margin-left: auto;
-  }
-  .panel :global(.dulang-status) {
-    font-weight: 600;
-    white-space: nowrap;
+    font-weight: 700;
+    overflow-wrap: anywhere;
   }
 </style>

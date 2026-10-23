@@ -36,8 +36,8 @@ backend (403). Sekatan di frontend hanyalah untuk UX.
 
 ## Aliran
 
-1. Halaman `/account/activities` dalam `AccountLayout`, dengan item sidebar baru.
-2. **Cara muat turun**: langkah ringkas di atas.
+1. Halaman `/account/activities` (senarai) dan `/account/activities/new` (borang) dalam `AccountLayout`, dengan item sidebar baru.
+2. **Cara muat turun**: langkah ringkas di halaman `/new`.
 3. **Persetujuan** (sekali, wajib sebelum muat naik pertama). Checkbox:
 
    > Saya faham fail asal (termasuk laluan GPS) disimpan dan digunakan untuk analitik Nubi secara
@@ -51,7 +51,7 @@ backend (403). Sekatan di frontend hanyalah untuk UX.
 5. Tekan "Import". **Satu aktiviti setiap request** (multipart: `fit`, `gpx` yang dah di-gzip, dan
    `summary`) ke `POST /api/v1/me/apps/nubi/activities`, dengan bar kemajuan. Keputusan: baru /
    dikemas kini.
-6. **Senarai**: tapis 30 / 90 hari / semua, jumlah jarak dan masa minggu ini, dan jenis sukan.
+6. **Senarai**: tapis 30 / 90 hari / semua melalui Dropdown (sama seperti penapis sukan), jumlah jarak dan masa minggu ini, dan jenis sukan.
    Padam satu aktiviti, atau "Padam semua data aktiviti saya", melalui `confirmDialog({ danger: true })`.
    Padam membuang ringkasan **dan fail** serta-merta.
 

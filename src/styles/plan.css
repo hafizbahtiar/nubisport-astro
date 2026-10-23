@@ -4,6 +4,11 @@
   padding-block: clamp(3rem, 7vw, 5rem);
 }
 
+/* Alert terus dalam hasil pelan (amaran, puasa, lumba) perlukan jarak antara blok. */
+#pelan>.alert {
+  margin-block: 1.25rem;
+}
+
 .ringkas {
   display: flex;
   flex-wrap: wrap;

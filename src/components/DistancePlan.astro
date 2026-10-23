@@ -234,10 +234,14 @@ const maraton = jarak === "42k";
     const next = planParamsFromForm(borang, q, key);
     for (const k of [...q.keys()]) q.delete(k);
     next.forEach((v, k) => q.set(k, v));
-    if (!papar()) return; // ralat dipapar, borang kekal terbuka
+    if (!papar()) {
+      hasil.hidden = false;
+      return;
+    }
     history.replaceState(null, "", `?${q}`);
     if (formPanel) formPanel.hidden = true;
     planGuard?.markClean();
+    hasil.hidden = false;
     hasil.scrollIntoView();
     pelanEl.querySelector("h2")?.focus({ preventScroll: true });
     void listCloud().then((a) => {
@@ -312,6 +316,7 @@ const maraton = jarak === "42k";
   if (mode === "new" || (formPanel && !formPanel.hidden)) planGuard.arm();
 
   function papar(): boolean {
+    hasil.hidden = false;
     q.set("jarak", jarak);
     const c = DISTANCES[jarak];
     let minggu = Number(q.get("minggu"));
@@ -440,7 +445,7 @@ const maraton = jarak === "42k";
       <p class="muted no-print" data-profil hidden></p>
       ${h.amaran.map((t) => `<div class="alert alert-info"><p>${t}</p>${lumba && perlu <= c.minggu.at(-1)! ? cubaLumba(perlu) : ""}</div>`).join("")}
       ${a ? analysisHtml(a) : ""}
-      ${pacesHtml(paces, !!pace, `Lumba ${c.nama}`)}
+      ${pacesHtml(paces, !!pace, `Lumba ${c.nama}`, false)}
       ${lumba ? raceDayHtml(lumba, paces.lumba, c.nama) : ""}
       ${ramadanNotice(h.minggu, isnin, lumba)}
       <div class="kalendar no-print">
@@ -477,6 +482,7 @@ const maraton = jarak === "42k";
     pelanEl.querySelector("[data-edit]")?.addEventListener("click", (e) => {
       if (!formPanel) return;
       formPanel.hidden = false;
+      hasil.hidden = true;
       planGuard?.arm();
       (e.currentTarget as HTMLElement).setAttribute("aria-expanded", "true");
       formPanel.scrollIntoView();
@@ -485,6 +491,12 @@ const maraton = jarak === "42k";
         .querySelector<HTMLElement>('input:not([type="hidden"]), select')
         ?.focus({ preventScroll: true });
     });
+    document
+      .querySelector<HTMLButtonElement>("[data-batal-edit]")
+      ?.addEventListener("click", () => {
+        planGuard?.markClean();
+        location.reload();
+      });
     // Pelan lumba tak dianjak - tarikh lumba tetap.
     const sambung =
       isnin && !lumba

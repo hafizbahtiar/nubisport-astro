@@ -241,10 +241,14 @@ const maf = full ? "/account/maf" : "/maf";
     const next = planParamsFromForm(borang, q, key);
     for (const k of [...q.keys()]) q.delete(k);
     next.forEach((v, k) => q.set(k, v));
-    if (!papar()) return; // ralat dipapar, borang kekal terbuka
+    if (!papar()) {
+      hasil.hidden = false; // tunjuk ralat, bukan form kosong
+      return;
+    }
     history.replaceState(null, "", `?${q}`);
     if (formPanel) formPanel.hidden = true;
     planGuard?.markClean();
+    hasil.hidden = false;
     hasil.scrollIntoView();
     pelanEl.querySelector("h2")?.focus({ preventScroll: true });
     // Pelan ini mungkin sudah di awan: hantar params/tanda siap baharu (update, bukan slot baharu).
@@ -349,6 +353,7 @@ const maf = full ? "/account/maf" : "/maf";
   }
 
   function papar(): boolean {
+    hasil.hidden = false;
     const tahap = q.get("tahap") as Level;
     const bulan = Number(q.get("bulan"));
     const hari = Number(q.get("hari"));
@@ -503,7 +508,7 @@ const maf = full ? "/account/maf" : "/maf";
       }
       ${a ? htmlAnalisis(a) : ""}
       ${lumba && minggu! < perlu && perlu <= RACE_WEEKS[1] ? `<div class="alert alert-info">${cubaLumba(perlu)}</div>` : ""}
-      ${pacesHtml(paces, !!pace, "Ujian 5K")}
+      ${pacesHtml(paces, !!pace, "Ujian 5K", !full)}
       ${lumba ? raceDayHtml(lumba, paces.lumba, "5K") : ""}
       ${ramadanNotice(h.minggu, isnin, lumba)}
       ${full ? "" : htmlPromosi()}
@@ -626,6 +631,7 @@ const maf = full ? "/account/maf" : "/maf";
     pelanEl.querySelector("[data-edit]")?.addEventListener("click", (e) => {
       if (!formPanel) return;
       formPanel.hidden = false;
+      hasil.hidden = true;
       planGuard?.arm();
       (e.currentTarget as HTMLElement).setAttribute("aria-expanded", "true");
       formPanel.scrollIntoView();
@@ -634,6 +640,12 @@ const maf = full ? "/account/maf" : "/maf";
         .querySelector<HTMLElement>('input:not([type="hidden"]), select')
         ?.focus({ preventScroll: true });
     });
+    document
+      .querySelector<HTMLButtonElement>("[data-batal-edit]")
+      ?.addEventListener("click", () => {
+        planGuard?.markClean();
+        location.reload(); // buang nilai form yang belum disimpan
+      });
     const buatIcs = () => {
       const jam =
         (document.getElementById("masa-lari") as HTMLInputElement).value ||

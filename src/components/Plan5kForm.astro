@@ -136,9 +136,14 @@ const tahun = new Date().getFullYear();
   </Field>
   {
     mode === "view" ? (
-      <button class="btn btn-primary" type="submit">
-        Kemas kini pelan
-      </button>
+      <div class="actions">
+        <button class="btn btn-primary" type="submit">
+          Kemas kini pelan
+        </button>
+        <button class="btn btn-outline" type="button" data-batal-edit>
+          Batal
+        </button>
+      </div>
     ) : (
       <button class="btn btn-primary" type="submit">
         Buat pelan

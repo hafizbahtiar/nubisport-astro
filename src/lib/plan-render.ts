@@ -103,7 +103,7 @@ const arah = ([a, b]: [number, number]) => `<span class="nw">~${formatPace(a)} â
  * Kotak "Pace pelan" (lalai dari masa semasa / sasaran) + borang pace sasaran sendiri (param `pace`, s/km).
  * Mudah/panjang kekal dari masa sekarang - pace sasaran yang lebih laju tak patut melajukan hari mudah.
  */
-export function pacesHtml(p: Paces, sendiri: boolean, lumbaLabel: string) {
+export function pacesHtml(p: Paces, sendiri: boolean, lumbaLabel: string, showForm = true) {
   const baris = [
     ["Mudah + larian panjang", p.mudah ? julat(p.mudah) : "Ikut rasa - boleh bercakap ayat penuh"],
     ...(p.tempo ? [["Tempo", `${arah(p.tempo)} <small>beransur setiap minggu</small>`]] : []),
@@ -113,13 +113,13 @@ export function pacesHtml(p: Paces, sendiri: boolean, lumbaLabel: string) {
   return `<section class="pace-pelan" aria-labelledby="pace-tajuk">
     <h3 class="display" id="pace-tajuk">Pace pelan</h3>
     <dl>${baris.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
-    <form class="pace-ubah no-print" data-pace-borang>
+    ${showForm ? `<form class="pace-ubah no-print" data-pace-borang>
       <label class="field"><span class="field-label">Pace sasaran sendiri (min:saat /km)</span>
         <input class="input" name="pace" data-mask="pace" inputmode="numeric" autocomplete="off" placeholder="cth. 6:30" value="${sendiri ? formatPace(p.lumba) : ""}" required /></label>
       <button class="btn btn-outline btn-sm" type="submit">Kira semula</button>
       ${sendiri ? `<button class="btn btn-outline btn-sm" type="button" data-pace-asal>Guna pace lalai</button>` : ""}
       <p class="ralat" data-pace-ralat hidden>Format pace: min:saat, contoh 6:30.</p>
-    </form>
+    </form>` : ""}
   </section>`;
 }
 
