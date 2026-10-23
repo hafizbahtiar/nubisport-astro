@@ -1,0 +1,307 @@
+---
+// Pembantu AI Nubi (fasa 1b): chat baca sahaja. Backend: POST /me/ai/chat (hono-workers).
+// Teks model dipapar dengan textContent - tiada innerHTML daripada model. Chat dalam memori page.
+import AccountLayout from "../../layouts/AccountLayout.astro";
+import Alert from "../../components/ui/Alert.astro";
+---
+
+<AccountLayout
+  title="Pembantu AI"
+  description="Pembantu AI Nubi untuk profil, pelan, aktiviti dan larian kumpulan anda."
+>
+  <Alert variant="info" title="Ciri untuk ahli" id="bukan-ahli" hidden>
+    <p>
+      Pembantu AI terbuka untuk ahli Nubi Sport. Keahlian diluluskan pentadbir -
+      <a class="link" href="/account/pricing">lihat keahlian</a>.
+    </p>
+  </Alert>
+
+  <Alert variant="danger" id="ralat" hidden />
+
+  <section class="panel" id="persetujuan" aria-labelledby="t-setuju" hidden>
+    <div class="panel-kepala">
+      <h3 class="display" id="t-setuju">Sebelum mula</h3>
+    </div>
+    <p>
+      Pembantu AI boleh membaca profil, pelan, aktiviti dan larian kumpulan yang
+      anda bincangkan. Soalan dan data itu dihantar ke Command Code dan pembekal
+      model untuk diproses. Nubi tak menyimpan chat ini.
+    </p>
+    <p class="muted">
+      Ini bukan nasihat perubatan atau penilaian jurulatih. Berhenti jika sakit,
+      sesak dada atau pening. Anda boleh tarik balik persetujuan bila-bila masa.
+    </p>
+    <button class="btn btn-primary" type="button" id="setuju">
+      Setuju dan mula
+    </button>
+  </section>
+
+  <div id="chat" hidden>
+    <section class="panel" aria-labelledby="t-chat">
+      <div class="panel-kepala">
+        <h3 class="display" id="t-chat">Pembantu AI</h3>
+        <span class="muted" id="kuota">…</span>
+      </div>
+      <p class="muted">
+        Tanya tentang pelan, aktiviti atau larian anda. AI baca data anda;
+        perubahan data belum dibuka dalam versi ini.
+      </p>
+
+      <ul
+        class="ai-log"
+        id="log"
+        role="log"
+        aria-live="polite"
+        aria-label="Perbualan"
+      >
+      </ul>
+
+      <ul class="ai-chips" id="contoh" aria-label="Contoh soalan">
+        <li>
+          <button
+            class="btn btn-outline btn-sm"
+            type="button"
+            data-contoh="Minggu ini pelan saya apa?"
+            >Minggu ini pelan saya apa?</button>
+        </li>
+        <li>
+          <button
+            class="btn btn-outline btn-sm"
+            type="button"
+            data-contoh="Aktiviti saya bulan ini macam mana?"
+            >Aktiviti bulan ini macam mana?</button>
+        </li>
+        <li>
+          <button
+            class="btn btn-outline btn-sm"
+            type="button"
+            data-contoh="Larian kumpulan akan datang apa?"
+            >Larian akan datang apa?</button>
+        </li>
+      </ul>
+
+      <form class="ai-borangan" id="borang">
+        <label class="sr-only" for="teks">Soalan untuk pembantu AI</label>
+        <textarea
+          class="input"
+          id="teks"
+          rows="3"
+          maxlength="2000"
+          placeholder="Taip soalan… (Enter hantar, Shift+Enter baris baru)"
+          required></textarea>
+        <div class="ai-kaki">
+          <span class="muted" id="kira">0 / 2,000</span>
+          <button class="btn btn-primary" type="submit" id="hantar"
+            >Hantar</button
+          >
+        </div>
+      </form>
+
+      <p class="muted">
+        <a class="link" href="/privacy">Privasi</a> ·
+        <button class="link" type="button" id="tarik"
+          >Tarik balik persetujuan AI</button
+        >
+      </p>
+    </section>
+  </div>
+</AccountLayout>
+
+<script>
+  import { api, currentUser, json } from "../../lib/api";
+  import { confirmDialog } from "../../lib/confirm";
+  import {
+    runTool,
+    toolContent,
+    type AiChatMessage,
+    type AiToolCall,
+  } from "../../lib/ai-tools";
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const ralat = (m: string | null) => {
+    $("ralat").textContent = m ?? "";
+    $("ralat").hidden = !m;
+  };
+  const log = $("log");
+  const teks = $("teks") as HTMLTextAreaElement;
+  const hantar = $("hantar") as HTMLButtonElement;
+  const kira = $("kira");
+  const messages: AiChatMessage[] = [];
+  let sibuk = false;
+
+  const render = (role: "user" | "assistant", text: string) => {
+    if (!text.trim()) return;
+    const li = document.createElement("li");
+    li.className = `ai-msg ${role === "user" ? "ai-msg-user" : "ai-msg-bot"}`;
+    li.textContent = text;
+    log.append(li);
+    log.scrollTop = log.scrollHeight;
+  };
+
+  const setBusy = (v: boolean) => {
+    sibuk = v;
+    hantar.disabled = v;
+    hantar.textContent = v ? "Tunggu…" : "Hantar";
+  };
+
+  const setQuota = (q: { used: number; limit: number | null } | null) => {
+    $("kuota").textContent = q
+      ? q.limit === null
+        ? `${q.used} · tiada had`
+        : `${q.used} / ${q.limit} hari ini`
+      : "…";
+  };
+
+  const muatKuota = async () => {
+    const res = await api("/me/apps/nubi/usage").catch(() => null);
+    if (!res?.ok) return setQuota(null);
+    const data = (await json(res)).data;
+    const ai = data?.items?.find((i: { key: string }) => i.key === "ai");
+    if (ai)
+      setQuota({
+        used: Number(ai.used) || 0,
+        limit: ai.limit === null ? null : Number(ai.limit) || 0,
+      });
+  };
+
+  const tunjukChat = async () => {
+    $("persetujuan").hidden = true;
+    $("chat").hidden = false;
+    await muatKuota();
+    teks.focus();
+  };
+
+  const tunjukPersetujuan = () => {
+    $("chat").hidden = true;
+    $("persetujuan").hidden = false;
+  };
+
+  const mesejRalat = (status: number, body: Record<string, any>) => {
+    if (body.code === "ai_consent_required") {
+      tunjukPersetujuan();
+      return "Persetujuan AI diperlukan semula.";
+    }
+    if (body.code === "ai_quota_full") return "Kuota AI hari ini dah habis.";
+    if (status === 429) return "Tunggu sekejap dan cuba lagi.";
+    if (status === 503 || status === 502)
+      return "AI sibuk sekarang. Cuba lagi sekejap.";
+    return "Tak dapat jawapan sekarang. Cuba lagi.";
+  };
+
+  const hantarSoalan = async () => {
+    const text = teks.value.trim();
+    if (!text || sibuk) return;
+    ralat(null);
+    messages.push({ role: "user", content: text });
+    render("user", text);
+    teks.value = "";
+    kira.textContent = "0 / 2,000";
+    setBusy(true);
+
+    try {
+      for (let round = 0; round < 6; round++) {
+        const res = await api("/me/ai/chat", {
+          method: "POST",
+          body: JSON.stringify({ messages: messages.slice(-40) }),
+        });
+        const body = await json(res);
+        if (!res.ok) {
+          ralat(mesejRalat(res.status, body));
+          return;
+        }
+        const data = body.data;
+        setQuota(data.quota);
+        render("assistant", String(data.text ?? ""));
+        const calls: AiToolCall[] = Array.isArray(data.toolCalls)
+          ? data.toolCalls
+          : [];
+        if (!calls.length) return;
+        messages.push({
+          role: "assistant",
+          content: String(data.text ?? ""),
+          toolCalls: calls,
+        });
+        for (const call of calls) {
+          const hasil = await runTool(call.name, call.arguments);
+          messages.push({
+            role: "tool",
+            toolCallId: call.id,
+            content: toolContent(hasil),
+          });
+        }
+      }
+      ralat("AI ambil terlalu banyak langkah. Cuba soalan yang lebih ringkas.");
+    } catch {
+      ralat("Tiada sambungan. Semak internet dan cuba lagi.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const simpanPersetujuan = async () => {
+    ralat(null);
+    const res = await api("/me/apps/nubi/aiconsent/ya", {
+      method: "PUT",
+      body: JSON.stringify({ engine: 1, data: {}, progress: [] }),
+    }).catch(() => null);
+    if (!res?.ok)
+      return ralat("Tak dapat simpan persetujuan sekarang. Cuba lagi.");
+    await tunjukChat();
+  };
+
+  const tarikPersetujuan = async () => {
+    if (
+      !(await confirmDialog({
+        title: "Tarik balik persetujuan AI?",
+        message:
+          "Chat ini akan ditutup. Anda boleh setuju semula bila-bila masa.",
+        confirmLabel: "Tarik balik",
+        danger: true,
+      }))
+    )
+      return;
+    await api("/me/apps/nubi/aiconsent/ya", { method: "DELETE" }).catch(
+      () => null,
+    );
+    messages.length = 0;
+    log.replaceChildren();
+    tunjukPersetujuan();
+  };
+
+  teks.addEventListener("input", () => {
+    kira.textContent = `${teks.value.length.toLocaleString("ms-MY")} / 2,000`;
+  });
+  teks.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      void hantarSoalan();
+    }
+  });
+  $("borang").addEventListener("submit", (e) => {
+    e.preventDefault();
+    void hantarSoalan();
+  });
+  $("setuju").addEventListener("click", () => void simpanPersetujuan());
+  $("tarik").addEventListener("click", () => void tarikPersetujuan());
+  for (const b of document.querySelectorAll<HTMLButtonElement>("[data-contoh]"))
+    b.addEventListener("click", () => {
+      teks.value = b.dataset.contoh ?? "";
+      teks.dispatchEvent(new Event("input"));
+      void hantarSoalan();
+    });
+
+  const saya = await currentUser();
+  const ahli =
+    saya &&
+    (saya.role === "owner" ||
+      saya.apps?.nubi === "ahli" ||
+      saya.apps?.nubi === "admin");
+  if (!ahli) {
+    $("bukan-ahli").hidden = false;
+  } else {
+    const res = await api("/me/apps/nubi/aiconsent").catch(() => null);
+    const ada = res?.ok && ((await json(res)).data?.items?.length ?? 0) > 0;
+    if (ada) await tunjukChat();
+    else tunjukPersetujuan();
+  }
+</script>

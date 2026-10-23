@@ -1,6 +1,6 @@
 # Pembantu AI - frontend, fasa 1 (AI platform)
 
-Status: **dirancang** (2026-10-23), belum dibina. Fail utama pelan (keputusan, seni bina, keselamatan):
+Status: **fasa 1b dibina** (2026-10-23): page, persetujuan, kuota dan tool baca. Tool tulis + kad Sahkan (fasa 1c) belum. Fail utama pelan (keputusan, seni bina, keselamatan):
 **`hono-workers/docs/plans/ai/README.md`**. Separuh backend: `hono-workers/docs/plans/ai/backend-platform.md`.
 
 ## Tujuan

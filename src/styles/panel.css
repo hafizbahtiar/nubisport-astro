@@ -83,3 +83,82 @@
   justify-content: space-between;
   gap: 0.75rem;
 }
+
+/* ---------- Pembantu AI (page chat) ---------- */
+.ai-log,
+.ai-chips,
+.ai-borangan {
+  justify-self: stretch;
+}
+
+.ai-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.65rem;
+  max-height: 30rem;
+  overflow-y: auto;
+}
+
+.ai-msg {
+  max-width: 85%;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius-lg);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ai-msg-user {
+  justify-self: end;
+  background: var(--navy);
+  color: var(--paper);
+  border-bottom-right-radius: var(--radius);
+}
+
+.ai-msg-bot {
+  justify-self: start;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-bottom-left-radius: var(--radius);
+}
+
+.ai-chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.ai-chips li {
+  margin: 0;
+}
+
+.ai-borangan {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.ai-borangan .input {
+  width: 100%;
+  min-height: 5.5rem;
+  resize: vertical;
+}
+
+.ai-kaki {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+button.link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
