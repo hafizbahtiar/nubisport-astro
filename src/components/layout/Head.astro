@@ -39,9 +39,17 @@ const og = Astro.site && new URL("/og.png", Astro.site);
     </>
   )
 }
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link
-  rel="stylesheet"
-  href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;1,700;1,800&display=swap"
+  rel="preload"
+  href="/fonts/barlow-condensed-700-v13.woff2"
+  as="font"
+  type="font/woff2"
+  crossorigin
+/>
+<link
+  rel="preload"
+  href="/fonts/barlow-condensed-800-italic-v13.woff2"
+  as="font"
+  type="font/woff2"
+  crossorigin
 />

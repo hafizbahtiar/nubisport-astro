@@ -3,6 +3,29 @@
    Pelan: plan.css. Susunan: token · asas · susun atur · tipografi · butang · kad · alert ·
    permukaan gelap · cetak. */
 
+/* ---------- Font paparan (self-host, Latin subset; OFL dalam public/fonts) ---------- */
+@font-face {
+  font-family: "Barlow Condensed";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/barlow-condensed-700-v13.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Barlow Condensed";
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/barlow-condensed-700-italic-v13.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Barlow Condensed";
+  font-style: italic;
+  font-weight: 800;
+  font-display: swap;
+  src: url("/fonts/barlow-condensed-800-italic-v13.woff2") format("woff2");
+}
+
 /* ---------- Token ---------- */
 /* Palet = scripts/brand/gen.py: navy pekat + oren tenaga. */
 :root {
