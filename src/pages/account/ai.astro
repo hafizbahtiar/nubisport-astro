@@ -3,6 +3,7 @@
 // Teks model dipapar dengan textContent - tiada innerHTML daripada model. Chat dalam memori page.
 import AccountLayout from "../../layouts/AccountLayout.astro";
 import Alert from "../../components/ui/Alert.astro";
+import Icon from "../../components/ui/Icon.astro";
 ---
 
 <AccountLayout
@@ -37,72 +38,98 @@ import Alert from "../../components/ui/Alert.astro";
   </section>
 
   <div id="chat" hidden>
-    <section class="panel" aria-labelledby="t-chat">
-      <div class="panel-kepala">
-        <h3 class="display" id="t-chat">Pembantu AI</h3>
-        <span class="muted" id="kuota">…</span>
+    <section class="ai-chat" aria-labelledby="t-chat">
+      <header class="ai-kepala">
+        <div class="ai-identiti">
+          <span class="ai-avatar ai-avatar-bot" aria-hidden="true">N</span>
+          <div>
+            <h2 class="display" id="t-chat">Pembantu AI</h2>
+            <p class="muted">Larian · latihan · pemulihan · pemakanan pelari</p>
+          </div>
+        </div>
+        <span class="ai-kuota" id="kuota">…</span>
+      </header>
+
+      <div class="ai-skrin" id="skrin">
+        <ul
+          class="ai-log"
+          id="log"
+          role="log"
+          aria-live="polite"
+          aria-label="Perbualan"
+        >
+        </ul>
+
+        <div class="ai-kosong" id="kosong">
+          <span class="ai-avatar ai-avatar-bot" aria-hidden="true">N</span>
+          <h3 class="display">Apa nak tahu hari ini?</h3>
+          <p class="muted">
+            Tanya pasal pelan, aktiviti, pemulihan atau larian kumpulan. AI baca
+            data awak sendiri; perubahan data belum dibuka.
+          </p>
+          <ul class="ai-chips" aria-label="Contoh soalan">
+            <li>
+              <button
+                class="btn btn-outline btn-sm"
+                type="button"
+                data-contoh="Minggu ini pelan saya apa?"
+                >Minggu ini pelan saya apa?</button
+              >
+            </li>
+            <li>
+              <button
+                class="btn btn-outline btn-sm"
+                type="button"
+                data-contoh="Aktiviti saya bulan ini macam mana?"
+                >Aktiviti bulan ini macam mana?</button
+              >
+            </li>
+            <li>
+              <button
+                class="btn btn-outline btn-sm"
+                type="button"
+                data-contoh="Larian kumpulan akan datang apa?"
+                >Larian akan datang apa?</button
+              >
+            </li>
+          </ul>
+        </div>
       </div>
-      <p class="muted">
-        Tanya tentang pelan, aktiviti atau larian anda. AI baca data anda;
-        perubahan data belum dibuka dalam versi ini.
-      </p>
-
-      <ul
-        class="ai-log"
-        id="log"
-        role="log"
-        aria-live="polite"
-        aria-label="Perbualan"
-      >
-      </ul>
-
-      <ul class="ai-chips" id="contoh" aria-label="Contoh soalan">
-        <li>
-          <button
-            class="btn btn-outline btn-sm"
-            type="button"
-            data-contoh="Minggu ini pelan saya apa?"
-            >Minggu ini pelan saya apa?</button>
-        </li>
-        <li>
-          <button
-            class="btn btn-outline btn-sm"
-            type="button"
-            data-contoh="Aktiviti saya bulan ini macam mana?"
-            >Aktiviti bulan ini macam mana?</button>
-        </li>
-        <li>
-          <button
-            class="btn btn-outline btn-sm"
-            type="button"
-            data-contoh="Larian kumpulan akan datang apa?"
-            >Larian akan datang apa?</button>
-        </li>
-      </ul>
 
       <form class="ai-borangan" id="borang">
-        <label class="sr-only" for="teks">Soalan untuk pembantu AI</label>
-        <textarea
-          class="input"
-          id="teks"
-          rows="3"
-          maxlength="2000"
-          placeholder="Taip soalan… (Enter hantar, Shift+Enter baris baru)"
-          required></textarea>
-        <div class="ai-kaki">
-          <span class="muted" id="kira">0 / 2,000</span>
-          <button class="btn btn-primary" type="submit" id="hantar"
-            >Hantar</button
+        <div class="ai-kotak">
+          <label class="sr-only" for="teks">Soalan untuk pembantu AI</label>
+          <textarea
+            class="ai-teks"
+            id="teks"
+            rows="1"
+            maxlength="2000"
+            aria-describedby="kira"
+            placeholder="Tanya pasal larian…"
+            required></textarea>
+          <button
+            class="ai-hantar"
+            type="submit"
+            id="hantar"
+            aria-label="Hantar"
+            title="Hantar"
           >
+            <Icon name="hantar" />
+          </button>
+        </div>
+        <div class="ai-kaki">
+          <span id="kira">0 / 2,000</span>
+          <span>Enter hantar · Shift+Enter baris baru</span>
         </div>
       </form>
 
-      <p class="muted">
-        <a class="link" href="/privacy">Privasi</a> ·
-        <button class="link" type="button" id="tarik"
-          >Tarik balik persetujuan AI</button
-        >
-      </p>
+      <div class="ai-kaki-luar">
+        <a class="link" href="/privacy">Privasi</a>
+        <span aria-hidden="true">·</span>
+        <button class="link" type="button" id="tarik">
+          Tarik balik persetujuan AI
+        </button>
+      </div>
     </section>
   </div>
 </AccountLayout>
@@ -121,27 +148,90 @@ import Alert from "../../components/ui/Alert.astro";
   const ralat = (m: string | null) => {
     $("ralat").textContent = m ?? "";
     $("ralat").hidden = !m;
+    if (m) $("ralat").scrollIntoView({ block: "nearest" });
   };
   const log = $("log");
+  const skrin = $("skrin") as HTMLElement;
+  const kosong = $("kosong") as HTMLElement;
   const teks = $("teks") as HTMLTextAreaElement;
   const hantar = $("hantar") as HTMLButtonElement;
   const kira = $("kira");
   const messages: AiChatMessage[] = [];
   let sibuk = false;
+  let namaSaya = "Awak";
+  let assistant: { row: HTMLLIElement; bubble: HTMLElement } | null = null;
+  let thinking: { row: HTMLLIElement; label: HTMLElement } | null = null;
 
-  const render = (role: "user" | "assistant", text: string) => {
-    if (!text.trim()) return;
-    const li = document.createElement("li");
-    li.className = `ai-msg ${role === "user" ? "ai-msg-user" : "ai-msg-bot"}`;
-    li.textContent = text;
-    log.append(li);
-    log.scrollTop = log.scrollHeight;
+  const scrollBottom = () => {
+    skrin.scrollTop = skrin.scrollHeight;
+  };
+
+  const buatBaris = (role: "user" | "assistant") => {
+    const row = document.createElement("li");
+    row.className = `ai-row ai-row-${role}`;
+
+    const avatar = document.createElement("span");
+    avatar.className = `ai-avatar ai-avatar-${role}`;
+    avatar.setAttribute("aria-hidden", "true");
+    avatar.textContent =
+      role === "assistant" ? "N" : namaSaya.charAt(0).toUpperCase();
+
+    const wrap = document.createElement("div");
+    wrap.className = "ai-msg-wrap";
+    const nama = document.createElement("span");
+    nama.className = "ai-nama";
+    nama.textContent = role === "assistant" ? "Nubi" : namaSaya;
+    const bubble = document.createElement("div");
+    bubble.className = "ai-msg";
+    wrap.append(nama, bubble);
+    row.append(avatar, wrap);
+    return { row, bubble };
+  };
+
+  const paparUser = (text: string) => {
+    const { row, bubble } = buatBaris("user");
+    bubble.textContent = text;
+    log.append(row);
+    scrollBottom();
+  };
+
+  const paparAssistant = (text: string) => {
+    if (!assistant) {
+      assistant = buatBaris("assistant");
+      log.append(assistant.row);
+    }
+    assistant.bubble.textContent = text;
+    scrollBottom();
+  };
+
+  const pikir = (label: string) => {
+    if (!thinking) {
+      const { row, bubble } = buatBaris("assistant");
+      row.classList.add("ai-row-thinking");
+      bubble.classList.add("ai-thinking");
+      const dots = document.createElement("span");
+      dots.className = "ai-dots";
+      dots.setAttribute("aria-hidden", "true");
+      for (let i = 0; i < 3; i++) dots.append(document.createElement("i"));
+      const text = document.createElement("span");
+      text.className = "ai-thinking-teks";
+      bubble.append(dots, text);
+      log.append(row);
+      thinking = { row, label: text };
+    }
+    thinking.label.textContent = label;
+    scrollBottom();
+  };
+
+  const selesaiPikir = () => {
+    thinking?.row.remove();
+    thinking = null;
   };
 
   const setBusy = (v: boolean) => {
     sibuk = v;
     hantar.disabled = v;
-    hantar.textContent = v ? "Tunggu…" : "Hantar";
+    hantar.setAttribute("aria-busy", String(v));
   };
 
   const setQuota = (q: { used: number; limit: number | null } | null) => {
@@ -168,7 +258,8 @@ import Alert from "../../components/ui/Alert.astro";
     $("persetujuan").hidden = true;
     $("chat").hidden = false;
     await muatKuota();
-    teks.focus();
+    if (messages.length === 0 && matchMedia("(pointer: fine)").matches)
+      teks.focus();
   };
 
   const tunjukPersetujuan = () => {
@@ -188,40 +279,63 @@ import Alert from "../../components/ui/Alert.astro";
     return "Tak dapat jawapan sekarang. Cuba lagi.";
   };
 
+  const labelTool = (name: string) => {
+    if (name === "get_profile") return "Menyemak profil…";
+    if (name === "list_plans" || name === "get_plan") return "Menyemak pelan…";
+    if (name === "list_activities") return "Menyemak aktiviti…";
+    if (name === "list_events") return "Menyemak larian…";
+    return "Menyemak data…";
+  };
+
   const hantarSoalan = async () => {
     const text = teks.value.trim();
     if (!text || sibuk) return;
     ralat(null);
+    kosong.hidden = true;
     messages.push({ role: "user", content: text });
-    render("user", text);
+    paparUser(text);
     teks.value = "";
+    resizeTeks();
     kira.textContent = "0 / 2,000";
+    assistant = null;
     setBusy(true);
+    pikir("Memikir…");
 
     try {
+      let reply = "";
       for (let round = 0; round < 6; round++) {
+        if (round) pikir("Menyusun jawapan…");
         const res = await api("/me/ai/chat", {
           method: "POST",
           body: JSON.stringify({ messages: messages.slice(-40) }),
         });
         const body = await json(res);
         if (!res.ok) {
+          selesaiPikir();
           ralat(mesejRalat(res.status, body));
           return;
         }
         const data = body.data;
         setQuota(data.quota);
-        render("assistant", String(data.text ?? ""));
+        const text = String(data.text ?? "").trim();
+        if (text) {
+          selesaiPikir();
+          paparAssistant(text);
+          reply = text;
+        }
         const calls: AiToolCall[] = Array.isArray(data.toolCalls)
           ? data.toolCalls
           : [];
-        if (!calls.length) return;
-        messages.push({
-          role: "assistant",
-          content: String(data.text ?? ""),
-          toolCalls: calls,
-        });
+        if (!calls.length) {
+          selesaiPikir();
+          if (!reply) ralat("AI tak beri jawapan. Cuba lagi.");
+          else messages.push({ role: "assistant", content: reply });
+          return;
+        }
+        // Satu bubble per turn: teks perantara tidak disimpan dalam history.
+        messages.push({ role: "assistant", content: "", toolCalls: calls });
         for (const call of calls) {
+          pikir(labelTool(call.name));
           const hasil = await runTool(call.name, call.arguments);
           messages.push({
             role: "tool",
@@ -230,12 +344,19 @@ import Alert from "../../components/ui/Alert.astro";
           });
         }
       }
+      selesaiPikir();
       ralat("AI ambil terlalu banyak langkah. Cuba soalan yang lebih ringkas.");
     } catch {
+      selesaiPikir();
       ralat("Tiada sambungan. Semak internet dan cuba lagi.");
     } finally {
       setBusy(false);
     }
+  };
+
+  const resizeTeks = () => {
+    teks.style.height = "auto";
+    teks.style.height = `${Math.min(teks.scrollHeight, 128)}px`;
   };
 
   const simpanPersetujuan = async () => {
@@ -265,14 +386,18 @@ import Alert from "../../components/ui/Alert.astro";
     );
     messages.length = 0;
     log.replaceChildren();
+    assistant = null;
+    thinking = null;
+    kosong.hidden = false;
     tunjukPersetujuan();
   };
 
   teks.addEventListener("input", () => {
     kira.textContent = `${teks.value.length.toLocaleString("ms-MY")} / 2,000`;
+    resizeTeks();
   });
   teks.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
       e.preventDefault();
       void hantarSoalan();
     }
@@ -291,6 +416,7 @@ import Alert from "../../components/ui/Alert.astro";
     });
 
   const saya = await currentUser();
+  if (saya?.name) namaSaya = saya.name.split(/\s+/)[0];
   const ahli =
     saya &&
     (saya.role === "owner" ||

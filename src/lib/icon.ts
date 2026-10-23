@@ -5,6 +5,7 @@
 // Hanya ikon yang diimport masuk ke bundle (skrip pelayar guna ini untuk innerHTML).
 import {
   Activity,
+  ArrowUp,
   BookOpen,
   Building,
   Calendar,
@@ -58,6 +59,7 @@ export const ICONS = {
   cari: Search,
   buku: BookOpen,
   harga: Tag,
+  hantar: ArrowUp,
   laju: Gauge,
   kalendar: Calendar,
   jam: Clock,
