@@ -23,7 +23,7 @@ import Table from "../../../components/ui/Table.astro";
 
   <Alert variant="danger" id="status" hidden />
 
-  <div id="ahli" hidden>
+  <div id="ahli" class="stack-panels" hidden>
     <ul class="stat" aria-label="7 hari terakhir">
       <li><span>Aktiviti 7 hari</span><strong id="bil-minggu">0</strong></li>
       <li><span>Jarak</span><strong id="jarak-minggu">0 km</strong></li>
@@ -316,10 +316,6 @@ import Table from "../../../components/ui/Table.astro";
 </script>
 
 <style>
-  #ahli {
-    display: grid;
-    gap: 1.5rem;
-  }
   .penapis-sukan {
     display: flex;
     flex-wrap: wrap;

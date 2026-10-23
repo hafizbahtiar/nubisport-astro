@@ -741,3 +741,11 @@ button.link {
     grid-template-columns: 1fr;
   }
 }
+
+/* Wrapper untuk beberapa kad dalam satu page akaun: gap sama dengan .app-kandungan.
+   Guna pada div pembungkus (contoh #ahli) supaya jarak kad tidak hilang. */
+.stack-panels {
+  display: grid;
+  gap: 1.5rem;
+  align-content: start;
+}
