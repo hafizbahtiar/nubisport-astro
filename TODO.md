@@ -231,7 +231,7 @@ Item yang dah siap dibuang (lihat git history).
   dirender dengan `innerHTML`. Tanda siap = localStorage `pelan-5k:<bulan>-<tahap>-<masa>-<hari>[-pPace]`.
   Hari sesi tetap (`SESSION_DAYS`: 3 hari = Isn/Rab/Sab, 4 hari = Isn/Rab/Jum/Ahd - sesi akhir hujung
   minggu); `mula` dianjak ke Isnin (`startMonday`) dan minggu semasa + sesi hari ini diserlahkan.
-- Semak: `bun run build` + semua `bun scripts/check-*.ts` (25 skrip, termasuk `check-deficit`,
+- Semak: `bun run build` + semua `bun scripts/check-*.ts` (27 skrip, termasuk `check-deficit`,
   `check-session-analysis`, `check-plan-list`, `check-login-next`) + `npx -y -p @astrojs/check -p typescript@5 astro-check`. CI: `.github/workflows/verify.yml` (push/PR: astro-check, semua `check-*.ts`, build). Belum ada lint.
   `bunx tsc --noEmit -p .` saja tak membaca skrip dalam `.astro` - guna astro-check
   (`@astrojs/check` belum sokong TS 7, jadi tak dipasang).
@@ -241,6 +241,8 @@ Item yang dah siap dibuang (lihat git history).
 - [ ] `CONTACT` WhatsApp group / Instagram (e-mel dah diisi: hafiz@hafizbahtiar.com) - "Sertai" kini tunjuk e-mel saja.
 - [ ] **Migration 035** (`nubi_calendar_feeds`) remote + deploy backend/frontend sebelum butang
   "Hidupkan kalendar automatik" digunakan.
+- [ ] **Migration 039** (`nubi_badges`) remote + deploy backend/frontend sebelum `/account/badges`
+  dan panel lencana dashboard digunakan.
 - [ ] Uji import `.ics` pada iPhone (Safari: terus "Tambah semua" atau simpan ke Files?), Samsung Calendar,
   Google Calendar (web) dan Outlook - nota platform di halaman belum diuji pada peranti sebenar.
 - [ ] Uji kalendar automatik (iPhone Calendar + Google Calendar "From URL") dan PWA (install + buka
@@ -259,6 +261,12 @@ Item yang dah siap dibuang (lihat git history).
   skrip itu, kalau tak ia disekat. Isu DNS/TLS (DMARC, TLS 1.2, SPF, CAA) = `hono-workers/TODO.md` Security.
 
 ## 🛠 Frontend - seterusnya
+
+- [x] **Dashboard aktiviti + lencana/misi** (2026-10-22): panel aktiviti 8 minggu (KPI, bar jarak,
+  3 terbaru), `/account/badges`, sidebar "Lencana", 6 lencana + 2 misi. Backend `nubi_badges`
+  (migration 039), service `nubi-badges.ts`; spec `docs/plans/badges-missions.md`. Semak:
+  `bun scripts/check-activity-summary.ts`, `bun scripts/check-badges.ts`, backend
+  `bun scripts/verify-nubi-badges.ts`.
 
 - [x] **Detail aktiviti lambat** (`/account/activities/view`, didiagnosis 2026-10-23, dibaiki): `mula()`
   berjalan satu demi satu - `/me` -> baris aktiviti -> fail `.fit` (R2) -> parser FIT 430 KB baru dimuat ->

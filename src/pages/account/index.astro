@@ -73,6 +73,51 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
     <div id="aktif-sambung" hidden></div>
   </section>
 
+  <section
+    class="panel"
+    id="ringkasan-aktiviti"
+    data-ahli
+    hidden
+    aria-labelledby="t-aktiviti"
+  >
+    <div class="panel-kepala">
+      <h3 class="display" id="t-aktiviti">Aktiviti 8 minggu</h3>
+      <a class="btn btn-outline btn-sm" href="/account/activities"
+        >Semua aktiviti</a
+      >
+    </div>
+    <p class="muted" id="aktiviti-nota">
+      Larian dan jalan yang dimuat naik dari Strava.
+    </p>
+    <ul class="stat" aria-label="Ringkasan aktiviti 8 minggu">
+      <li><span>Aktiviti</span><strong id="aktiviti-bil">0</strong></li>
+      <li><span>Jarak</span><strong id="aktiviti-jarak">0 km</strong></li>
+      <li><span>Masa</span><strong id="aktiviti-masa">0m</strong></li>
+    </ul>
+    <p class="muted" id="aktiviti-naik" hidden></p>
+    <div class="beban-senarai" id="aktiviti-beban" hidden></div>
+    <p class="muted" id="aktiviti-kosong" hidden>
+      Belum ada aktiviti. Muat naik fail .fit dari Strava untuk mula.
+    </p>
+    <ul class="pautan-senarai" id="aktiviti-terbaru" hidden></ul>
+  </section>
+
+  <section
+    class="panel"
+    id="lencana"
+    data-ahli
+    hidden
+    aria-labelledby="t-lencana"
+  >
+    <div class="panel-kepala">
+      <h3 class="display" id="t-lencana">Lencana &amp; misi</h3>
+      <a class="btn btn-outline btn-sm" href="/account/badges">Lihat semua</a>
+    </div>
+    <p class="muted" id="lencana-nota">Memuatkan lencana…</p>
+    <div class="lencana-baris" id="lencana-dapat" hidden></div>
+    <div class="misi-senarai" id="misi-dash" hidden></div>
+  </section>
+
   <section class="panel">
     <div class="panel-kepala">
       <h3 class="display">Pelan saya</h3>
@@ -118,6 +163,23 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
   import { resumePoint, startMonday, isoDate } from "../../lib/plan-5k";
   import { describePlan } from "../../lib/plan-list";
   import { loadBarHtml } from "../../lib/plan-render";
+  import {
+    summarizeActivities,
+    type DashboardActivity,
+  } from "../../lib/activity-summary";
+  import {
+    formatDuration,
+    formatKm,
+    SPORT_LABELS,
+  } from "../../lib/activity-file";
+  import {
+    BADGES,
+    evaluateBadges,
+    MISSION_LABELS,
+    planProofFromSavedPlans,
+    type Mission,
+  } from "../../lib/badges";
+  import { icon } from "../../lib/icon";
   import { CREATED_KEY, readList, deletePlan } from "../../lib/saved-plans";
   import {
     ENGINE_VERSION,
@@ -188,7 +250,7 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
 
   // Owner sahaja: bilangan ikut peranan + 5 terbaru (nama sahaja; e-mel kekal di portfolio).
   async function komuniti() {
-    const res = await api("/owner/apps/nubi/members").catch(() => null);
+    const res = await api("/me/apps/nubi/community").catch(() => null);
     if (!res?.ok)
       return void ($("komuniti-nota").textContent =
         "Tak dapat muat ahli sekarang.");
@@ -209,6 +271,127 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
         ),
     );
     $("komuniti-baru").hidden = false;
+  }
+
+  const dayLabel = (iso: string) =>
+    new Date(iso).toLocaleDateString("ms-MY", {
+      day: "numeric",
+      month: "short",
+      timeZone: "Asia/Kuala_Lumpur",
+    });
+
+  function renderActivitySummary(rows: DashboardActivity[] | null) {
+    const nota = $("aktiviti-nota");
+    if (!rows) {
+      nota.textContent = "Tak dapat muat aktiviti sekarang.";
+      return;
+    }
+    const data = summarizeActivities(rows);
+    $("aktiviti-bil").textContent = String(data.count);
+    $("aktiviti-jarak").textContent = formatKm(data.distanceM);
+    $("aktiviti-masa").textContent = formatDuration(data.movingS);
+
+    const naik = $("aktiviti-naik");
+    if (data.activeWeeks) {
+      naik.textContent = `${data.activeWeeks} / 8 minggu aktif${data.elevationGainM > 0 ? ` · ${Math.round(data.elevationGainM)} m naik` : ""}`;
+      naik.hidden = false;
+    } else {
+      naik.hidden = true;
+    }
+
+    const kosong = $("aktiviti-kosong");
+    const graf = $("aktiviti-beban");
+    const terbaru = $("aktiviti-terbaru");
+    if (!data.count) {
+      kosong.hidden = false;
+      graf.hidden = true;
+      terbaru.hidden = true;
+      return;
+    }
+    kosong.hidden = true;
+
+    const max = Math.max(...data.weeks.map((w) => w.distanceM), 1);
+    graf.replaceChildren(
+      ...data.weeks.map((w) => {
+        const p = document.createElement("p");
+        p.className = "beban";
+        p.setAttribute(
+          "aria-label",
+          `${w.label}: ${formatKm(w.distanceM)}, ${w.count} aktiviti`,
+        );
+        const label = elText("span", w.label);
+        const trek = document.createElement("span");
+        trek.className = "beban-trek";
+        const isi = document.createElement("i");
+        isi.style.width = `${(w.distanceM / max) * 100}%`;
+        trek.append(isi);
+        p.append(label, trek, elText("span", formatKm(w.distanceM)));
+        return p;
+      }),
+    );
+    graf.hidden = false;
+
+    terbaru.replaceChildren(
+      ...data.recent.map((a) => {
+        const li = document.createElement("li");
+        const link = document.createElement("a");
+        link.href = a.id
+          ? `/account/activities/view?id=${a.id}${a.updatedAt ? `&v=${encodeURIComponent(a.updatedAt)}` : ""}`
+          : "/account/activities";
+        link.className = "link";
+        link.textContent =
+          a.name ||
+          SPORT_LABELS[a.sport as keyof typeof SPORT_LABELS] ||
+          "Aktiviti";
+        const meta = elText(
+          "span",
+          `${dayLabel(a.startedAt)} · ${formatKm(a.distanceM)}`,
+        );
+        li.append(link, meta);
+        return li;
+      }),
+    );
+    terbaru.hidden = data.recent.length === 0;
+  }
+
+  function missionBar(m: Mission) {
+    const wrap = document.createElement("div");
+    wrap.className = "misi";
+    const progress = Math.min(100, Math.round((m.progress / m.target) * 100));
+    wrap.innerHTML = `<div class="misi-teks"><strong>${MISSION_LABELS[m.id]}</strong><span>${m.unit === "km" ? `${m.progress.toLocaleString("ms-MY")} / ${m.target} km` : `${m.progress} / ${m.target}`}</span></div><div class="misi-trek" role="progressbar" aria-valuemin="0" aria-valuemax="${m.target}" aria-valuenow="${Math.min(m.progress, m.target)}"><i style="width:${progress}%"></i></div>`;
+    return wrap;
+  }
+
+  async function renderBadges() {
+    const nota = $("lencana-nota");
+    const state = await evaluateBadges(planProofFromSavedPlans());
+    if (!state) {
+      nota.textContent = "Lencana tak dapat dimuatkan sekarang.";
+      return;
+    }
+    const earned = new Map(state.earned.map((b) => [b.id, b.earnedAt]));
+    const available = BADGES.filter((b) => earned.has(b.id)).sort((a, b) =>
+      (earned.get(b.id) ?? "").localeCompare(earned.get(a.id) ?? ""),
+    );
+    const draw = $("lencana-dapat");
+    if (available.length) {
+      draw.replaceChildren(
+        ...available.slice(0, 3).map((b) => {
+          const chip = elText("span", b.label);
+          chip.className = "lencana";
+          chip.insertAdjacentHTML("afterbegin", icon(b.icon));
+          return chip;
+        }),
+      );
+      draw.hidden = false;
+      nota.textContent = `${state.earned.length} / ${BADGES.length} lencana · ${available[0].label} terkini`;
+    } else {
+      draw.hidden = true;
+      nota.textContent = "Belum ada lencana. Mula dengan 5K pertama.";
+    }
+    const misi = $("misi-dash");
+    misi.replaceChildren(...state.missions.map(missionBar));
+    misi.hidden = false;
   }
 
   // Pengawal sesi, nama, peranan dan bahagian ikut peranan = AccountLayout (dilukis dari cache sebelum
@@ -363,6 +546,13 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
   if (!awan) gagal();
   papar();
   if (location.hash === "#awan") $("awan").scrollIntoView();
+
+  if (isMember(s)) {
+    void activitiesBetween<DashboardActivity>(addDays(todayMY(), -55)).then(
+      renderActivitySummary,
+    );
+    void renderBadges();
+  }
 
   // Pelan aktif (ahli sahaja, lib/plan-sync.ts): sesi seterusnya + minggu ini (Isnin-Ahad, waktu Malaysia).
   if (isMember(s)) {

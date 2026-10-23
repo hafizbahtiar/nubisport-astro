@@ -47,7 +47,6 @@ Semua dibina - lihat "Dah ada" dan `TODO.md`.
 | **Larian kumpulan - baki** | Asas dah dibina (lihat "Dah ada") | Belum: senarai awam tanpa log masuk, larian berulang mingguan, senarai menunggu bila penuh |
 | **Pengumuman** | Batal sebab hujan / tukar lokasi | Admin Nubi hantar; sambung bot Telegram sedia ada. Hantar ke ramai RSVP = kerja latar -> Cloudflare Queues sesuai di sini (free: 10k operasi/hari, ~3 operasi setiap mesej). Push web tangguh (kos + kebenaran) |
 | **Log larian ringkas** | Lihat kemajuan sebenar vs pelan | Sebahagian dah ada untuk ahli: aktiviti Strava + bar beban mingguan. Baki: log manual untuk bukan ahli / tanpa jam (`app_items` kind `log`: tarikh, jarak, masa, rasa 1-5) |
-| **Lencana pencapaian** | Motivasi pemula | Dikira dari tanda siap + log + RSVP: 5K pertama, 10 sesi hadir, 4 minggu konsisten, MAF bertambah baik. Tiada jadual baru kalau dikira |
 | **Peranan `coach`** | Jurulatih pantau ahli yang setuju | Role baru `app_roles`; ahli pilih "kongsi pelan dengan coach" (lalai tak). Bergantung pada semakan jurulatih bertauliah dulu |
 | **Langganan kalendar** | `.ics` sekali tak ikut perubahan | `webcal://` dari backend ikut token peribadi (boleh ditarik balik). Kos rendah, cache |
 

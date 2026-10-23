@@ -619,3 +619,125 @@ button.link {
   font: inherit;
   cursor: pointer;
 }
+
+/* Lencana + misi (Dashboard, /account/badges). */
+.panel>.stat {
+  justify-self: stretch;
+}
+
+.lencana-baris {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.misi-senarai {
+  justify-self: stretch;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.misi {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.misi-teks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  font-size: 0.9rem;
+}
+
+.misi-teks span {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.misi-trek {
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.misi-trek i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--orange);
+}
+
+.lencana-grid {
+  justify-self: stretch;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 1rem;
+}
+
+.lencana-kad {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0.8rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+
+.lencana-kad[data-dapat="true"] {
+  border-color: var(--orange);
+}
+
+.lencana-ikon {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  background: var(--paper-2);
+  color: var(--muted);
+}
+
+.lencana-kad[data-dapat="true"] .lencana-ikon {
+  color: var(--orange);
+  background: var(--info-bg);
+}
+
+.lencana-kad[data-dapat="false"] .lencana-ikon {
+  opacity: 0.55;
+}
+
+.lencana-meta {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.lencana-meta p {
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.lencana-status {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.lencana-kad[data-dapat="true"] .lencana-status {
+  color: var(--orange);
+}
+
+.lencana-baru {
+  margin-left: 0.3rem;
+}
+
+@media (max-width: 30rem) {
+  .lencana-grid {
+    grid-template-columns: 1fr;
+  }
+}

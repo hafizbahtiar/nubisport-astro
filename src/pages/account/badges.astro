@@ -1,0 +1,166 @@
+---
+import AccountLayout from "../../layouts/AccountLayout.astro";
+import Alert from "../../components/ui/Alert.astro";
+---
+
+<AccountLayout title="Lencana">
+  <Alert variant="info" title="Ciri untuk ahli" id="bukan-ahli" hidden>
+    <p>
+      Lencana dan misi terbuka untuk ahli Nubi Sport. Keahlian diluluskan
+      pentadbir - <a class="link" href="/account/pricing">lihat keahlian</a>.
+    </p>
+  </Alert>
+
+  <Alert variant="danger" id="status" hidden />
+
+  <div id="ahli" hidden>
+    <ul class="stat" aria-label="Ringkasan lencana">
+      <li><span>Lencana</span><strong id="badge-count">0 / 6</strong></li>
+      <li>
+        <span>Misi minggu ini</span><strong id="mission-week">0 / 3</strong>
+      </li>
+      <li>
+        <span>Misi bulan ini</span><strong id="mission-month">0 km</strong>
+      </li>
+    </ul>
+
+    <section class="panel" aria-labelledby="t-badges">
+      <div class="panel-kepala">
+        <h3 class="display" id="t-badges">Lencana</h3>
+        <a class="btn btn-outline btn-sm" href="/account/activities"
+          >Aktiviti saya</a
+        >
+      </div>
+      <p class="muted">
+        Dikira dari aktiviti .fit, kehadiran larian kumpulan dan pelan awan.
+      </p>
+      <div class="lencana-grid" id="badge-grid"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="t-missions">
+      <div class="panel-kepala">
+        <h3 class="display" id="t-missions">Misi</h3>
+      </div>
+      <p class="muted">Misi dikira semula setiap kali page ini dibuka.</p>
+      <div class="misi-senarai" id="mission-list"></div>
+    </section>
+
+    <p class="muted">
+      Lencana ialah motivasi, bukan penilaian jurulatih. Larian yang tidak
+      dimuat naik tidak dikira.
+    </p>
+  </div>
+</AccountLayout>
+
+<script>
+  import { currentUser } from "../../lib/api";
+  import { icon } from "../../lib/icon";
+  import {
+    BADGES,
+    evaluateBadges,
+    MISSION_LABELS,
+    planProofFromSavedPlans,
+    type BadgeState,
+    type Mission,
+  } from "../../lib/badges";
+  import { pullCloud } from "../../lib/cloud-sync";
+  import { isMember } from "../../lib/plan-sync";
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const el = <K extends keyof HTMLElementTagNameMap>(tag: K, text: string) =>
+    Object.assign(document.createElement(tag), { textContent: text });
+
+  const missionBar = (m: Mission) => {
+    const wrap = document.createElement("div");
+    wrap.className = "misi";
+    const head = document.createElement("div");
+    head.className = "misi-teks";
+    head.append(
+      el("strong", MISSION_LABELS[m.id]),
+      el(
+        "span",
+        m.unit === "km"
+          ? `${m.progress.toLocaleString("ms-MY")} / ${m.target} km`
+          : `${m.progress} / ${m.target}`,
+      ),
+    );
+    const bar = document.createElement("div");
+    bar.className = "misi-trek";
+    bar.setAttribute("role", "progressbar");
+    bar.setAttribute("aria-valuemin", "0");
+    bar.setAttribute("aria-valuemax", String(m.target));
+    bar.setAttribute("aria-valuenow", String(Math.min(m.progress, m.target)));
+    const fill = document.createElement("i");
+    fill.style.width = `${Math.min(100, Math.round((m.progress / m.target) * 100))}%`;
+    bar.append(fill);
+    wrap.append(head, bar);
+    return wrap;
+  };
+
+  const dateLabel = (iso: string) =>
+    new Date(iso).toLocaleDateString("ms-MY", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      timeZone: "Asia/Kuala_Lumpur",
+    });
+
+  function render(state: BadgeState) {
+    const earned = new Map(state.earned.map((b) => [b.id, b]));
+    const fresh = new Set(state.newlyEarned);
+    const grid = $("badge-grid");
+    grid.replaceChildren(
+      ...BADGES.map((def) => {
+        const got = earned.get(def.id);
+        const card = document.createElement("article");
+        card.className = "lencana-kad";
+        card.dataset.dapat = got ? "true" : "false";
+        const badgeIcon = document.createElement("span");
+        badgeIcon.className = "lencana-ikon";
+        badgeIcon.innerHTML = icon(def.icon);
+        const meta = document.createElement("div");
+        meta.className = "lencana-meta";
+        const title = el("strong", def.label);
+        if (fresh.has(def.id)) {
+          const baru = el("span", "Baru");
+          baru.className = "lencana lencana-awan lencana-baru";
+          title.append(baru);
+        }
+        const description = el("p", def.description);
+        const status = el(
+          "span",
+          got ? `Dah dapat · ${dateLabel(got.earnedAt)}` : def.hint,
+        );
+        status.className = "lencana-status";
+        meta.append(title, description, status);
+        card.append(badgeIcon, meta);
+        return card;
+      }),
+    );
+    $("badge-count").textContent = `${state.earned.length} / ${BADGES.length}`;
+    const week = state.missions.find((m) => m.id === "weekly_3_runs");
+    const month = state.missions.find((m) => m.id === "monthly_50k");
+    if (week)
+      $("mission-week").textContent = `${week.progress} / ${week.target}`;
+    if (month)
+      $("mission-month").textContent =
+        `${month.progress.toLocaleString("ms-MY")} km`;
+    $("mission-list").replaceChildren(...state.missions.map(missionBar));
+  }
+
+  const s = await currentUser();
+  const member = isMember(s);
+  $("bukan-ahli").hidden = member;
+  $("ahli").hidden = !member;
+  if (member) {
+    await pullCloud();
+    const state = await evaluateBadges(planProofFromSavedPlans());
+    if (!state) {
+      $("status").hidden = false;
+      $("status").textContent =
+        "Lencana tak dapat dimuatkan sekarang. Semak sambungan dan cuba lagi.";
+    } else {
+      render(state);
+    }
+  }
+</script>
