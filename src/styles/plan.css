@@ -265,6 +265,11 @@
   color: var(--muted);
 }
 
+/* Sesi dah siap: pemasa tak perlu lagi (nyahtanda = butang kembali). */
+.sesi:has([data-sesi]:checked) .btn-mula {
+  display: none;
+}
+
 .kalendar {
   margin-top: 1.5rem;
   display: grid;
