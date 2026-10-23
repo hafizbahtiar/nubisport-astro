@@ -19,10 +19,14 @@ import Icon from "../../components/ui/Icon.astro";
 
   <Alert variant="danger" id="ralat" hidden />
 
-  <section class="panel" id="persetujuan" aria-labelledby="t-setuju" hidden>
-    <div class="panel-kepala">
-      <h3 class="display" id="t-setuju">Sebelum mula</h3>
-    </div>
+  <section
+    class="ai-consent"
+    id="persetujuan"
+    aria-labelledby="t-setuju"
+    hidden
+  >
+    <span class="ai-avatar ai-avatar-bot" aria-hidden="true">N</span>
+    <h3 class="display" id="t-setuju">Sebelum mula</h3>
     <p>
       Pembantu AI boleh membaca profil, pelan, aktiviti dan larian kumpulan yang
       anda bincangkan. Soalan dan data itu dihantar ke Command Code dan pembekal
@@ -30,7 +34,8 @@ import Icon from "../../components/ui/Icon.astro";
     </p>
     <p class="muted">
       Ini bukan nasihat perubatan atau penilaian jurulatih. Berhenti jika sakit,
-      sesak dada atau pening. Anda boleh tarik balik persetujuan bila-bila masa.
+      sesak dada atau pening. Anda boleh tarik balik persetujuan di Profil >
+      Maklumat.
     </p>
     <button class="btn btn-primary" type="button" id="setuju">
       Setuju dan mula
@@ -59,41 +64,6 @@ import Icon from "../../components/ui/Icon.astro";
           aria-label="Perbualan"
         >
         </ul>
-
-        <div class="ai-kosong" id="kosong">
-          <span class="ai-avatar ai-avatar-bot" aria-hidden="true">N</span>
-          <h3 class="display">Apa nak tahu hari ini?</h3>
-          <p class="muted">
-            Tanya pasal pelan, aktiviti, pemulihan atau larian kumpulan. AI baca
-            data awak sendiri; perubahan data belum dibuka.
-          </p>
-          <ul class="ai-chips" aria-label="Contoh soalan">
-            <li>
-              <button
-                class="btn btn-outline btn-sm"
-                type="button"
-                data-contoh="Minggu ini pelan saya apa?"
-                >Minggu ini pelan saya apa?</button
-              >
-            </li>
-            <li>
-              <button
-                class="btn btn-outline btn-sm"
-                type="button"
-                data-contoh="Aktiviti saya bulan ini macam mana?"
-                >Aktiviti bulan ini macam mana?</button
-              >
-            </li>
-            <li>
-              <button
-                class="btn btn-outline btn-sm"
-                type="button"
-                data-contoh="Larian kumpulan akan datang apa?"
-                >Larian akan datang apa?</button
-              >
-            </li>
-          </ul>
-        </div>
       </div>
 
       <form class="ai-borangan" id="borang">
@@ -123,12 +93,30 @@ import Icon from "../../components/ui/Icon.astro";
         </div>
       </form>
 
-      <div class="ai-kaki-luar">
-        <a class="link" href="/privacy">Privasi</a>
-        <span aria-hidden="true">·</span>
-        <button class="link" type="button" id="tarik">
-          Tarik balik persetujuan AI
-        </button>
+      <div class="ai-saran" id="saran">
+        <ul aria-label="Cadangan soalan">
+          <li>
+            <button type="button" data-contoh="Minggu ini pelan saya apa?">
+              Minggu ini pelan saya apa?
+            </button>
+          </li>
+          <li>
+            <button
+              type="button"
+              data-contoh="Aktiviti saya bulan ini macam mana?"
+            >
+              Aktiviti bulan ini macam mana?
+            </button>
+          </li>
+          <li>
+            <button
+              type="button"
+              data-contoh="Larian kumpulan akan datang apa?"
+            >
+              Larian akan datang apa?
+            </button>
+          </li>
+        </ul>
       </div>
     </section>
   </div>
@@ -136,7 +124,6 @@ import Icon from "../../components/ui/Icon.astro";
 
 <script>
   import { api, currentUser, json } from "../../lib/api";
-  import { confirmDialog } from "../../lib/confirm";
   import {
     runTool,
     toolContent,
@@ -152,7 +139,7 @@ import Icon from "../../components/ui/Icon.astro";
   };
   const log = $("log");
   const skrin = $("skrin") as HTMLElement;
-  const kosong = $("kosong") as HTMLElement;
+  const saran = $("saran") as HTMLElement;
   const teks = $("teks") as HTMLTextAreaElement;
   const hantar = $("hantar") as HTMLButtonElement;
   const kira = $("kira");
@@ -291,7 +278,7 @@ import Icon from "../../components/ui/Icon.astro";
     const text = teks.value.trim();
     if (!text || sibuk) return;
     ralat(null);
-    kosong.hidden = true;
+    saran.hidden = true;
     messages.push({ role: "user", content: text });
     paparUser(text);
     teks.value = "";
@@ -370,28 +357,6 @@ import Icon from "../../components/ui/Icon.astro";
     await tunjukChat();
   };
 
-  const tarikPersetujuan = async () => {
-    if (
-      !(await confirmDialog({
-        title: "Tarik balik persetujuan AI?",
-        message:
-          "Chat ini akan ditutup. Anda boleh setuju semula bila-bila masa.",
-        confirmLabel: "Tarik balik",
-        danger: true,
-      }))
-    )
-      return;
-    await api("/me/apps/nubi/aiconsent/ya", { method: "DELETE" }).catch(
-      () => null,
-    );
-    messages.length = 0;
-    log.replaceChildren();
-    assistant = null;
-    thinking = null;
-    kosong.hidden = false;
-    tunjukPersetujuan();
-  };
-
   teks.addEventListener("input", () => {
     kira.textContent = `${teks.value.length.toLocaleString("ms-MY")} / 2,000`;
     resizeTeks();
@@ -407,7 +372,6 @@ import Icon from "../../components/ui/Icon.astro";
     void hantarSoalan();
   });
   $("setuju").addEventListener("click", () => void simpanPersetujuan());
-  $("tarik").addEventListener("click", () => void tarikPersetujuan());
   for (const b of document.querySelectorAll<HTMLButtonElement>("[data-contoh]"))
     b.addEventListener("click", () => {
       teks.value = b.dataset.contoh ?? "";

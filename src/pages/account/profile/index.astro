@@ -47,6 +47,17 @@ import Alert from "../../../components/ui/Alert.astro";
       >
     </div>
   </section>
+
+  <section class="panel" aria-labelledby="t-ai">
+    <h2 class="display" id="t-ai">Pembantu AI</h2>
+    <p class="muted" id="ai-status">Menyemak persetujuan…</p>
+    <Alert variant="danger" id="mesej-ai" hidden />
+    <div class="actions">
+      <button class="btn btn-outline" type="button" id="ai-tarik" hidden
+        >Tarik balik persetujuan AI</button
+      >
+    </div>
+  </section>
 </ProfileShell>
 
 <script>
@@ -72,6 +83,43 @@ import Alert from "../../../components/ui/Alert.astro";
     profil.nama.value = s.name;
     profil.emel.value = s.email;
   }
+
+  // Persetujuan AI boleh ditarik balik di sini - chat AI sendiri kekal bersih.
+  const aiStatus = document.getElementById("ai-status")!;
+  const aiTarik = document.getElementById("ai-tarik") as HTMLButtonElement;
+  const aiMesej = document.getElementById("mesej-ai")!;
+  const muatAi = async () => {
+    const res = await api("/me/apps/nubi/aiconsent").catch(() => null);
+    const aktif = res?.ok && ((await json(res)).data?.items?.length ?? 0) > 0;
+    aiStatus.textContent = aktif
+      ? "Persetujuan AI aktif. Chat dibuang bila page dimuat semula; Nubi tak simpan kandungan chat."
+      : "Belum setuju. Pembantu AI akan minta persetujuan sebelum mula.";
+    aiTarik.hidden = !aktif;
+  };
+  void muatAi();
+  aiTarik.addEventListener("click", async () => {
+    const ya = await confirmDialog({
+      title: "Tarik balik persetujuan AI?",
+      message:
+        "Pembantu AI akan meminta persetujuan semula sebelum digunakan. Chat lama dibuang bila page dimuat semula.",
+      confirmLabel: "Tarik balik",
+      danger: true,
+    });
+    if (!ya) return aiTarik.focus();
+    aiMesej.hidden = true;
+    const res = await api("/me/apps/nubi/aiconsent/ya", {
+      method: "DELETE",
+    }).catch(() => null);
+    if (!res?.ok) {
+      aiMesej.textContent =
+        "Tak dapat tarik balik sekarang. Cuba lagi sekejap.";
+      aiMesej.hidden = false;
+      return;
+    }
+    aiStatus.textContent =
+      "Persetujuan AI ditarik balik. Pembantu AI akan minta persetujuan semula.";
+    aiTarik.hidden = true;
+  });
 
   // Telegram: status + nyahpaut dari profil. Amaran dihantar ke chat oleh backend
   // sebelum pautan dibuang (best effort - outage Telegram tak menghalang nyahpaut).

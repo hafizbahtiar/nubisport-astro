@@ -24,7 +24,7 @@ Ahli Nubi berbual dengan pembantu yang faham konteks dia (profil, pelan, larian,
   1. **Persetujuan** (kali pertama, bila `GET /me/apps/nubi/aiconsent` kosong): apa dihantar (data yang anda
      bincang - profil, pelan, larian, larian kumpulan) ke siapa (Command Code -> pembekal model), tak disimpan
      oleh Nubi, bukan nasihat perubatan. Butang "Setuju" -> `PUT /me/apps/nubi/aiconsent/ya` `{ engine: 1,
-     data: {}, progress: [] }`. Pautan tarik balik di bawah chat (`DELETE` yang sama).
+     data: {}, progress: [] }`. Tarik balik ada di Profil > Maklumat (`DELETE` yang sama); chat kekal bersih tanpa footer.
   2. **Chat**: senarai mesej (`role="log"`, `aria-live="polite"`), kotak teks (`textarea`, Enter hantar,
      Shift+Enter baris baru, had 2,000 aksara dengan kiraan), butang Hantar.
   3. **Baris kuota**: "12 / 100 bulan ini" dari respons chat (`quota`) atau `GET /me/apps/nubi/usage`.
