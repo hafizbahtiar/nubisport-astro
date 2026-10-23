@@ -7,9 +7,14 @@ import Section from "./ui/Section.astro";
 import Field from "./ui/Field.astro";
 import Dropdown from "./ui/Dropdown.astro";
 import { STATES } from "../lib/run-check";
+
+interface Props {
+  full?: boolean;
+}
+const { full = false } = Astro.props;
 ---
 
-<Section narrow title="Sesuai lari hari ini?" class="no-print">
+<Section narrow={!full} title="Sesuai lari hari ini?" class="no-print">
   <div class="card sesuai">
     <Field label="Negeri anda" for="sesuai-negeri-butang">
       <Dropdown

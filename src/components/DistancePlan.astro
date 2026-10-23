@@ -44,65 +44,70 @@ const maraton = jarak === "42k";
   <DistancePlanForm jarak={jarak} mode={mode} />
 </section>
 
-<section class="hasil" id="hasil" hidden aria-live="polite">
-  <div class="container" id="pelan"></div>
+<section class="hasil hasil-akaun" id="hasil" hidden aria-live="polite">
+  <div id="pelan"></div>
 </section>
 
-<RunCheck />
+{mode !== "new" && <RunCheck full />}
 
-<Section band narrow title="Sebelum mula" class="nota">
-  <ul>
-    <li>
-      Pelan ini panduan umum, <strong>bukan nasihat perubatan</strong>. Rujuk
-      doktor kalau ada masalah jantung, tekanan darah, sendi atau baru sembuh
-      daripada kecederaan. Berhenti kalau sakit (bukan sekadar penat). Pelan
-      dibina ikut prinsip latihan umum (contoh pelan pemula Hal Higdon) dan <strong
-        >belum disemak jurulatih bertauliah</strong
-      >.
-    </li>
-    <li>
-      Pelan disimpan dalam pelayar ini. Tekan "Simpan ke awan" (akaun percuma 1
-      pelan, ahli 5) supaya ia dan tanda siap ikut akaun anda ke peranti lain.
-    </li>
-    {
-      maraton ? (
+{
+  mode !== "new" && (
+    <Section band narrow={false} title="Sebelum mula" class="nota">
+      <ul>
         <li>
-          Bertangga: maraton perlukan masa 21K (boleh habis separuh maraton).
-          Belum sampai? Mula dengan{" "}
-          <a class="link" href="/account/plans/21k/new">
-            pelan 21K
-          </a>{" "}
-          dulu. Larian panjang 3-4 jam: latih minum dan makan (gel/kurma) sama
-          seperti hari lumba.
+          Pelan ini panduan umum, <strong>bukan nasihat perubatan</strong>.
+          Rujuk doktor kalau ada masalah jantung, tekanan darah, sendi atau baru
+          sembuh daripada kecederaan. Berhenti kalau sakit (bukan sekadar
+          penat). Pelan dibina ikut prinsip latihan umum (contoh pelan pemula
+          Hal Higdon) dan <strong>belum disemak jurulatih bertauliah</strong>.
         </li>
-      ) : (
         <li>
-          Bertangga: 10K perlukan masa 5K (boleh lari 5 km tanpa henti), 21K
-          perlukan masa 10K. Belum sampai? Mula dengan{" "}
-          <a class="link" href="/account/plans/5k/new">
-            Pelan 5K
-          </a>{" "}
-          atau pelan 10K dulu.
+          Pelan disimpan dalam pelayar ini. Tekan "Simpan ke awan" (akaun
+          percuma 1 pelan, ahli 5) supaya ia dan tanda siap ikut akaun anda ke
+          peranti lain.
         </li>
-      )
-    }
-    <li>
-      Anggaran masa guna formula Riegel berdasarkan masa anda sekarang - <strong
-        >anggaran kasar</strong
-      >. Jarak jauh biasanya lebih perlahan daripada ramalan bagi pelari yang
-      belum biasa.
-    </li>
-    <li>
-      Larian panjang naik sedikit demi sedikit, setiap minggu ke-4 lebih ringan,
-      dan minggu terakhir sebelum lumba diturunkan (tirus) supaya kaki segar.
-      Cuaca Malaysia panas - lari awal pagi, bawa air.
-    </li>
-    <li>
-      Baru bermula? Baca <a class="link" href="/guide">panduan pemula</a> - kasut,
-      panas badan, cuaca panas, keselamatan dan senarai semak hari lumba.
-    </li>
-  </ul>
-</Section>
+        {maraton ? (
+          <li>
+            Bertangga: maraton perlukan masa 21K (boleh habis separuh maraton).
+            Belum sampai? Mula dengan{" "}
+            <a class="link" href="/account/plans/21k/new">
+              pelan 21K
+            </a>{" "}
+            dulu. Larian panjang 3-4 jam: latih minum dan makan (gel/kurma) sama
+            seperti hari lumba.
+          </li>
+        ) : (
+          <li>
+            Bertangga: 10K perlukan masa 5K (boleh lari 5 km tanpa henti), 21K
+            perlukan masa 10K. Belum sampai? Mula dengan{" "}
+            <a class="link" href="/account/plans/5k/new">
+              Pelan 5K
+            </a>{" "}
+            atau pelan 10K dulu.
+          </li>
+        )}
+        <li>
+          Anggaran masa guna formula Riegel berdasarkan masa anda sekarang -{" "}
+          <strong>anggaran kasar</strong>. Jarak jauh biasanya lebih perlahan
+          daripada ramalan bagi pelari yang belum biasa.
+        </li>
+        <li>
+          Larian panjang naik sedikit demi sedikit, setiap minggu ke-4 lebih
+          ringan, dan minggu terakhir sebelum lumba diturunkan (tirus) supaya
+          kaki segar. Cuaca Malaysia panas - lari awal pagi, bawa air.
+        </li>
+        <li>
+          Baru bermula? Baca{" "}
+          <a class="link" href="/guide">
+            panduan pemula
+          </a>{" "}
+          - kasut, panas badan, cuaca panas, keselamatan dan senarai semak hari
+          lumba.
+        </li>
+      </ul>
+    </Section>
+  )
+}
 
 <Timer />
 <script>
@@ -160,6 +165,7 @@ const maraton = jarak === "42k";
     saveToCloud,
   } from "../lib/cloud-sync";
   import {
+    autoActivateOnly,
     mountActivePlanBox,
     mountActuals,
     planSessionDate,
@@ -563,6 +569,7 @@ const maraton = jarak === "42k";
         if (!ya) return;
         deletePlan(kunci);
         await removeFromCloud(kunci);
+        await autoActivateOnly();
         location.href = "/account/plans";
       });
     pelanEl

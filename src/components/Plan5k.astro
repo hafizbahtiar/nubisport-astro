@@ -62,46 +62,60 @@ const maf = full ? "/account/maf" : "/maf";
   )
 }
 
-<section class="hasil" id="hasil" hidden aria-live="polite">
-  <div class="container" id="pelan"></div>
+<section
+  class:list={["hasil", full ? "hasil-akaun" : ""]}
+  id="hasil"
+  hidden
+  aria-live="polite"
+>
+  <div class:list={[full ? "" : "container"]} id="pelan"></div>
 </section>
 
-<RunCheck />
+{mode !== "new" && <RunCheck full={full} />}
 
-<Section band narrow title="Sebelum mula" class="nota">
-  <ul>
-    <li>
-      Pelan ini panduan umum, <strong>bukan nasihat perubatan</strong>. Kalau
-      ada masalah jantung, tekanan darah, sendi atau baru sembuh daripada
-      kecederaan, rujuk doktor dulu. Berhenti kalau sakit (bukan sekadar penat).
-      Pelan dibina ikut prinsip latihan umum (contoh NHS Couch to 5K) dan <strong
-        >belum disemak jurulatih bertauliah</strong
-      >.
-    </li>
-    <li>
-      Ambang "munasabah" ialah <strong>anggaran kasar</strong>: dari sifar ~{
-        MIN_WEEKS.sifar
-      } minggu, dari jalan-lari ~{MIN_WEEKS.jalan} minggu, dan dari 5K sekarang ~{
-        WEEKS_PER_MINUTE
-      } minggu bagi setiap minit yang nak dipotong. Setiap orang berbeza.
-    </li>
-    <li>
-      Beban naik paling banyak 10% seminggu dan setiap minggu ke-4 lebih ringan
-      - badan jadi kuat masa berehat. Terlepas sesi? Teruskan dengan minggu itu,
-      jangan ganti dua kali ganda.
-    </li>
-    <li>
-      Cuaca Malaysia panas dan lembap: lari awal pagi atau lewat petang, bawa
-      air, perlahankan pace bila panas - ikut rasa usaha, bukan jam. Nak ukuran
-      yang lebih tepat? Cuba <a class="link" href={maf}>lari ikut nadi (MAF)</a> untuk
-      sesi mudah.
-    </li>
-    <li>
-      Baru bermula? Baca <a class="link" href="/guide">panduan pemula</a> - kasut,
-      panas badan, cuaca panas, keselamatan dan senarai semak hari lumba.
-    </li>
-  </ul>
-</Section>
+{
+  mode !== "new" && (
+    <Section band narrow={!full} title="Sebelum mula" class="nota">
+      <ul>
+        <li>
+          Pelan ini panduan umum, <strong>bukan nasihat perubatan</strong>.
+          Kalau ada masalah jantung, tekanan darah, sendi atau baru sembuh
+          daripada kecederaan, rujuk doktor dulu. Berhenti kalau sakit (bukan
+          sekadar penat). Pelan dibina ikut prinsip latihan umum (contoh NHS
+          Couch to 5K) dan <strong>belum disemak jurulatih bertauliah</strong>.
+        </li>
+        <li>
+          Ambang "munasabah" ialah <strong>anggaran kasar</strong>: dari sifar ~
+          {MIN_WEEKS.sifar} minggu, dari jalan-lari ~{MIN_WEEKS.jalan} minggu,
+          dan dari 5K sekarang ~{WEEKS_PER_MINUTE} minggu bagi setiap minit yang
+          nak dipotong. Setiap orang berbeza.
+        </li>
+        <li>
+          Beban naik paling banyak 10% seminggu dan setiap minggu ke-4 lebih
+          ringan - badan jadi kuat masa berehat. Terlepas sesi? Teruskan dengan
+          minggu itu, jangan ganti dua kali ganda.
+        </li>
+        <li>
+          Cuaca Malaysia panas dan lembap: lari awal pagi atau lewat petang,
+          bawa air, perlahankan pace bila panas - ikut rasa usaha, bukan jam.
+          Nak ukuran yang lebih tepat? Cuba{" "}
+          <a class="link" href={maf}>
+            lari ikut nadi (MAF)
+          </a>{" "}
+          untuk sesi mudah.
+        </li>
+        <li>
+          Baru bermula? Baca{" "}
+          <a class="link" href="/guide">
+            panduan pemula
+          </a>{" "}
+          - kasut, panas badan, cuaca panas, keselamatan dan senarai semak hari
+          lumba.
+        </li>
+      </ul>
+    </Section>
+  )
+}
 
 <Timer />
 <script>
@@ -127,6 +141,7 @@ const maf = full ? "/account/maf" : "/maf";
     saveToCloud,
   } from "../lib/cloud-sync";
   import {
+    autoActivateOnly,
     mountActivePlanBox,
     mountActuals,
     planSessionDate,
@@ -613,6 +628,7 @@ const maf = full ? "/account/maf" : "/maf";
         if (!ya) return;
         deletePlan(kunci);
         await removeFromCloud(kunci);
+        await autoActivateOnly();
         location.href = "/account/plans";
       });
     mountShare(

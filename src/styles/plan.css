@@ -9,6 +9,15 @@
   margin-block: 1.25rem;
 }
 
+/* Akaun: hasil pelan guna lebar kandungan penuh, bukan container awam. */
+.hasil-akaun {
+  padding-block: 0;
+}
+
+.hasil-akaun>#pelan {
+  width: 100%;
+}
+
 .ringkas {
   display: flex;
   flex-wrap: wrap;

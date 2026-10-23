@@ -198,11 +198,8 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
                     ? "Ahli"
                     : "Belum ahli",
             );
-            const buka = (a, ok) =>
-              document.querySelectorAll(a).forEach((e) => (e.hidden = !ok));
-            buka("[data-ahli]", owner || n === "ahli" || n === "admin");
-            buka("[data-admin]", owner || n === "admin");
-            buka("[data-owner]", owner);
+            // Link ahli/owner sengaja TIDAK dibuka dari cache: cache boleh stale selepas
+            // role dibuang. Skrip modul di bawah buka ikut /me segar.
           }
         } catch {}
       </script>

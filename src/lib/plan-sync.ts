@@ -302,6 +302,14 @@ export async function sessionFor<A extends MatchableActivity>(a: A): Promise<{ s
 }
 
 /** Jadikan pelan aktif, kemudian padankan aktiviti sejak tarikh mula. Pulang bilangan sesi ditanda, null = gagal. */
+/** If the member has exactly one cloud plan and no active pointer, activate it. */
+export async function autoActivateOnly(): Promise<boolean> {
+  if (!isMember(await currentUser())) return false;
+  const [k, a] = await Promise.all([activePlanKey(), listCloud()]);
+  if (!a || a.items.length !== 1 || k === a.items[0].key) return false;
+  return (await setActivePlan(a.items[0].key)) !== null;
+}
+
 export async function setActivePlan(kunci: string): Promise<number | null> {
   const r = await api(`${AKTIF}/plan`, {
     method: "PUT",
@@ -321,8 +329,11 @@ export async function setActivePlan(kunci: string): Promise<number | null> {
 export async function mountActivePlanBox(slot: HTMLElement, kunci: string, adaMula: boolean, siap: Set<string>, kemas: () => void) {
   if (!isMember(await currentUser())) return;
   const lukis = async (pesan = "") => {
-    const [k, a] = await Promise.all([activePlanKey(), listCloud()]);
+    let [k, a] = await Promise.all([activePlanKey(), listCloud()]);
     if (!a) return;
+    // Pelan pertama/tunggal: jadikan aktif tanpa perlu tekan butang.
+    if (a.items.length === 1 && k !== a.items[0].key && (await setActivePlan(a.items[0].key)) !== null)
+      k = a.items[0].key;
     const diAwan = a.items.some((i) => i.key === kunci);
     // Pelan aktif yang tak boleh dipadankan: terangkan kenapa, bukan "Tak dapat sync sekarang".
     const st = k === kunci ? await activePlanState() : null;
@@ -338,13 +349,13 @@ export async function mountActivePlanBox(slot: HTMLElement, kunci: string, adaMu
       k === kunci && halangan
         ? `<span class="lencana lencana-awan">${icon("aktiviti")}Aktif</span> <span class="muted">${halangan}</span>`
         : k === kunci
-        ? `<span class="lencana lencana-awan">${icon("aktiviti")}Aktif</span> <span class="muted">${pesan || "Aktiviti Strava yang dimuat naik akan tanda sesi siap sendiri."}</span>
+          ? `<span class="lencana lencana-awan">${icon("aktiviti")}Aktif</span> <span class="muted">${pesan || "Aktiviti Strava yang dimuat naik akan tanda sesi siap sendiri."}</span>
            <button class="btn btn-outline btn-sm" type="button" data-sync>Sync aktiviti</button>`
-        : !diAwan
-          ? `<span class="muted">Simpan pelan ini ke awan untuk jadikan ia pelan aktif.</span>`
-          : !adaMula
-            ? `<span class="muted">Isi "Tarikh mula" di atas dan tekan "Buat pelan" untuk jadikan ia pelan aktif.</span>`
-            : `<button class="btn btn-outline btn-sm" type="button" data-aktifkan>Jadikan pelan aktif</button>
+          : !diAwan
+            ? `<span class="muted">Simpan pelan ini ke awan untuk jadikan ia pelan aktif.</span>`
+            : !adaMula
+              ? `<span class="muted">Isi "Tarikh mula" di atas dan tekan "Buat pelan" untuk jadikan ia pelan aktif.</span>`
+              : `<button class="btn btn-outline btn-sm" type="button" data-aktifkan>Jadikan pelan aktif</button>
                <span class="muted">Aktiviti Strava akan tanda sesi pelan ini siap.</span>`;
     slot.querySelector<HTMLButtonElement>("[data-sync]")?.addEventListener("click", async (e) => {
       const b = e.currentTarget as HTMLButtonElement;
