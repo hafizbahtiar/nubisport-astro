@@ -1,0 +1,257 @@
+---
+// Kalkulator defisit: kalori sehari untuk turun berat + contoh pecahan makro. Dalam pelayar - input
+// (data kesihatan) tak masuk URL, storan atau API; log masuk = diisi dari profil latihan (baca saja). Logik: src/lib/deficit.ts (semak: bun scripts/check-deficit.ts).
+import Layout from "../layouts/Layout.astro";
+import PageHero from "../components/ui/PageHero.astro";
+import ChipGroup from "../components/ui/ChipGroup.astro";
+import Field from "../components/ui/Field.astro";
+import Alert from "../components/ui/Alert.astro";
+import { LIFESTYLES, RATES } from "../lib/deficit";
+---
+
+<Layout
+  title="Kalkulator defisit - Nubi Sport"
+  description="Anggar kalori sehari untuk turun berat dengan selamat, termasuk larian anda, dan contoh pecahan karbohidrat, protein dan lemak. Dikira dalam pelayar."
+>
+  <PageHero
+    eyebrow="Kalkulator"
+    title="Nak turun berat,"
+    accent="makan berapa?"
+    lead="Anggaran kalori sehari ikut badan, gaya hidup dan larian anda - dengan had selamat. Tiada apa disimpan; semua dikira dalam pelayar."
+  >
+    <form class="form" id="borang">
+      <ChipGroup
+        legend="Jantina (untuk formula)"
+        name="jantina"
+        options={[
+          { value: "lelaki", label: "Lelaki" },
+          { value: "perempuan", label: "Perempuan" },
+        ]}
+      />
+      <div class="dua">
+        <Field label="Umur" hint="19-78 tahun">
+          <input
+            class="input"
+            type="number"
+            name="umur"
+            min="19"
+            max="78"
+            step="1"
+            inputmode="numeric"
+            required
+          />
+        </Field>
+        <Field label="Tinggi (cm)">
+          <input
+            class="input"
+            type="number"
+            name="tinggi"
+            min="130"
+            max="220"
+            step="1"
+            inputmode="numeric"
+            required
+          />
+        </Field>
+        <Field label="Berat (kg)">
+          <input
+            class="input"
+            type="number"
+            name="berat"
+            min="35"
+            max="250"
+            step="0.1"
+            inputmode="decimal"
+            required
+          />
+        </Field>
+        <Field label="Larian seminggu (km)" hint="0 kalau belum mula">
+          <input
+            class="input"
+            type="number"
+            name="km"
+            min="0"
+            max="200"
+            step="1"
+            inputmode="numeric"
+            value="0"
+            required
+          />
+        </Field>
+      </div>
+      <ChipGroup
+        legend="Hari biasa anda (tanpa larian)"
+        name="gaya"
+        stacked
+        options={Object.entries(LIFESTYLES).map(([value, l]) => ({
+          value,
+          label: l.nama,
+        }))}
+      />
+      <ChipGroup
+        legend="Sasaran turun seminggu"
+        name="kg"
+        checked={0.5}
+        options={RATES.map((r) => ({ value: r, label: `${r} kg` }))}
+      />
+      <label class="check">
+        <input type="checkbox" name="sesuai" required />
+        <span class="check-teks">
+          <span class="check-label"
+            >Saya tidak hamil atau menyusu, dan tiada sejarah gangguan makan</span
+          >
+          <small class="field-hint"
+            >Kalau ada, kalkulator ini tak sesuai - rujuk doktor atau dietitian.</small
+          >
+        </span>
+      </label>
+      <p class="field-hint">
+        Ada akaun? Simpan tarikh lahir, jantina, tinggi dan berat di
+        <a class="link" href="/account/profile/training">Profil &gt; Latihan</a> -
+        borang ini terisi sendiri bila anda log masuk.
+      </p>
+      <button class="btn btn-primary" type="submit">Kira</button>
+    </form>
+  </PageHero>
+
+  <section id="hasil" hidden aria-live="polite">
+    <div class="container narrow" id="keputusan"></div>
+  </section>
+
+  <section>
+    <div class="container narrow">
+      <Alert variant="warning" title="Bukan nasihat perubatan">
+        <p>
+          Anggaran dari formula Mifflin-St Jeor dan tahap aktiviti FAO - ralat
+          ±10% atau lebih bagi setiap orang. Timbang 2-3 minggu, kemudian
+          laraskan. Belum disemak dietitian bertauliah. Ada diabetes, sakit buah
+          pinggang, makan ubat, atau umur bawah 19? Rujuk doktor dulu.
+        </p>
+      </Alert>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { calcDeficit } from "../lib/deficit";
+  import { prefillForm } from "../lib/profile";
+
+  const borang = document.getElementById("borang") as HTMLFormElement;
+  const hasil = document.getElementById("hasil")!;
+  if (/(?:^|; )session_active=1/.test(document.cookie))
+    void prefillForm(borang, new URLSearchParams(), () => undefined);
+  const keputusan = document.getElementById("keputusan")!;
+  const kcal = (n: number) => Math.round(n).toLocaleString("ms-MY");
+  const g = (n: number) => `${Math.round(n)} g`;
+
+  // Tiada GET: berat/umur tak patut tinggal dalam URL atau sejarah pelayar.
+  borang.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const f = new FormData(borang);
+    const n = (k: string) => Number(f.get(k) ?? NaN);
+    const h = calcDeficit({
+      umur: n("umur"),
+      jantina: String(f.get("jantina")),
+      tinggi: n("tinggi"),
+      berat: n("berat"),
+      gaya: String(f.get("gaya")),
+      km: n("km"),
+      kgSeminggu: n("kg"),
+    });
+    hasil.hidden = false;
+    // Teks dari lib + nombor sahaja - selamat untuk innerHTML.
+    keputusan.innerHTML = !h.ok
+      ? `<div class="alert alert-warning"><p>${h.sebab}</p></div>`
+      : `<p class="eyebrow">Sasaran sehari</p>
+        <div class="defisit-angka">
+          <div><span class="display">${kcal(h.sasaran)}</span><small>kcal makan</small></div>
+          <div><span class="display">${kcal(h.keperluan)}</span><small>kcal guna</small></div>
+          <div><span class="display">${h.kgSebenar.toFixed(2)}</span><small>kg seminggu</small></div>
+        </div>
+        ${
+          h.had === "lantai"
+            ? `<div class="alert alert-warning"><p>Sasaran berhenti di ${kcal(h.sasaran)} kcal - jangan makan kurang daripada ini tanpa pengawasan doktor atau dietitian. ${h.kgSebenar > 0 ? `Kadar turun jadi ~${h.kgSebenar.toFixed(2)} kg seminggu.` : "Keperluan anda dah rendah - tambah aktiviti, bukan kurangkan makan."}</p></div>`
+            : h.had === "25%"
+              ? `<div class="alert alert-warning"><p>Defisit dihadkan 25% keperluan supaya tenaga cukup untuk lari - kadar turun jadi ~${h.kgSebenar.toFixed(2)} kg seminggu.</p></div>`
+              : ""
+        }
+        <table class="defisit-jadual">
+          <tbody>
+            <tr><th scope="row">Badan berehat (Mifflin-St Jeor)</th><td>${kcal(h.ree)} kcal</td></tr>
+            <tr><th scope="row">Larian (purata sehari)</th><td>${kcal(h.larian)} kcal</td></tr>
+            <tr><th scope="row">Jumlah guna sehari</th><td>${kcal(h.keperluan)} kcal</td></tr>
+            <tr><th scope="row">Defisit</th><td>${kcal(Math.max(0, h.keperluan - h.sasaran))} kcal</td></tr>
+          </tbody>
+        </table>
+        <h2 class="display defisit-tajuk">Contoh pecahan makro</h2>
+        <p class="muted">Untuk ${kcal(h.sasaran)} kcal sehari. Contoh kiraan, bukan pelan makan - pilih yang sesuai dengan selera anda.</p>
+        <table class="defisit-jadual">
+          <thead><tr><th scope="col">Templat</th><th scope="col">Karbo</th><th scope="col">Protein</th><th scope="col">Lemak</th></tr></thead>
+          <tbody>${h.makro
+            .map(
+              (m) =>
+                `<tr><th scope="row">${m.nama}</th><td>${g(m.karbo)}</td><td>${g(m.protein)}</td><td>${g(m.lemak)}</td></tr>`,
+            )
+            .join("")}</tbody>
+        </table>
+        ${h.makro
+          .filter((m) => m.amaran)
+          .map(
+            (m) =>
+              `<p class="field-hint"><strong>${m.nama}:</strong> ${m.amaran}</p>`,
+          )
+          .join("")}
+        <p class="field-hint">Penurunan sebenar makin perlahan selepas beberapa minggu bila badan menyesuaikan. Panduan umum, bukan nasihat perubatan.</p>`;
+    hasil.scrollIntoView();
+  });
+</script>
+
+<style is:global>
+  /* Global: keputusan dirender dengan innerHTML. */
+  .dua {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: 1rem;
+  }
+  .defisit-angka {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin: 0 0 1.5rem;
+  }
+  .defisit-angka > div {
+    display: grid;
+  }
+  .defisit-angka .display {
+    font-size: clamp(1.8rem, 8vw, 3.5rem);
+    line-height: 1;
+    color: var(--orange-ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .defisit-angka small {
+    color: var(--muted);
+  }
+  .defisit-tajuk {
+    margin: 2rem 0 0.5rem;
+  }
+  .defisit-jadual {
+    width: 100%;
+    margin: 0 0 1rem;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+  .defisit-jadual th,
+  .defisit-jadual td {
+    padding: 0.6rem 0.5rem;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+  }
+  .defisit-jadual td {
+    white-space: nowrap;
+  }
+  .defisit-jadual thead th {
+    font-size: 0.85rem;
+    color: var(--muted);
+    font-weight: 600;
+  }
+</style>

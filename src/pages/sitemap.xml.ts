@@ -8,6 +8,7 @@ const HALAMAN = [
   "/guide",
   "/maf",
   "/pace",
+  "/deficit",
   "/privacy",
   "/terms",
 ];

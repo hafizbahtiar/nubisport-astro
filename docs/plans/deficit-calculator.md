@@ -1,6 +1,6 @@
 # Kalkulator defisit kalori
 
-Status: **dirancang** (2026-10-23), belum dibina. Diminta oleh kawan owner. Corak sama dengan kalkulator
+Status: **v1 dibina** (2026-10-23) - `/deficit`, `lib/deficit.ts`, `scripts/check-deficit.ts`. Diminta oleh kawan owner. Corak sama dengan kalkulator
 peluh (`lib/sweat.ts`): fungsi tulen, dikira dalam pelayar, tiada simpanan.
 
 ## Tujuan
@@ -73,9 +73,10 @@ buah pinggang atau hamil = rujuk doktor dulu.
 
 ## Privasi
 
-Berat, tinggi, umur dan jantina = data peribadi (kesihatan). v1 dikira **dalam pelayar saja** - tiada
-localStorage, tiada API, tiada analitik input. Jadi `/privacy` tak perlu berubah. Simpan ke profil
-(`app_items` `profil`) = keputusan berasingan nanti, dan wajib kemas kini `/privacy`.
+Kalkulator dikira **dalam pelayar** - input tak masuk URL, localStorage, API atau analitik, dan kalkulator
+tak pernah menulis ke profil. Owner putuskan (2026-10-23) simpan `jantina`, `tinggi`, `berat` dalam profil
+latihan (`app_items` `profil`, pengguna isi sendiri di Profil > Latihan); `/deficit` hanya membacanya untuk
+isi borang bila log masuk. `/privacy` disenaraikan (berat = data berkaitan kesihatan, boleh dikosongkan).
 
 ## Luar skop (YAGNI)
 

@@ -1,5 +1,5 @@
-// Profil latihan (akaun): tarikh lahir, keadaan MAF, hari seminggu, masa 5K/10K/21K terkini - supaya
-// borang MAF dan pelan terisi sendiri. Disimpan sebagai app_items `profil` (satu rekod "saya",
+// Profil latihan (akaun): tarikh lahir, keadaan MAF, hari seminggu, masa 5K/10K/21K terkini, jantina, tinggi,
+// berat - supaya borang MAF, pelan dan kalkulator defisit terisi sendiri. Disimpan sebagai app_items `profil` (satu rekod "saya",
 // /me/apps/nubi/profil) - bukan jadual baru: data milik seorang pengguna (IDEA.md). Hanya pemilik
 // akaun yang boleh baca. URL sentiasa menang (pautan kongsi / pelan seterusnya).
 // Semak: bun scripts/check-profile.ts
@@ -13,6 +13,9 @@ export interface TrainingProfile {
   masa5k?: string; // minit
   masa10k?: string;
   masa21k?: string;
+  jantina?: string; // lelaki | perempuan (formula Mifflin-St Jeor)
+  tinggi?: string; // cm
+  berat?: string; // kg
 }
 
 const LALUAN = "/me/apps/nubi/profil";
@@ -66,7 +69,7 @@ export function ageOn(lahir: string, hariIni = todayMY()): number | null {
 }
 
 /**
- * Isi borang dari profil: umur, keadaan, hari, masa (`masa` pilih 5K atau 10K). Medan yang ada
+ * Isi borang dari profil: umur, keadaan, hari, masa (`masa` pilih 5K atau 10K), jantina, tinggi, berat. Medan yang ada
  * dalam URL tidak disentuh. Tidak menunggu - borang sudah boleh diguna sebelum profil tiba.
  */
 export async function prefillForm(borang: HTMLFormElement, q: URLSearchParams, masa: (p: TrainingProfile) => string | undefined) {
@@ -77,6 +80,9 @@ export async function prefillForm(borang: HTMLFormElement, q: URLSearchParams, m
     keadaan: p.keadaan,
     hari: p.hari,
     masa: masa(p),
+    jantina: p.jantina,
+    tinggi: p.tinggi,
+    berat: p.berat,
   };
   for (const [k, v] of Object.entries(nilai)) {
     const el = borang.elements.namedItem(k);

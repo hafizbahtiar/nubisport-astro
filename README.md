@@ -26,6 +26,7 @@ oleh owner, **sebelum** Nubi bila Nubi bergantung pada endpoint baru.
 | `/plan-5k` | awam | Pelan "5K bawah 30 minit" + label "Realistik tak?" + pemasa jalan-lari + kad "Sesuai lari hari ini?" (IPU + cuaca + waktu lari terbaik); had lembut 3 pelan dalam pelayar; kongsi pelan |
 | `/maf` | awam | Kira had nadi MAF (formula 180 Maffetone) |
 | `/pace` | awam | Kalkulator pace: masa ↔ pace, km/j, anggaran 5K-maraton (Riegel) |
+| `/deficit` | awam | Kalkulator defisit: kalori sehari untuk turun berat (Mifflin-St Jeor, PAL FAO, larian ACSM, had selamat) + contoh makro; dalam pelayar, tiada simpanan |
 | `/guide` | awam | Panduan pemula (NHS, KKM) + kalkulator peluh (ACSM) + senarai semak hari lumba boleh cetak |
 | `/races` | awam | Kalendar lumba Malaysia (susun tangan dari laman rasmi penganjur) + `.ics` per acara |
 | `/privacy`, `/terms` | awam | Dasar Privasi (PDPA 2010) dan Terma Penggunaan, ikut data yang betul-betul disimpan |
@@ -95,6 +96,7 @@ bun scripts/check-ics.ts           # fail kalendar RFC 5545
 bun scripts/check-date.ts        # DatePicker dd/mm/yyyy
 bun scripts/check-run-check.ts         # band IPU (JAS) + nasihat cuaca (MET) + waktu lari terbaik (JAKIM)
 bun scripts/check-sweat.ts          # kalkulator peluh
+bun scripts/check-deficit.ts        # kalkulator defisit + makro (contoh kira tangan)
 bun scripts/check-races.ts          # data kalendar lumba (disemak <= 3 bulan)
 bun scripts/check-profile.ts         # umur dari tarikh lahir
 bun scripts/check-ramadan.ts        # bulan Hijri + tag/banner Ramadan

@@ -22,6 +22,20 @@ const maf = full ? "/account/maf" : "/maf";
 ---
 
 {
+  mode !== "public" && (
+    <p class="back-link-row">
+      <a
+        class="back-link back-link--accent"
+        href="/account/plans"
+        data-plan-back
+      >
+        ← Semua pelan
+      </a>
+    </p>
+  )
+}
+
+{
   mode === "public" ? (
     <PageHero
       eyebrow="Pelan latihan"
@@ -34,11 +48,6 @@ const maf = full ? "/account/maf" : "/maf";
   ) : (
     <section class="plan-form" data-plan-form hidden={mode === "view"}>
       <header class="plan-form-head">
-        {mode === "new" && (
-          <a class="back-link back-link--accent" href="/account/plans">
-            ← Semua pelan
-          </a>
-        )}
         <h2 class="display">
           {mode === "new" ? "Buat pelan 5K" : "Edit pelan 5K"}
         </h2>
@@ -126,6 +135,7 @@ const maf = full ? "/account/maf" : "/maf";
     planSessionDate,
   } from "../lib/plan-sync";
   import { confirmDialog } from "../lib/confirm";
+  import { mountUnsavedGuard, type UnsavedGuard } from "../lib/unsaved-guard";
   import { api, json } from "../lib/api";
   import { prefillForm, fillEmptyProfile } from "../lib/profile";
   import {
@@ -229,6 +239,7 @@ const maf = full ? "/account/maf" : "/maf";
   }
 
   // "Kemas kini pelan" dari borang edit (view). Kunci datang dari dataset yang papar() set.
+  let planGuard: UnsavedGuard | null = null;
   function updatePlan() {
     const key = borang.dataset.planKey;
     if (!key) return;
@@ -238,6 +249,7 @@ const maf = full ? "/account/maf" : "/maf";
     if (!papar()) return; // ralat dipapar, borang kekal terbuka
     history.replaceState(null, "", `?${q}`);
     if (formPanel) formPanel.hidden = true;
+    planGuard?.markClean();
     hasil.scrollIntoView();
     pelanEl.querySelector("h2")?.focus({ preventScroll: true });
     // Pelan ini mungkin sudah di awan: hantar params/tanda siap baharu (update, bukan slot baharu).
@@ -302,6 +314,14 @@ const maf = full ? "/account/maf" : "/maf";
     papar()
   )
     (pelanEl.querySelector(".kad.kini") ?? hasil).scrollIntoView();
+
+  if (full && mode !== "public") {
+    planGuard = mountUnsavedGuard(borang, {
+      active: () => mode === "new" || (formPanel ? !formPanel.hidden : false),
+      backLink: document.querySelector<HTMLAnchorElement>("[data-plan-back]"),
+    });
+    if (mode === "new" || (formPanel && !formPanel.hidden)) planGuard.arm();
+  }
 
   // Awam: kotak promosi versi penuh (selepas analisis ringkas).
   function htmlPromosi() {
@@ -469,7 +489,6 @@ const maf = full ? "/account/maf" : "/maf";
     );
 
     pelanEl.innerHTML = `
-      ${mode === "view" ? `<p class="no-print"><a class="back-link back-link--accent" href="/account/plans">← Semua pelan</a></p>` : ""}
       <div class="ringkas">
         <div>
           <p class="eyebrow">Pelan anda</p>
@@ -616,6 +635,7 @@ const maf = full ? "/account/maf" : "/maf";
     pelanEl.querySelector("[data-edit]")?.addEventListener("click", (e) => {
       if (!formPanel) return;
       formPanel.hidden = false;
+      planGuard?.arm();
       (e.currentTarget as HTMLElement).setAttribute("aria-expanded", "true");
       formPanel.scrollIntoView();
       // preventScroll: fokus tak potong skrol lancar di atas.

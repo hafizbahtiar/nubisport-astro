@@ -1,6 +1,6 @@
 ---
-// Profil Nubi - Maklumat latihan: tarikh lahir, keadaan MAF, hari, masa 5K/10K/21K (lib/profile.ts,
-// app_items `profil`). Mengisi borang MAF dan pelan; URL pelan tetap menang.
+// Profil Nubi - Maklumat latihan: tarikh lahir, keadaan MAF, hari, masa 5K/10K/21K, jantina, tinggi, berat
+// (lib/profile.ts, app_items `profil`). Mengisi borang MAF, pelan dan /deficit; URL pelan tetap menang.
 import ProfileShell from "../../../components/ProfileShell.astro";
 import Field from "../../../components/ui/Field.astro";
 import Alert from "../../../components/ui/Alert.astro";
@@ -19,9 +19,9 @@ const hariIni = new Date().toISOString().slice(0, 10);
   <section class="panel" aria-labelledby="t-latihan">
     <h2 class="display" id="t-latihan">Maklumat latihan</h2>
     <p class="muted">
-      Isi sekali, dan borang MAF serta pelan akan terisi sendiri (pautan pelan
-      tetap diutamakan). Semua medan pilihan - medan kosong tak disimpan. Hanya
-      anda yang boleh lihat.
+      Isi sekali, dan borang MAF, pelan serta kalkulator defisit akan terisi
+      sendiri (pautan pelan tetap diutamakan). Semua medan pilihan - medan
+      kosong tak disimpan. Hanya anda yang boleh lihat.
     </p>
     <form class="form form-grid form-grid--lg" id="latihan" novalidate>
       <Field
@@ -80,6 +80,37 @@ const hariIni = new Date().toISOString().slice(0, 10);
           inputmode="numeric"
         />
       </Field>
+      <ChipGroup
+        legend="Jantina"
+        name="jantina"
+        required={false}
+        options={[
+          { value: "lelaki", label: "Lelaki" },
+          { value: "perempuan", label: "Perempuan" },
+        ]}
+      />
+      <Field label="Tinggi (cm)">
+        <input
+          class="input"
+          type="number"
+          name="tinggi"
+          min="130"
+          max="220"
+          step="1"
+          inputmode="numeric"
+        />
+      </Field>
+      <Field label="Berat (kg)" hint="Kemas kini bila berat berubah.">
+        <input
+          class="input"
+          type="number"
+          name="berat"
+          min="35"
+          max="250"
+          step="0.1"
+          inputmode="decimal"
+        />
+      </Field>
       <Alert variant="danger" id="mesej-latihan" hidden />
       <Alert variant="success" id="ok-latihan" hidden />
       <button class="btn btn-primary" type="submit">Simpan</button>
@@ -109,6 +140,9 @@ const hariIni = new Date().toISOString().slice(0, 10);
     "masa5k",
     "masa10k",
     "masa21k",
+    "jantina",
+    "tinggi",
+    "berat",
   ] as const;
   const medan = (k: string) =>
     latihan.elements.namedItem(k) as HTMLInputElement | RadioNodeList;
@@ -135,7 +169,7 @@ const hariIni = new Date().toISOString().slice(0, 10);
                 "input[type=number]",
               ),
             ].some((i) => !i.checkValidity())
-          ? "Semak masa 5K / 10K / 21K - di luar julat."
+          ? "Semak masa, tinggi atau berat - di luar julat."
           : null;
     papar("mesej-latihan", salah);
     if (salah) return;

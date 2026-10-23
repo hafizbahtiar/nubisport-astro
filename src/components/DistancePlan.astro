@@ -18,15 +18,14 @@ const { jarak, mode } = Astro.props;
 const maraton = jarak === "42k";
 ---
 
+<p class="back-link-row">
+  <a class="back-link back-link--accent" href="/account/plans" data-plan-back>
+    ← Semua pelan
+  </a>
+</p>
+
 <section class="plan-form" data-plan-form hidden={mode === "view"}>
   <header class="plan-form-head">
-    {
-      mode === "new" && (
-        <a class="back-link back-link--accent" href="/account/plans">
-          ← Semua pelan
-        </a>
-      )
-    }
     <h2 class="display">
       {
         mode === "new"
@@ -169,6 +168,7 @@ const maraton = jarak === "42k";
     planSessionDate,
   } from "../lib/plan-sync";
   import { confirmDialog } from "../lib/confirm";
+  import { mountUnsavedGuard, type UnsavedGuard } from "../lib/unsaved-guard";
 
   const borang = document.getElementById("borang") as HTMLFormElement;
   const formPanel = document.querySelector<HTMLElement>("[data-plan-form]");
@@ -230,6 +230,7 @@ const maraton = jarak === "42k";
     borang.append(keyInput);
   }
   // Kemas kini pelan dari borang panel (view) guna kunci yang sama.
+  let planGuard: UnsavedGuard | null = null;
   function updatePlan() {
     const key = borang.dataset.planKey;
     if (!key) return;
@@ -239,6 +240,7 @@ const maraton = jarak === "42k";
     if (!papar()) return; // ralat dipapar, borang kekal terbuka
     history.replaceState(null, "", `?${q}`);
     if (formPanel) formPanel.hidden = true;
+    planGuard?.markClean();
     hasil.scrollIntoView();
     pelanEl.querySelector("h2")?.focus({ preventScroll: true });
     void listCloud().then((a) => {
@@ -307,6 +309,12 @@ const maraton = jarak === "42k";
   ikutJarak();
   // View papar pelan tersimpan tanpa auto-scroll; params rosak = buka borang untuk dibetulkan.
   if (viewParams && !papar() && formPanel) formPanel.hidden = false;
+
+  planGuard = mountUnsavedGuard(borang, {
+    active: () => mode === "new" || (formPanel ? !formPanel.hidden : false),
+    backLink: document.querySelector<HTMLAnchorElement>("[data-plan-back]"),
+  });
+  if (mode === "new" || (formPanel && !formPanel.hidden)) planGuard.arm();
 
   function papar(): boolean {
     q.set("jarak", jarak);
@@ -424,7 +432,6 @@ const maraton = jarak === "42k";
     const tajuk = `${c.nama} · ${tempoh} · ${hari} hari seminggu`;
 
     pelanEl.innerHTML = `
-      <p class="no-print"><a class="back-link back-link--accent" href="/account/plans">← Semua pelan</a></p>
       <div class="ringkas">
         <div>
           <p class="eyebrow">Pelan anda</p>
@@ -483,6 +490,7 @@ const maraton = jarak === "42k";
     pelanEl.querySelector("[data-edit]")?.addEventListener("click", (e) => {
       if (!formPanel) return;
       formPanel.hidden = false;
+      planGuard?.arm();
       (e.currentTarget as HTMLElement).setAttribute("aria-expanded", "true");
       formPanel.scrollIntoView();
       // preventScroll: fokus tak potong skrol lancar di atas.

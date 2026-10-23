@@ -231,7 +231,7 @@ Item yang dah siap dibuang (lihat git history).
   dirender dengan `innerHTML`. Tanda siap = localStorage `pelan-5k:<bulan>-<tahap>-<masa>-<hari>[-pPace]`.
   Hari sesi tetap (`SESSION_DAYS`: 3 hari = Isn/Rab/Sab, 4 hari = Isn/Rab/Jum/Ahd - sesi akhir hujung
   minggu); `mula` dianjak ke Isnin (`startMonday`) dan minggu semasa + sesi hari ini diserlahkan.
-- Semak: `bun run build` + semua `bun scripts/check-*.ts` (22 skrip, termasuk
+- Semak: `bun run build` + semua `bun scripts/check-*.ts` (23 skrip, termasuk `check-deficit`,
   `check-session-analysis`, `check-plan-list`, `check-login-next`) + `npx -y -p @astrojs/check -p typescript@5 astro-check`. Belum ada lint.
   `bunx tsc --noEmit -p .` saja tak membaca skrip dalam `.astro` - guna astro-check
   (`@astrojs/check` belum sokong TS 7, jadi tak dipasang).
@@ -299,26 +299,28 @@ Item yang dah siap dibuang (lihat git history).
 - [ ] Uji "Sambung dari Minggu N" Dashboard dengan akaun ahli + pelan aktif sebenar; uji flow pelan di
   Safari/telefon.
 
-## 🍽 Kalkulator defisit (dirancang 2026-10-23)
+## 🍽 Kalkulator defisit (v1 dibina 2026-10-23)
 
 Diminta kawan owner. Pelan penuh: **`docs/plans/deficit-calculator.md`** (formula, had keselamatan, privasi,
 luar skop). Awam, dalam pelayar, tiada simpanan - corak kalkulator peluh.
 
-- [ ] Owner putuskan: `/deficit` halaman sendiri (cadangan) atau seksyen `/guide#defisit`; isi km dari pelan
-  aktif (cadangan: tidak untuk v1); siapa semak kandungan (dietitian).
-- [x] Formula disemak 2026-10-23 (sumber + contoh kira tangan dalam pelan): Mifflin-St Jeor (umur 19-78),
-  PAL FAO 2004 (1.40/1.55/1.75/2.00 - faktor 1.2-1.725 dibuang), larian 1.0 kcal/kg/km dari persamaan ACSM,
-  lantai 1,200/1,500 (Harvard), ≤ 1% seminggu (Helms 2014), keto/rendah karbo (Feinman 2015).
-- [ ] Masih belum disahkan (jangan petik di page sampai sah): teks MDG 2020 KKM (0.5-1 kg seminggu), teks RNI
-  2017 (julat lemak), julat karbo g/kg AND/DC/ACSM 2016 (teks penuh berbayar).
-- [ ] `src/lib/deficit.ts` (`calcDeficit`) + `scripts/check-deficit.ts` - lantai 1,200/1,500 kcal, defisit
-  ≤ 25% keperluan, sasaran ≤ 1% berat seminggu, umur luar 19-78 / hamil / gangguan makan = tiada nombor.
-  Fixture = contoh kira tangan dalam pelan (lelaki 70 kg → 2,157 kcal; kes lantai → 1,200).
-- [ ] Page + satu entri `ALAT` (`Header.astro`) + `sitemap` + README "Apa ada"; penafian standard.
-- [ ] **Templat makro** (diminta kawan 2026-10-23): `DIET_TEMPLATES` - Seimbang (RNI), Pelari (1.6 g/kg),
-  Protein tinggi (2.0 g/kg), Rendah karbo; gram karbo/protein/lemak dari sasaran kcal. Contoh kiraan, bukan
-  pelan makan. Ambang "karbo < 3 g/kg" dibuang (tak dapat disahkan).
-- [ ] Owner putuskan **keto** (cadangan: tidak untuk v1 - bukti tak cukup untuk prestasi; kalau masuk = amaran tetap).
+- [x] **v1** (2026-10-23): `/deficit` halaman sendiri (+ `ALAT`, sitemap, README), `lib/deficit.ts`
+  (`calcDeficit`, `DIET_TEMPLATES`), `scripts/check-deficit.ts` (fixture kira tangan dalam pelan). Input tak
+  masuk URL/storan/API (submit dalam JS), jadi `/privacy` tak berubah. Tiada table DB: jantina/berat/tinggi
+  tak disimpan di mana-mana; tarikh lahir saja ada (`app_items` `nubi/profil`).
+- [x] Formula disemak 2026-10-23: Mifflin-St Jeor (umur 19-78), PAL FAO 2004 (1.40/1.55/1.75/2.00 - faktor
+  1.2-1.725 dibuang), larian 1.0 kcal/kg/km (ACSM), lantai 1,200/1,500 (Harvard), ≤ 1% seminggu (Helms 2014),
+  defisit ≤ 25%, rendah karbo < 26% (Feinman 2015).
+- [x] Templat makro: Seimbang, Pelari (1.6 g/kg), Protein tinggi (2.0 g/kg), Rendah karbo (+ amaran).
+- [ ] Owner putuskan **keto** (tidak dimasukkan - bukti tak cukup untuk prestasi, AND/DC/ACSM 2016). Kalau masuk:
+  satu entri `DIET_TEMPLATES` (karbo 30 g tetap, lemak baki) + amaran.
+- [ ] Siapa semak kandungan (dietitian)? Sampai disemak, penafian "belum disemak" kekal.
+- [ ] Belum disahkan (jangan petik di page): teks MDG 2020 KKM (0.5-1 kg seminggu), RNI 2017 (julat lemak),
+  julat karbo g/kg AND/DC/ACSM 2016.
+- [x] **Profil badan** (2026-10-23, owner minta): `jantina`, `tinggi`, `berat` dalam `profil` (`app_items`, tiada
+  migration - validator dah terima kunci baru) di Profil > Latihan; `/deficit` isi umur/jantina/tinggi/berat dari
+  profil bila log masuk (baca saja - kalkulator tak pernah menulis). `/privacy` dikemas kini (23 Okt).
+- [ ] Nanti kalau diminta: km dari pelan aktif, anggaran minggu ke berat sasaran.
 
 ## 💡 Idea
 
