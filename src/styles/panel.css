@@ -87,45 +87,13 @@
 /* ---------- Pembantu AI (page chat) ---------- */
 .ai-chat {
   width: min(100%, 52rem);
-  height: min(78vh, 52rem);
-  min-height: 32rem;
+  /* Isi seluruh content: viewport - navbar 4rem - padding atas/bawah 3rem. */
+  height: calc(100vh - var(--navbar-h) - 3rem);
+  height: calc(100dvh - var(--navbar-h) - 3rem);
   margin-inline: auto;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-}
-
-.ai-kepala {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.75rem 0 1rem;
-}
-
-.ai-identiti {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-}
-
-.ai-kepala h2 {
-  margin: 0;
-  color: var(--navy);
-  font-size: 1.45rem;
-}
-
-.ai-kepala p {
-  margin: 0;
-  font-size: 0.82rem;
-}
-
-.ai-kuota {
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 700;
-  white-space: nowrap;
 }
 
 .ai-avatar {
@@ -248,6 +216,81 @@
   background: var(--navy);
   color: var(--paper);
   border-top-right-radius: 0.3rem;
+}
+
+.ai-msg-tindakan {
+  display: flex;
+  min-height: 1.75rem;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.ai-row:hover .ai-msg-tindakan,
+.ai-msg-tindakan:focus-within {
+  opacity: 1;
+}
+
+.ai-row-user .ai-msg-tindakan {
+  justify-content: flex-end;
+}
+
+.ai-copy {
+  width: 2rem;
+  height: 1.75rem;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 0.4rem;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.ai-copy:hover {
+  color: var(--navy);
+  background: var(--paper-2);
+}
+
+.ai-copy.disalin {
+  color: var(--success-ink);
+}
+
+.ai-msg.ai-kad {
+  display: grid;
+  gap: 0.55rem;
+  min-width: min(100%, 22rem);
+  background: var(--paper);
+  border-color: var(--orange);
+}
+
+.ai-kad-tajuk {
+  color: var(--navy);
+  font-size: 0.95rem;
+}
+
+.ai-kad-butiran {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.9rem;
+  white-space: pre-line;
+}
+
+.ai-kad-tindakan {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.ai-copy svg {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+@media (pointer: coarse) {
+  .ai-msg-tindakan {
+    opacity: 1;
+  }
 }
 
 .ai-thinking {
@@ -391,18 +434,25 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.35rem 0.75rem;
+  justify-content: flex-start;
+  gap: 0.35rem 0.6rem;
   padding-inline: 0.35rem;
   color: var(--muted);
   font-size: 0.75rem;
 }
 
+.ai-kaki #kuota {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ai-hint {
+  margin-left: auto;
+}
+
 @media (max-width: 48rem) {
   .ai-chat {
     width: 100%;
-    height: calc(100dvh - 10rem);
-    min-height: 26rem;
   }
 
   .ai-skrin {
@@ -419,6 +469,13 @@
 
   .ai-kaki span:last-child {
     display: none;
+  }
+}
+
+@media (max-width: 40rem) {
+  .ai-chat {
+    height: calc(100vh - var(--navbar-h) - 2rem);
+    height: calc(100dvh - var(--navbar-h) - 2rem);
   }
 }
 

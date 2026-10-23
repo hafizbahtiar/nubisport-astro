@@ -231,7 +231,7 @@ Item yang dah siap dibuang (lihat git history).
   dirender dengan `innerHTML`. Tanda siap = localStorage `pelan-5k:<bulan>-<tahap>-<masa>-<hari>[-pPace]`.
   Hari sesi tetap (`SESSION_DAYS`: 3 hari = Isn/Rab/Sab, 4 hari = Isn/Rab/Jum/Ahd - sesi akhir hujung
   minggu); `mula` dianjak ke Isnin (`startMonday`) dan minggu semasa + sesi hari ini diserlahkan.
-- Semak: `bun run build` + semua `bun scripts/check-*.ts` (24 skrip, termasuk `check-deficit`,
+- Semak: `bun run build` + semua `bun scripts/check-*.ts` (25 skrip, termasuk `check-deficit`,
   `check-session-analysis`, `check-plan-list`, `check-login-next`) + `npx -y -p @astrojs/check -p typescript@5 astro-check`. CI: `.github/workflows/verify.yml` (push/PR: astro-check, semua `check-*.ts`, build). Belum ada lint.
   `bunx tsc --noEmit -p .` saja tak membaca skrip dalam `.astro` - guna astro-check
   (`@astrojs/check` belum sokong TS 7, jadi tak dipasang).
@@ -337,7 +337,7 @@ luar skop). Akaun sahaja, dikira dalam pelayar, diisi dari profil latihan; keput
   profil (baca saja - kalkulator tak pernah menulis). `/privacy` dikemas kini (23 Okt).
 - [ ] Nanti kalau diminta: km dari pelan aktif, anggaran minggu ke berat sasaran.
 
-## 🤖 Pembantu AI - chat (fasa 1b dibina 2026-10-23)
+## 🤖 Pembantu AI - chat (fasa 1c dibina 2026-10-23)
 
 Diminta kawan owner. Fail utama: **`hono-workers/docs/plans/ai/README.md`**; frontend: `docs/plans/ai/frontend-platform.md` (fasa 1) dan `docs/plans/ai/frontend-byok.md` (fasa 2). Keputusan owner: chat yang
 faham konteks dan boleh baca / cipta / ubah data **ahli itu sahaja**; ahli ke atas; AI platform dulu, kunci
@@ -347,7 +347,8 @@ API sendiri (Claude, OpenAI, OpenRouter, Command Code) fasa 2.
 - [x] `/account/ai` "Pembantu AI" (sidebar, ahli+): chat, persetujuan `nubi/aiconsent` (berasingan daripada persetujuan aktiviti), baris kuota.
 - [x] `lib/ai-tools.ts` + `scripts/check-ai-tools.ts`: tool **baca** berjalan dalam pelayar guna API `/me`
   sedia ada (profil, pelan, aktiviti, larian kumpulan); tool tulis masih ditolak.
-- [ ] Fasa 1c: tool tulis + kad Sahkan / Batal (tiada tool padam).
+- [x] Fasa 1c: tool tulis + kad Sahkan / Batal (tiada tool padam).
+- [x] Copy button pada setiap bubble user/assistant.
 - [x] Teks AI dipapar dengan `textContent`, bukan `innerHTML`.
 - [x] `/privacy` + `/terms`: bahagian AI.
 - [ ] Fasa 2 (bila diminta): bahagian "Guna kunci API sendiri" dalam `/account/ai` - lihat `frontend-byok.md`.

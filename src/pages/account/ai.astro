@@ -1,5 +1,5 @@
 ---
-// Pembantu AI Nubi (fasa 1b): chat baca sahaja. Backend: POST /me/ai/chat (hono-workers).
+// Pembantu AI Nubi (fasa 1c): chat baca + cadangan tulis dengan kad Sahkan. Backend: POST /me/ai/chat.
 // Teks model dipapar dengan textContent - tiada innerHTML daripada model. Chat dalam memori page.
 import AccountLayout from "../../layouts/AccountLayout.astro";
 import Alert from "../../components/ui/Alert.astro";
@@ -43,18 +43,7 @@ import Icon from "../../components/ui/Icon.astro";
   </section>
 
   <div id="chat" hidden>
-    <section class="ai-chat" aria-labelledby="t-chat">
-      <header class="ai-kepala">
-        <div class="ai-identiti">
-          <span class="ai-avatar ai-avatar-bot" aria-hidden="true">N</span>
-          <div>
-            <h2 class="display" id="t-chat">Pembantu AI</h2>
-            <p class="muted">Larian · latihan · pemulihan · pemakanan pelari</p>
-          </div>
-        </div>
-        <span class="ai-kuota" id="kuota">…</span>
-      </header>
-
+    <section class="ai-chat" aria-label="Pembantu AI">
       <div class="ai-skrin" id="skrin">
         <ul
           class="ai-log"
@@ -89,7 +78,8 @@ import Icon from "../../components/ui/Icon.astro";
         </div>
         <div class="ai-kaki">
           <span id="kira">0 / 2,000</span>
-          <span>Enter hantar · Shift+Enter baris baru</span>
+          <span id="kuota">…</span>
+          <span class="ai-hint">Enter hantar · Shift+Enter baris baru</span>
         </div>
       </form>
 
@@ -124,11 +114,15 @@ import Icon from "../../components/ui/Icon.astro";
 
 <script>
   import { api, currentUser, json } from "../../lib/api";
+  import { icon } from "../../lib/icon";
   import {
     runTool,
     toolContent,
+    WRITE_TOOLS,
     type AiChatMessage,
     type AiToolCall,
+    type ToolProposal,
+    type ToolResult,
   } from "../../lib/ai-tools";
 
   const $ = (id: string) => document.getElementById(id)!;
@@ -153,7 +147,48 @@ import Icon from "../../components/ui/Icon.astro";
     skrin.scrollTop = skrin.scrollHeight;
   };
 
-  const buatBaris = (role: "user" | "assistant") => {
+  const salinTeks = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      const area = document.createElement("textarea");
+      area.value = text;
+      area.setAttribute("readonly", "");
+      area.style.position = "fixed";
+      area.style.opacity = "0";
+      document.body.append(area);
+      area.select();
+      let ok = false;
+      try {
+        const exec = (
+          document as unknown as { execCommand?: (id: string) => boolean }
+        ).execCommand;
+        ok = exec?.("copy") ?? false;
+      } catch {
+        /* clipboard tak tersedia */
+      }
+      area.remove();
+      return ok;
+    }
+  };
+
+  const salinMesej = async (bubble: HTMLElement, button: HTMLButtonElement) => {
+    if (await salinTeks(bubble.textContent ?? "")) {
+      button.innerHTML = icon("tanda");
+      button.classList.add("disalin");
+      button.setAttribute("aria-label", "Disalin");
+      button.title = "Disalin";
+      setTimeout(() => {
+        button.innerHTML = icon("salin");
+        button.classList.remove("disalin");
+        button.setAttribute("aria-label", "Salin mesej");
+        button.title = "Salin mesej";
+      }, 1500);
+    }
+  };
+
+  const buatBaris = (role: "user" | "assistant", copy = true) => {
     const row = document.createElement("li");
     row.className = `ai-row ai-row-${role}`;
 
@@ -171,6 +206,19 @@ import Icon from "../../components/ui/Icon.astro";
     const bubble = document.createElement("div");
     bubble.className = "ai-msg";
     wrap.append(nama, bubble);
+    if (copy) {
+      const tindakan = document.createElement("div");
+      tindakan.className = "ai-msg-tindakan";
+      const salin = document.createElement("button");
+      salin.className = "ai-copy";
+      salin.type = "button";
+      salin.setAttribute("aria-label", "Salin mesej");
+      salin.title = "Salin mesej";
+      salin.innerHTML = icon("salin");
+      salin.addEventListener("click", () => void salinMesej(bubble, salin));
+      tindakan.append(salin);
+      wrap.append(tindakan);
+    }
     row.append(avatar, wrap);
     return { row, bubble };
   };
@@ -193,7 +241,7 @@ import Icon from "../../components/ui/Icon.astro";
 
   const pikir = (label: string) => {
     if (!thinking) {
-      const { row, bubble } = buatBaris("assistant");
+      const { row, bubble } = buatBaris("assistant", false);
       row.classList.add("ai-row-thinking");
       bubble.classList.add("ai-thinking");
       const dots = document.createElement("span");
@@ -214,6 +262,53 @@ import Icon from "../../components/ui/Icon.astro";
     thinking?.row.remove();
     thinking = null;
   };
+
+  const paparKad = (proposal: ToolProposal) =>
+    new Promise<boolean>((resolve) => {
+      const { row, bubble } = buatBaris("assistant", false);
+      row.classList.add("ai-row-proposal");
+      bubble.classList.add("ai-kad");
+      const id = `ai-kad-${Date.now()}`;
+      bubble.setAttribute("role", "group");
+      bubble.setAttribute("aria-labelledby", id);
+      const tajuk = document.createElement("strong");
+      tajuk.id = id;
+      tajuk.className = "ai-kad-tajuk";
+      tajuk.textContent = proposal.title;
+      const butiran = document.createElement("p");
+      butiran.className = "ai-kad-butiran";
+      butiran.textContent = proposal.detail;
+      const tindakan = document.createElement("div");
+      tindakan.className = "ai-kad-tindakan";
+      const batal = document.createElement("button");
+      batal.type = "button";
+      batal.className = "btn btn-outline btn-sm";
+      batal.textContent = "Batal";
+      const sahkan = document.createElement("button");
+      sahkan.type = "button";
+      sahkan.className = "btn btn-primary btn-sm";
+      sahkan.textContent = "Sahkan";
+      tindakan.append(batal, sahkan);
+      bubble.append(tajuk, butiran, tindakan);
+      log.append(row);
+      scrollBottom();
+
+      const tutup = (ok: boolean) => {
+        document.removeEventListener("keydown", esc);
+        row.remove();
+        resolve(ok);
+      };
+      const esc = (e: KeyboardEvent) => {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          tutup(false);
+        }
+      };
+      batal.addEventListener("click", () => tutup(false));
+      sahkan.addEventListener("click", () => tutup(true));
+      document.addEventListener("keydown", esc);
+      sahkan.focus();
+    });
 
   const setBusy = (v: boolean) => {
     sibuk = v;
@@ -271,6 +366,7 @@ import Icon from "../../components/ui/Icon.astro";
     if (name === "list_plans" || name === "get_plan") return "Menyemak pelan…";
     if (name === "list_activities") return "Menyemak aktiviti…";
     if (name === "list_events") return "Menyemak larian…";
+    if (WRITE_TOOLS.has(name)) return "Menyemak perubahan…";
     return "Menyemak data…";
   };
 
@@ -324,10 +420,23 @@ import Icon from "../../components/ui/Icon.astro";
         for (const call of calls) {
           pikir(labelTool(call.name));
           const hasil = await runTool(call.name, call.arguments);
+          let result: ToolResult;
+          if ("proposal" in hasil) {
+            selesaiPikir();
+            const sah = await paparKad(hasil.proposal);
+            if (!sah) result = { dibatalkan: true };
+            else {
+              pikir("Menyimpan…");
+              result = await hasil.proposal.jalankan();
+              selesaiPikir();
+            }
+          } else {
+            result = hasil.result;
+          }
           messages.push({
             role: "tool",
             toolCallId: call.id,
-            content: toolContent(hasil),
+            content: toolContent(result),
           });
         }
       }

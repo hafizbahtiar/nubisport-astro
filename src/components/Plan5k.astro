@@ -113,14 +113,11 @@ const maf = full ? "/account/maf" : "/maf";
     readList,
     planKey,
     deletePlan,
-    planParams,
     readParams,
     savedPlanParams,
     pickPlanKey,
     planParamsFromForm,
     writeList,
-    writeParams,
-    remapProgress,
   } from "../lib/saved-plans";
   import {
     pullCloud,
@@ -137,6 +134,7 @@ const maf = full ? "/account/maf" : "/maf";
   import { confirmDialog } from "../lib/confirm";
   import { mountUnsavedGuard, type UnsavedGuard } from "../lib/unsaved-guard";
   import { api, json } from "../lib/api";
+  import { savePlan } from "../lib/plan-save";
   import { prefillForm, fillEmptyProfile } from "../lib/profile";
   import {
     weekHtml,
@@ -172,7 +170,6 @@ const maf = full ? "/account/maf" : "/maf";
     PLAN_MONTHS,
     type Level,
   } from "../lib/plan-5k";
-  import type { Week } from "../lib/plan-5k";
 
   const PROFIL_LABEL: Record<string, string> = {
     hari: "hari seminggu",
@@ -224,8 +221,6 @@ const maf = full ? "/account/maf" : "/maf";
     keyInput.value = keyFromUrl!;
     borang.append(keyInput);
   }
-  // Pelan terakhir dipapar: "Kemas kini pelan" petakan tanda siap ke struktur baharu (remapProgress).
-  let lalu: { kunci: string; minggu: Week[] } | null = null;
   if (full) void prefillForm(borang, q, (p) => p.masa5k);
   for (const [k, v] of q) {
     const el = borang.elements.namedItem(k);
@@ -428,16 +423,15 @@ const maf = full ? "/account/maf" : "/maf";
     // dua sasaran tak berkongsi tanda siap. Pelan lalai (tiada pace) kekal kunci lama.
     // Pelan yang dibuka dari dashboard bawa `kunci` - "Kemas kini pelan" menulis params di bawahnya.
     const dibuat = readList(CREATED_KEY);
-    const kunci = pickPlanKey(
+    const dipilih = pickPlanKey(
       q.get("kunci"),
       dibuat,
       planKey(lumba ? `${minggu}w` : bulan, tahap, masa5k, hari, pace),
     );
-    borang.dataset.planKey = kunci;
     // Had tanpa akaun kira pelan 5K sahaja (10K/21K = akaun).
     if (
       !canBuildPlan(
-        kunci,
+        dipilih,
         dibuat.filter((k) => k.startsWith("pelan-5k:")),
         full || logMasuk,
       )
@@ -454,28 +448,25 @@ const maf = full ? "/account/maf" : "/maf";
       hasil.scrollIntoView();
       return false;
     }
-    if (!dibuat.includes(kunci)) writeList(CREATED_KEY, [...dibuat, kunci]);
-    if (full) writeParams(kunci, planParams(q));
+    const saved = savePlan(
+      "5k",
+      Object.fromEntries(q),
+      mode === "view" ? dipilih : undefined,
+    );
+    if (!saved.ok) {
+      pelanEl.innerHTML = `<div class="alert alert-warning"><p>${saved.error}</p></div>`;
+      hasil.scrollIntoView();
+      return false;
+    }
+    const kunci = saved.key;
+    borang.dataset.planKey = kunci;
     // Halaman /new: pelan sudah disimpan - terus ke paparan (bukan kekal pada borang).
     if (mode === "new") {
-      location.replace(
-        `/account/plans/5k/view?kunci=${encodeURIComponent(kunci)}`,
-      );
+      location.replace(saved.href);
       return true;
     }
-    // Kemas kini pelan: tanda siap ikut sesi yang sama (bukan indeks); yang tiada lagi dibuang.
-    const sah = new Set(
-      h.minggu.flatMap((w) => w.sesi.map((_, i) => `${w.no}.${i}`)),
-    );
-    const tersimpan = readList(kunci);
-    const dipeta =
-      lalu?.kunci === kunci
-        ? remapProgress(tersimpan, lalu.minggu, h.minggu)
-        : tersimpan;
-    lalu = { kunci, minggu: h.minggu };
-    const siap = new Set<string>(dipeta.filter((id) => sah.has(id)));
-    if (JSON.stringify([...siap]) !== JSON.stringify(tersimpan))
-      writeList(kunci, [...siap]);
+    // Tanda siap disimpan/dipetakan oleh savePlan semasa kemas kini.
+    const siap = new Set<string>(readList(kunci));
     const isnin = /^\d{4}-\d{2}-\d{2}$/.test(q.get("mula") ?? "")
       ? startMonday(new Date(`${q.get("mula")}T00:00:00`))
       : null;

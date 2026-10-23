@@ -107,6 +107,7 @@ const maraton = jarak === "42k";
 <Timer />
 <script>
   import { buildIcs, malaysiaTime } from "../lib/ics";
+  import { savePlan } from "../lib/plan-save";
   import { mountTimePickers, timePickerHtml } from "../lib/time-picker";
   import { prefillForm, fillEmptyProfile } from "../lib/profile";
   import { calcMaf, type Condition } from "../lib/maf";
@@ -118,7 +119,6 @@ const maraton = jarak === "42k";
     isoDate,
     formatPace,
   } from "../lib/plan-5k";
-  import type { Week } from "../lib/plan-5k";
   import {
     DISTANCES,
     analyzeDistancePlan,
@@ -146,14 +146,11 @@ const maraton = jarak === "42k";
     readList,
     distancePlanKey,
     deletePlan,
-    planParams,
     readParams,
     savedPlanParams,
     pickPlanKey,
     planParamsFromForm,
     writeList,
-    writeParams,
-    remapProgress,
   } from "../lib/saved-plans";
   import {
     pullCloud,
@@ -260,8 +257,6 @@ const maraton = jarak === "42k";
       new FormData(borang).forEach((v, k) => q.set(k, String(v)));
       papar();
     });
-  // Pelan terakhir dipapar: "Kemas kini pelan" petakan tanda siap ke struktur baharu (remapProgress).
-  let lalu: { kunci: string; minggu: Week[] } | null = null;
   const ikutJarak = () => {
     const c = DISTANCES[jarak];
     tempohMedan.hidden = tempohMedan.disabled = !!lumbaInput.value; // tarikh lumba = minggu dikira
@@ -394,7 +389,7 @@ const maraton = jarak === "42k";
 
     // Pelan yang dibuka dari dashboard bawa `kunci` - "Kemas kini pelan" menulis params di bawahnya.
     const dibuat = readList(CREATED_KEY);
-    const kunci = pickPlanKey(
+    const dipilih = pickPlanKey(
       q.get("kunci"),
       dibuat,
       distancePlanKey(jarak, minggu, masa, pace ? `p${pace}` : sasaran, hari),
@@ -402,28 +397,20 @@ const maraton = jarak === "42k";
     const paces = planDistancePaces(input);
     const sasaranMinit = pace ? (pace * c.km) / 60 : sasaran;
     const perlu = distanceWeeksNeeded(input);
-    if (!dibuat.includes(kunci)) writeList(CREATED_KEY, [...dibuat, kunci]);
+    const saved = savePlan(
+      jarak,
+      Object.fromEntries(q),
+      mode === "view" ? dipilih : undefined,
+    );
+    if (!saved.ok) return amaran(saved.error);
+    const kunci = saved.key;
     borang.dataset.planKey = kunci;
-    writeParams(kunci, planParams(q));
     if (mode === "new") {
-      location.replace(
-        `/account/plans/${jarak}/view?kunci=${encodeURIComponent(kunci)}`,
-      );
+      location.replace(saved.href);
       return true;
     }
-    // Kemas kini pelan: tanda siap ikut sesi yang sama (bukan indeks); yang tiada lagi dibuang.
-    const sah = new Set(
-      h.minggu.flatMap((w) => w.sesi.map((_, i) => `${w.no}.${i}`)),
-    );
-    const tersimpan = readList(kunci);
-    const dipeta =
-      lalu?.kunci === kunci
-        ? remapProgress(tersimpan, lalu.minggu, h.minggu)
-        : tersimpan;
-    lalu = { kunci, minggu: h.minggu };
-    const siap = new Set<string>(dipeta.filter((id) => sah.has(id)));
-    if (JSON.stringify([...siap]) !== JSON.stringify(tersimpan))
-      writeList(kunci, [...siap]);
+    // Tanda siap disimpan/dipetakan oleh savePlan semasa kemas kini.
+    const siap = new Set<string>(readList(kunci));
     const isnin = /^\d{4}-\d{2}-\d{2}$/.test(q.get("mula") ?? "")
       ? startMonday(new Date(`${q.get("mula")}T00:00:00`))
       : null;
