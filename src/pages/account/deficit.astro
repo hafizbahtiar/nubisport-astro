@@ -1,23 +1,24 @@
 ---
-// Kalkulator defisit: kalori sehari untuk turun berat + contoh pecahan makro. Dalam pelayar - input
-// (data kesihatan) tak masuk URL, storan atau API; log masuk = diisi dari profil latihan (baca saja). Logik: src/lib/deficit.ts (semak: bun scripts/check-deficit.ts).
-import Layout from "../layouts/Layout.astro";
-import PageHero from "../components/ui/PageHero.astro";
-import ChipGroup from "../components/ui/ChipGroup.astro";
-import Field from "../components/ui/Field.astro";
-import Alert from "../components/ui/Alert.astro";
-import { LIFESTYLES, RATES } from "../lib/deficit";
+// Kalkulator defisit (akaun sahaja - owner 2026-10-23): kalori sehari untuk turun berat + contoh makro.
+// Dikira dalam pelayar; diisi dari profil latihan (baca saja), keputusan tak disimpan dan input tak masuk URL.
+// Logik: src/lib/deficit.ts (semak: bun scripts/check-deficit.ts).
+import AccountLayout from "../../layouts/AccountLayout.astro";
+import PageHero from "../../components/ui/PageHero.astro";
+import ChipGroup from "../../components/ui/ChipGroup.astro";
+import Field from "../../components/ui/Field.astro";
+import Alert from "../../components/ui/Alert.astro";
+import { LIFESTYLES, RATES } from "../../lib/deficit";
 ---
 
-<Layout
-  title="Kalkulator defisit - Nubi Sport"
+<AccountLayout
+  title="Kalkulator defisit"
   description="Anggar kalori sehari untuk turun berat dengan selamat, termasuk larian anda, dan contoh pecahan karbohidrat, protein dan lemak. Dikira dalam pelayar."
 >
   <PageHero
     eyebrow="Kalkulator"
     title="Nak turun berat,"
     accent="makan berapa?"
-    lead="Anggaran kalori sehari ikut badan, gaya hidup dan larian anda - dengan had selamat. Tiada apa disimpan; semua dikira dalam pelayar."
+    lead="Anggaran kalori sehari ikut badan, gaya hidup dan larian anda - dengan had selamat. Keputusan tak disimpan; semua dikira dalam pelayar."
   >
     <form class="form" id="borang">
       <ChipGroup
@@ -106,9 +107,9 @@ import { LIFESTYLES, RATES } from "../lib/deficit";
         </span>
       </label>
       <p class="field-hint">
-        Ada akaun? Simpan tarikh lahir, jantina, tinggi dan berat di
+        Tarikh lahir, jantina, tinggi dan berat diisi dari
         <a class="link" href="/account/profile/training">Profil &gt; Latihan</a> -
-        borang ini terisi sendiri bila anda log masuk.
+        kemas kini di sana bila berat berubah.
       </p>
       <button class="btn btn-primary" type="submit">Kira</button>
     </form>
@@ -130,16 +131,15 @@ import { LIFESTYLES, RATES } from "../lib/deficit";
       </Alert>
     </div>
   </section>
-</Layout>
+</AccountLayout>
 
 <script>
-  import { calcDeficit } from "../lib/deficit";
-  import { prefillForm } from "../lib/profile";
+  import { calcDeficit } from "../../lib/deficit";
+  import { prefillForm } from "../../lib/profile";
 
   const borang = document.getElementById("borang") as HTMLFormElement;
   const hasil = document.getElementById("hasil")!;
-  if (/(?:^|; )session_active=1/.test(document.cookie))
-    void prefillForm(borang, new URLSearchParams(), () => undefined);
+  void prefillForm(borang, new URLSearchParams(), () => undefined);
   const keputusan = document.getElementById("keputusan")!;
   const kcal = (n: number) => Math.round(n).toLocaleString("ms-MY");
   const g = (n: number) => `${Math.round(n)} g`;

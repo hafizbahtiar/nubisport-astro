@@ -302,9 +302,9 @@ Item yang dah siap dibuang (lihat git history).
 ## 🍽 Kalkulator defisit (v1 dibina 2026-10-23)
 
 Diminta kawan owner. Pelan penuh: **`docs/plans/deficit-calculator.md`** (formula, had keselamatan, privasi,
-luar skop). Awam, dalam pelayar, tiada simpanan - corak kalkulator peluh.
+luar skop). Akaun sahaja, dikira dalam pelayar, diisi dari profil latihan; keputusan tak disimpan.
 
-- [x] **v1** (2026-10-23): `/deficit` halaman sendiri (+ `ALAT`, sitemap, README), `lib/deficit.ts`
+- [x] **v1** (2026-10-23): `/account/deficit` - akaun sahaja (owner), pautan sidebar "Latihan" (bukan `ALAT`/sitemap); README, `lib/deficit.ts`
   (`calcDeficit`, `DIET_TEMPLATES`), `scripts/check-deficit.ts` (fixture kira tangan dalam pelan). Input tak
   masuk URL/storan/API (submit dalam JS), jadi `/privacy` tak berubah. Tiada table DB: jantina/berat/tinggi
   tak disimpan di mana-mana; tarikh lahir saja ada (`app_items` `nubi/profil`).
@@ -318,8 +318,8 @@ luar skop). Awam, dalam pelayar, tiada simpanan - corak kalkulator peluh.
 - [ ] Belum disahkan (jangan petik di page): teks MDG 2020 KKM (0.5-1 kg seminggu), RNI 2017 (julat lemak),
   julat karbo g/kg AND/DC/ACSM 2016.
 - [x] **Profil badan** (2026-10-23, owner minta): `jantina`, `tinggi`, `berat` dalam `profil` (`app_items`, tiada
-  migration - validator dah terima kunci baru) di Profil > Latihan; `/deficit` isi umur/jantina/tinggi/berat dari
-  profil bila log masuk (baca saja - kalkulator tak pernah menulis). `/privacy` dikemas kini (23 Okt).
+  migration - validator dah terima kunci baru) di Profil > Latihan; `/account/deficit` isi umur/jantina/tinggi/berat dari
+  profil (baca saja - kalkulator tak pernah menulis). `/privacy` dikemas kini (23 Okt).
 - [ ] Nanti kalau diminta: km dari pelan aktif, anggaran minggu ke berat sasaran.
 
 ## 💡 Idea

@@ -26,12 +26,12 @@ oleh owner, **sebelum** Nubi bila Nubi bergantung pada endpoint baru.
 | `/plan-5k` | awam | Pelan "5K bawah 30 minit" + label "Realistik tak?" + pemasa jalan-lari + kad "Sesuai lari hari ini?" (IPU + cuaca + waktu lari terbaik); had lembut 3 pelan dalam pelayar; kongsi pelan |
 | `/maf` | awam | Kira had nadi MAF (formula 180 Maffetone) |
 | `/pace` | awam | Kalkulator pace: masa ↔ pace, km/j, anggaran 5K-maraton (Riegel) |
-| `/deficit` | awam | Kalkulator defisit: kalori sehari untuk turun berat (Mifflin-St Jeor, PAL FAO, larian ACSM, had selamat) + contoh makro; dalam pelayar, tiada simpanan |
 | `/guide` | awam | Panduan pemula (NHS, KKM) + kalkulator peluh (ACSM) + senarai semak hari lumba boleh cetak |
 | `/races` | awam | Kalendar lumba Malaysia (susun tangan dari laman rasmi penganjur) + `.ics` per acara |
 | `/privacy`, `/terms` | awam | Dasar Privasi (PDPA 2010) dan Terma Penggunaan, ikut data yang betul-betul disimpan |
 | `/login`, `/register`, `/verify` | awam | Akaun dikongsi dengan hafizbahtiar.com (Turnstile) |
 | `/account` | akaun | Dashboard: pelan aktif (sesi seterusnya, minggu ini X/Y, minit dirancang vs sebenar, bar beban 6 minggu, "Sambung dari Minggu N"), pelan saya (lencana **Awan** / **Peranti ini**, meter slot, Ganti), profil, MAF |
+| `/account/deficit` | akaun | Kalkulator defisit: kalori sehari untuk turun berat (Mifflin-St Jeor, PAL FAO, larian ACSM, had selamat) + contoh makro; diisi dari profil latihan, keputusan tak disimpan |
 | `/account/activities` | ahli | Import aktiviti Strava (`.fit` wajib + `.gpx` pilihan, seret & lepas), jadual cari / tapis sukan / halaman, padanan ke pelan aktif |
 | `/account/activities/view?id=` | ahli | Detail aktiviti: peta laluan 2D / 3D / Terrain, ringkasan, % lari, sesi pelan yang dipadankan |
 | `/account/plans` | akaun | Senarai semua pelan (5K, 10K, 21K, 42K) - jadual, storan, status, padam |

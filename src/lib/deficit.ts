@@ -1,5 +1,5 @@
-// Kalkulator defisit (/deficit): kalori sehari untuk turun berat dengan selamat + contoh pecahan makro.
-// Dalam pelayar, tiada simpanan. Pelan + sumber penuh: docs/plans/deficit-calculator.md.
+// Kalkulator defisit (/account/deficit): kalori sehari untuk turun berat dengan selamat + contoh pecahan makro.
+// Fungsi tulen, dikira dalam pelayar. Pelan + sumber penuh: docs/plans/deficit-calculator.md.
 // - REE: Mifflin-St Jeor 1990 (Am J Clin Nutr 51:241), sampel umur 19-78; paling tepat antara 4
 //   persamaan (Frankenfield 2005, J Am Diet Assoc 105:775), ralat individu masih besar.
 // - Gaya hidup: PAL FAO/WHO/UNU 2004 (Human energy requirements, Jadual 5.3), tanpa larian.

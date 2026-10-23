@@ -1,6 +1,6 @@
 # Kalkulator defisit kalori
 
-Status: **v1 dibina** (2026-10-23) - `/deficit`, `lib/deficit.ts`, `scripts/check-deficit.ts`. Diminta oleh kawan owner. Corak sama dengan kalkulator
+Status: **v1 dibina** (2026-10-23) - `/account/deficit` (akaun sahaja), `lib/deficit.ts`, `scripts/check-deficit.ts`. Diminta oleh kawan owner. Corak sama dengan kalkulator
 peluh (`lib/sweat.ts`): fungsi tulen, dikira dalam pelayar, tiada simpanan.
 
 ## Tujuan
@@ -8,13 +8,13 @@ peluh (`lib/sweat.ts`): fungsi tulen, dikira dalam pelayar, tiada simpanan.
 Pelari yang nak turun berat dapat anggaran kalori sehari yang **selamat**: berapa yang badan guna
 (termasuk larian dalam pelan), berapa defisit untuk sasaran seminggu, dan bila sasaran itu terlalu
 agresif. Ukuran berjaya: satu jawapan jelas ("~2,050 kcal sehari") + amaran bila input tak selamat,
-tanpa log masuk dan tanpa data meninggalkan pelayar.
+dikira dalam pelayar - keputusan tak disimpan.
 
 ## Skop v1 (kecil)
 
-- Route **`/deficit`** (awam, fail English), label UI **"Kalkulator defisit"**. Satu entri `ALAT` dalam
-  `Header.astro` (panel "Alat" jadi 5 kad). Borang dalam `PageHero` seperti `/pace`, komponen `ui/`
-  sedia ada (`Field`, `ChipGroup`), hasil dalam `.card`.
+- Route **`/account/deficit`** - **akaun sahaja** (owner 2026-10-23, asalnya dirancang awam), label UI
+  **"Kalkulator defisit"** dalam sidebar akaun kumpulan "Latihan" (bukan `ALAT`, bukan sitemap). Borang dalam
+  `PageHero` seperti `/account/maf`, diisi dari profil latihan.
 - Logik: `src/lib/deficit.ts` (eksport English, contoh `calcDeficit`), semak `scripts/check-deficit.ts`
   (corak `ok()`/`check()`).
 - Input: umur (19-78), jantina (untuk formula), tinggi (cm), berat (kg), gaya hidup **tanpa larian**
@@ -75,7 +75,7 @@ buah pinggang atau hamil = rujuk doktor dulu.
 
 Kalkulator dikira **dalam pelayar** - input tak masuk URL, localStorage, API atau analitik, dan kalkulator
 tak pernah menulis ke profil. Owner putuskan (2026-10-23) simpan `jantina`, `tinggi`, `berat` dalam profil
-latihan (`app_items` `profil`, pengguna isi sendiri di Profil > Latihan); `/deficit` hanya membacanya untuk
+latihan (`app_items` `profil`, pengguna isi sendiri di Profil > Latihan); `/account/deficit` hanya membacanya untuk
 isi borang bila log masuk. `/privacy` disenaraikan (berat = data berkaitan kesihatan, boleh dikosongkan).
 
 ## Luar skop (YAGNI)
@@ -86,7 +86,7 @@ Tambah hanya bila diminta.
 
 ## Soalan untuk owner
 
-1. `/deficit` halaman sendiri (cadangan) atau seksyen dalam `/guide` macam kalkulator peluh (`/guide#peluh`)?
+1. ~~Halaman awam atau `/guide`?~~ Diputuskan: `/account/deficit`, akaun sahaja.
 2. Isi "larian seminggu" dari pelan aktif bila log masuk? (Cadangan: tidak untuk v1 - input manual.)
 3. Siapa semak kandungan (dietitian)? Sampai disemak, label "belum disemak" kekal.
 4. **Keto masuk atau tidak?** Cadangan: **tidak untuk v1** - laman pelari pemula, dan kenyataan bersama
