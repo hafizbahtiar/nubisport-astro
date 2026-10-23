@@ -75,7 +75,13 @@ const maf = full ? "/account/maf" : "/maf";
 
 {
   mode !== "new" && (
-    <Section band narrow={!full} title="Sebelum mula" class="nota">
+    <Section
+      band
+      narrow={!full}
+      fullWidth={full}
+      title="Sebelum mula"
+      class="nota"
+    >
       <ul>
         <li>
           Pelan ini panduan umum, <strong>bukan nasihat perubatan</strong>.
@@ -367,6 +373,15 @@ const maf = full ? "/account/maf" : "/maf";
     );
   }
 
+  async function openNewPlan(href: string, kunci: string) {
+    // Pelan pertama akaun: simpan ke awan supaya ia boleh jadi pelan aktif.
+    if (full) {
+      const a = await listCloud();
+      if (a && a.items.length === 0) await saveToCloud(kunci);
+    }
+    location.replace(href);
+  }
+
   function papar(): boolean {
     hasil.hidden = false;
     const tahap = q.get("tahap") as Level;
@@ -482,7 +497,7 @@ const maf = full ? "/account/maf" : "/maf";
     borang.dataset.planKey = kunci;
     // Halaman /new: pelan sudah disimpan - terus ke paparan (bukan kekal pada borang).
     if (mode === "new") {
-      location.replace(saved.href);
+      void openNewPlan(saved.href, kunci);
       return true;
     }
     // Tanda siap disimpan/dipetakan oleh savePlan semasa kemas kini.

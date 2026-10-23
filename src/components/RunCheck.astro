@@ -14,7 +14,12 @@ interface Props {
 const { full = false } = Astro.props;
 ---
 
-<Section narrow={!full} title="Sesuai lari hari ini?" class="no-print">
+<Section
+  narrow={!full}
+  fullWidth={full}
+  title="Sesuai lari hari ini?"
+  class="no-print"
+>
   <div class="card sesuai">
     <Field label="Negeri anda" for="sesuai-negeri-butang">
       <Dropdown

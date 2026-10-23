@@ -52,7 +52,7 @@ const maraton = jarak === "42k";
 
 {
   mode !== "new" && (
-    <Section band narrow={false} title="Sebelum mula" class="nota">
+    <Section band narrow={false} fullWidth title="Sebelum mula" class="nota">
       <ul>
         <li>
           Pelan ini panduan umum, <strong>bukan nasihat perubatan</strong>.
@@ -321,6 +321,13 @@ const maraton = jarak === "42k";
   });
   if (mode === "new" || (formPanel && !formPanel.hidden)) planGuard.arm();
 
+  async function openNewPlan(href: string, kunci: string) {
+    // Pelan pertama akaun: simpan ke awan supaya ia boleh jadi pelan aktif.
+    const a = await listCloud();
+    if (a && a.items.length === 0) await saveToCloud(kunci);
+    location.replace(href);
+  }
+
   function papar(): boolean {
     hasil.hidden = false;
     q.set("jarak", jarak);
@@ -417,7 +424,7 @@ const maraton = jarak === "42k";
     const kunci = saved.key;
     borang.dataset.planKey = kunci;
     if (mode === "new") {
-      location.replace(saved.href);
+      void openNewPlan(saved.href, kunci);
       return true;
     }
     // Tanda siap disimpan/dipetakan oleh savePlan semasa kemas kini.

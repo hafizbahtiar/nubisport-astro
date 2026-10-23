@@ -41,7 +41,8 @@ import Icon from "../../components/ui/Icon.astro";
       Setuju dan mula
     </button>
     <p class="muted">
-      <a class="link" href="/privacy">Dasar Privasi</a> ·
+      <a class="link" href="/privacy">Dasar Privasi</a>{" "}
+      <span aria-hidden="true">·</span>{" "}
       <a class="link" href="/terms">Terma Penggunaan</a>
     </p>
   </section>
@@ -118,8 +119,8 @@ import Icon from "../../components/ui/Icon.astro";
       </form>
 
       <p class="ai-legal" id="legal">
-        <a class="link" href="/privacy">Dasar Privasi</a>
-        <span aria-hidden="true">·</span>
+        <a class="link" href="/privacy">Dasar Privasi</a>{" "}
+        <span aria-hidden="true">·</span>{" "}
         <a class="link" href="/terms">Terma Penggunaan</a>
       </p>
     </section>
@@ -143,7 +144,7 @@ import Icon from "../../components/ui/Icon.astro";
   document.body.classList.add("ai-page");
 
   const $ = (id: string) => document.getElementById(id)!;
-  const ralat = (m: string | null) => {
+  const showError = (m: string | null) => {
     $("ralat").textContent = m ?? "";
     $("ralat").hidden = !m;
     if (m) $("ralat").scrollIntoView({ block: "nearest" });
@@ -164,7 +165,7 @@ import Icon from "../../components/ui/Icon.astro";
     skrin.scrollTop = skrin.scrollHeight;
   };
 
-  const salinTeks = async (text: string) => {
+  const copyText = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
       return true;
@@ -190,8 +191,11 @@ import Icon from "../../components/ui/Icon.astro";
     }
   };
 
-  const salinMesej = async (bubble: HTMLElement, button: HTMLButtonElement) => {
-    if (await salinTeks(bubble.dataset.teks ?? bubble.textContent ?? "")) {
+  const copyMessage = async (
+    bubble: HTMLElement,
+    button: HTMLButtonElement,
+  ) => {
+    if (await copyText(bubble.dataset.text ?? bubble.textContent ?? "")) {
       button.innerHTML = icon("tanda");
       button.classList.add("disalin");
       button.setAttribute("aria-label", "Disalin");
@@ -205,7 +209,7 @@ import Icon from "../../components/ui/Icon.astro";
     }
   };
 
-  const buatBaris = (role: "user" | "assistant", copy = true) => {
+  const createRow = (role: "user" | "assistant", copy = true) => {
     const row = document.createElement("li");
     row.className = `ai-row ai-row-${role}`;
 
@@ -224,44 +228,47 @@ import Icon from "../../components/ui/Icon.astro";
     bubble.className = "ai-msg";
     wrap.append(nama, bubble);
     if (copy) {
-      const tindakan = document.createElement("div");
-      tindakan.className = "ai-msg-tindakan";
-      const salin = document.createElement("button");
-      salin.className = "ai-copy";
-      salin.type = "button";
-      salin.setAttribute("aria-label", "Salin mesej");
-      salin.title = "Salin mesej";
-      salin.innerHTML = icon("salin");
-      salin.addEventListener("click", () => void salinMesej(bubble, salin));
-      tindakan.append(salin);
-      wrap.append(tindakan);
+      const actions = document.createElement("div");
+      actions.className = "ai-msg-tindakan";
+      const copyButton = document.createElement("button");
+      copyButton.className = "ai-copy";
+      copyButton.type = "button";
+      copyButton.setAttribute("aria-label", "Salin mesej");
+      copyButton.title = "Salin mesej";
+      copyButton.innerHTML = icon("salin");
+      copyButton.addEventListener(
+        "click",
+        () => void copyMessage(bubble, copyButton),
+      );
+      actions.append(copyButton);
+      wrap.append(actions);
     }
     row.append(avatar, wrap);
     return { row, bubble };
   };
 
-  const paparUser = (text: string) => {
-    const { row, bubble } = buatBaris("user");
+  const renderUser = (text: string) => {
+    const { row, bubble } = createRow("user");
     bubble.textContent = text;
-    bubble.dataset.teks = text;
+    bubble.dataset.text = text;
     log.append(row);
     scrollBottom();
   };
 
-  const paparAssistant = (text: string) => {
+  const renderAssistant = (text: string) => {
     if (!assistant) {
-      assistant = buatBaris("assistant");
+      assistant = createRow("assistant");
       log.append(assistant.row);
     }
     assistant.bubble.classList.add("ai-msg-rich");
-    assistant.bubble.dataset.teks = text;
+    assistant.bubble.dataset.text = text;
     renderMarkdown(assistant.bubble, text);
     scrollBottom();
   };
 
-  const pikir = (label: string) => {
+  const showThinking = (label: string) => {
     if (!thinking) {
-      const { row, bubble } = buatBaris("assistant", false);
+      const { row, bubble } = createRow("assistant", false);
       row.classList.add("ai-row-thinking");
       bubble.classList.add("ai-thinking");
       const dots = document.createElement("span");
@@ -278,14 +285,14 @@ import Icon from "../../components/ui/Icon.astro";
     scrollBottom();
   };
 
-  const selesaiPikir = () => {
+  const hideThinking = () => {
     thinking?.row.remove();
     thinking = null;
   };
 
-  const paparKad = (proposal: ToolProposal) =>
+  const renderConfirmCard = (proposal: ToolProposal) =>
     new Promise<boolean>((resolve) => {
-      const { row, bubble } = buatBaris("assistant", false);
+      const { row, bubble } = createRow("assistant", false);
       row.classList.add("ai-row-proposal");
       bubble.classList.add("ai-kad");
       const id = `ai-kad-${Date.now()}`;
@@ -298,8 +305,8 @@ import Icon from "../../components/ui/Icon.astro";
       const butiran = document.createElement("p");
       butiran.className = "ai-kad-butiran";
       butiran.textContent = proposal.detail;
-      const tindakan = document.createElement("div");
-      tindakan.className = "ai-kad-tindakan";
+      const actions = document.createElement("div");
+      actions.className = "ai-kad-tindakan";
       if (
         proposal.href &&
         proposal.href.startsWith("/") &&
@@ -309,7 +316,7 @@ import Icon from "../../components/ui/Icon.astro";
         pautan.className = "btn btn-outline btn-sm";
         pautan.href = proposal.href;
         pautan.textContent = proposal.label ?? "Lihat";
-        tindakan.append(pautan);
+        actions.append(pautan);
       }
       const batal = document.createElement("button");
       batal.type = "button";
@@ -319,8 +326,8 @@ import Icon from "../../components/ui/Icon.astro";
       sahkan.type = "button";
       sahkan.className = "btn btn-primary btn-sm";
       sahkan.textContent = "Sahkan";
-      tindakan.append(batal, sahkan);
-      bubble.append(tajuk, butiran, tindakan);
+      actions.append(batal, sahkan);
+      bubble.append(tajuk, butiran, actions);
       log.append(row);
       scrollBottom();
 
@@ -341,8 +348,8 @@ import Icon from "../../components/ui/Icon.astro";
       sahkan.focus();
     });
 
-  const paparHasil = (result: ToolResult) => {
-    const { row, bubble } = buatBaris("assistant", false);
+  const renderResult = (result: ToolResult) => {
+    const { row, bubble } = createRow("assistant", false);
     row.classList.add("ai-row-proposal");
     bubble.classList.add("ai-kad");
     const salah = typeof result.ralat === "string";
@@ -392,9 +399,9 @@ import Icon from "../../components/ui/Icon.astro";
     hantar.setAttribute("aria-busy", String(v));
   };
 
-  const setMula = (mula: boolean) => {
-    $("ai-chat").classList.toggle("ai-chat--mula", mula);
-    $("legal").hidden = !mula;
+  const setEmptyState = (empty: boolean) => {
+    $("ai-chat").classList.toggle("ai-chat--mula", empty);
+    $("legal").hidden = !empty;
   };
 
   const setQuota = (q: { used: number; limit: number | null } | null) => {
@@ -405,7 +412,7 @@ import Icon from "../../components/ui/Icon.astro";
       : "…";
   };
 
-  const muatKuota = async () => {
+  const loadQuota = async () => {
     const res = await api("/me/apps/nubi/usage").catch(() => null);
     if (!res?.ok) return setQuota(null);
     const data = (await json(res)).data;
@@ -417,23 +424,23 @@ import Icon from "../../components/ui/Icon.astro";
       });
   };
 
-  const tunjukChat = async () => {
+  const showChat = async () => {
     $("persetujuan").hidden = true;
     $("chat").hidden = false;
-    setMula(messages.length === 0);
-    await muatKuota();
+    setEmptyState(messages.length === 0);
+    await loadQuota();
     if (messages.length === 0 && matchMedia("(pointer: fine)").matches)
       teks.focus();
   };
 
-  const tunjukPersetujuan = () => {
+  const showConsent = () => {
     $("chat").hidden = true;
     $("persetujuan").hidden = false;
   };
 
-  const mesejRalat = (status: number, body: Record<string, any>) => {
+  const errorMessage = (status: number, body: Record<string, any>) => {
     if (body.code === "ai_consent_required") {
-      tunjukPersetujuan();
+      showConsent();
       return "Persetujuan AI diperlukan semula.";
     }
     if (body.code === "ai_quota_full") return "Kuota AI hari ini dah habis.";
@@ -443,7 +450,7 @@ import Icon from "../../components/ui/Icon.astro";
     return "Tak dapat jawapan sekarang. Cuba lagi.";
   };
 
-  const labelTool = (name: string) => {
+  const toolLabel = (name: string) => {
     if (name === "get_profile") return "Menyemak profil…";
     if (name === "list_plans" || name === "get_plan") return "Menyemak pelan…";
     if (name === "list_activities") return "Menyemak aktiviti…";
@@ -452,72 +459,77 @@ import Icon from "../../components/ui/Icon.astro";
     return "Menyemak data…";
   };
 
-  const hantarSoalan = async () => {
+  const sendQuestion = async () => {
     const text = teks.value.trim();
     if (!text || sibuk) return;
-    ralat(null);
+    showError(null);
     saran.hidden = true;
     messages.push({ role: "user", content: text });
-    setMula(false);
-    paparUser(text);
+    setEmptyState(false);
+    renderUser(text);
     teks.value = "";
     resizeTeks();
     kira.textContent = "0 / 2,000";
     assistant = null;
     setBusy(true);
-    pikir("Memikir…");
+    showThinking("Memikir…");
 
     try {
       let reply = "";
       let wrote = false;
       for (let round = 0; round < 6; round++) {
-        if (round) pikir("Menyusun jawapan…");
+        if (round) showThinking("Menyusun jawapan…");
         const res = await api("/me/ai/chat", {
           method: "POST",
           body: JSON.stringify({ messages: messages.slice(-40) }),
         });
         const body = await json(res);
         if (!res.ok) {
-          selesaiPikir();
-          ralat(mesejRalat(res.status, body));
+          hideThinking();
+          showError(errorMessage(res.status, body));
           return;
         }
         const data = body.data;
         setQuota(data.quota);
         const text = String(data.text ?? "").trim();
         if (text) {
-          selesaiPikir();
-          paparAssistant(text);
+          hideThinking();
+          renderAssistant(text);
           reply = text;
         }
         const calls: AiToolCall[] = Array.isArray(data.toolCalls)
           ? data.toolCalls
           : [];
         if (!calls.length) {
-          selesaiPikir();
-          if (!reply) ralat("AI tak beri jawapan. Cuba lagi.");
+          hideThinking();
+          if (!reply) showError("AI tak beri jawapan. Cuba lagi.");
           else messages.push({ role: "assistant", content: reply });
           return;
         }
         // Satu bubble per turn: teks perantara tidak disimpan dalam history.
         messages.push({ role: "assistant", content: "", toolCalls: calls });
         for (const call of calls) {
-          pikir(labelTool(call.name));
+          showThinking(toolLabel(call.name));
           const hasil = await runTool(call.name, call.arguments);
           let result: ToolResult;
           if ("proposal" in hasil) {
             wrote = true;
-            selesaiPikir();
-            const sah = await paparKad(hasil.proposal);
+            hideThinking();
+            const sah = await renderConfirmCard(hasil.proposal);
             if (!sah) result = { dibatalkan: true };
             else {
-              pikir("Menyimpan…");
+              showThinking("Menyimpan…");
               result = await hasil.proposal.jalankan();
-              selesaiPikir();
+              hideThinking();
             }
-            paparHasil(result);
+            renderResult(result);
           } else {
             result = hasil.result;
+            if (
+              typeof result.href === "string" &&
+              typeof result.label === "string"
+            )
+              renderResult(result);
           }
           messages.push({
             role: "tool",
@@ -527,15 +539,17 @@ import Icon from "../../components/ui/Icon.astro";
         }
         // Selepas tulis, UI jadi sumber kebenaran: jangan minta model mengesahkan lagi.
         if (wrote) {
-          selesaiPikir();
+          hideThinking();
           return;
         }
       }
-      selesaiPikir();
-      ralat("AI ambil terlalu banyak langkah. Cuba soalan yang lebih ringkas.");
+      hideThinking();
+      showError(
+        "AI ambil terlalu banyak langkah. Cuba soalan yang lebih ringkas.",
+      );
     } catch {
-      selesaiPikir();
-      ralat("Tiada sambungan. Semak internet dan cuba lagi.");
+      hideThinking();
+      showError("Tiada sambungan. Semak internet dan cuba lagi.");
     } finally {
       setBusy(false);
     }
@@ -547,14 +561,14 @@ import Icon from "../../components/ui/Icon.astro";
   };
 
   const simpanPersetujuan = async () => {
-    ralat(null);
+    showError(null);
     const res = await api("/me/apps/nubi/aiconsent/ya", {
       method: "PUT",
       body: JSON.stringify({ engine: 1, data: {}, progress: [] }),
     }).catch(() => null);
     if (!res?.ok)
-      return ralat("Tak dapat simpan persetujuan sekarang. Cuba lagi.");
-    await tunjukChat();
+      return showError("Tak dapat simpan persetujuan sekarang. Cuba lagi.");
+    await showChat();
   };
 
   teks.addEventListener("input", () => {
@@ -564,19 +578,19 @@ import Icon from "../../components/ui/Icon.astro";
   teks.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
       e.preventDefault();
-      void hantarSoalan();
+      void sendQuestion();
     }
   });
   $("borang").addEventListener("submit", (e) => {
     e.preventDefault();
-    void hantarSoalan();
+    void sendQuestion();
   });
   $("setuju").addEventListener("click", () => void simpanPersetujuan());
   for (const b of document.querySelectorAll<HTMLButtonElement>("[data-contoh]"))
     b.addEventListener("click", () => {
       teks.value = b.dataset.contoh ?? "";
       teks.dispatchEvent(new Event("input"));
-      void hantarSoalan();
+      void sendQuestion();
     });
 
   const saya = await currentUser();
@@ -591,7 +605,7 @@ import Icon from "../../components/ui/Icon.astro";
   } else {
     const res = await api("/me/apps/nubi/aiconsent").catch(() => null);
     const ada = res?.ok && ((await json(res)).data?.items?.length ?? 0) > 0;
-    if (ada) await tunjukChat();
-    else tunjukPersetujuan();
+    if (ada) await showChat();
+    else showConsent();
   }
 </script>

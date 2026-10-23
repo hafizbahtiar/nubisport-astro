@@ -86,8 +86,8 @@ export function parseToolArgs(raw: string): Record<string, unknown> {
   }
 }
 
-const teks = (v: unknown, max = 500) => (typeof v === "string" ? v.slice(0, max) : "");
-const ralat = (message: string): ToolOutcome => ({ result: { ralat: message } });
+const textValue = (v: unknown, max = 500) => (typeof v === "string" ? v.slice(0, max) : "");
+const errorOutcome = (message: string): ToolOutcome => ({ result: { ralat: message } });
 
 /** Ringkasan aktiviti - tiada koordinat, fail, atau id pengguna. */
 export function activitySummary(a: Record<string, unknown>) {
@@ -97,7 +97,7 @@ export function activitySummary(a: Record<string, unknown>) {
     id: a.id,
     startedAt: a.startedAt,
     sport: a.sport,
-    name: teks(a.name, 120),
+    name: textValue(a.name, 120),
     distanceKm: +((m / 1000).toFixed(2)),
     movingMin: Math.round(s / 60),
     paceSPerKm: m > 0 ? Math.round(s / (m / 1000)) : null,
@@ -107,7 +107,7 @@ export function activitySummary(a: Record<string, unknown>) {
   };
 }
 
-const ringkasAcara = (a: Acara) => ({
+const eventSummary = (a: Acara) => ({
   id: a.id,
   title: a.title,
   startsAt: a.startsAt,
@@ -192,16 +192,16 @@ function planDetail(kind: PlanKind, p: Record<string, string>) {
 
 async function preparePlan(name: "create_plan" | "update_plan", args: Record<string, unknown>): Promise<ToolOutcome> {
   const kind = planKind(args.distance);
-  if (!kind) return ralat("Pilih jarak 5K, 10K, 21K atau 42K.");
-  const key = name === "update_plan" ? teks(args.key, 100) : "";
-  if (name === "update_plan" && !key) return ralat("Pelan yang nak diubah tiada.");
+  if (!kind) return errorOutcome("Pilih jarak 5K, 10K, 21K atau 42K.");
+  const key = name === "update_plan" ? textValue(args.key, 100) : "";
+  if (name === "update_plan" && !key) return errorOutcome("Pelan yang nak diubah tiada.");
   if (key) await pullCloud();
   const raw = { ...args };
   delete raw.key;
   delete raw.distance;
   delete raw.jarak;
   const preview = previewPlan(kind, raw, key || undefined);
-  if (!preview.ok) return ralat(preview.error);
+  if (!preview.ok) return errorOutcome(preview.error);
   const existing = key ? describePlan(key) : null;
   return {
     proposal: {
@@ -227,13 +227,13 @@ async function preparePlan(name: "create_plan" | "update_plan", args: Record<str
 
 async function prepareProfile(args: Record<string, unknown>): Promise<ToolOutcome> {
   const parsed = profileChanges(args);
-  if (!parsed.ok) return ralat(parsed.error);
+  if (!parsed.ok) return errorOutcome(parsed.error);
   const current = await readProfile();
   const changes = parsed.changes;
   const lines = Object.entries(changes)
     .filter(([key, value]) => String(current[key as keyof TrainingProfile] ?? "") !== String(value))
     .map(([key, value]) => `${PROFILE[key].label}: ${current[key as keyof TrainingProfile] || "kosong"} → ${value}`);
-  if (!lines.length) return ralat("Tiada perubahan profil.");
+  if (!lines.length) return errorOutcome("Tiada perubahan profil.");
   const merged = { ...current, ...changes };
   return {
     proposal: {
@@ -256,10 +256,10 @@ async function prepareProfile(args: Record<string, unknown>): Promise<ToolOutcom
 }
 
 async function prepareActive(args: Record<string, unknown>): Promise<ToolOutcome> {
-  const key = teks(args.key, 100);
+  const key = textValue(args.key, 100);
   if (key) await pullCloud();
   const plan = key ? describePlan(key) : null;
-  if (!plan) return ralat("Pelan itu tiada dalam akaun ini.");
+  if (!plan) return errorOutcome("Pelan itu tiada dalam akaun ini.");
   return {
     proposal: {
       title: "Jadikan pelan aktif",
@@ -284,13 +284,13 @@ async function prepareActive(args: Record<string, unknown>): Promise<ToolOutcome
 
 async function prepareRsvp(name: "rsvp_event" | "cancel_rsvp", args: Record<string, unknown>): Promise<ToolOutcome> {
   const id = Number(args.eventId);
-  if (!Number.isInteger(id) || id <= 0) return ralat("Pilih larian yang sah.");
+  if (!Number.isInteger(id) || id <= 0) return errorOutcome("Pilih larian yang sah.");
   const event = await fetchEvent(id);
-  if (!event) return ralat("Larian itu tiada atau sudah dipadam.");
-  if (closed(event)) return ralat("Larian ini sudah tamat.");
-  if (name === "rsvp_event" && event.mine) return ralat("Awak dah RSVP larian ini.");
-  if (name === "rsvp_event" && full(event)) return ralat("Larian ini sudah penuh.");
-  if (name === "cancel_rsvp" && !event.mine) return ralat("Awak belum RSVP larian ini.");
+  if (!event) return errorOutcome("Larian itu tiada atau sudah dipadam.");
+  if (closed(event)) return errorOutcome("Larian ini sudah tamat.");
+  if (name === "rsvp_event" && event.mine) return errorOutcome("Awak dah RSVP larian ini.");
+  if (name === "rsvp_event" && full(event)) return errorOutcome("Larian ini sudah penuh.");
+  if (name === "cancel_rsvp" && !event.mine) return errorOutcome("Awak belum RSVP larian ini.");
   return {
     proposal: {
       title: name === "rsvp_event" ? "Saya datang" : "Batal RSVP",
@@ -313,7 +313,7 @@ async function prepareRsvp(name: "rsvp_event" | "cancel_rsvp", args: Record<stri
 }
 
 async function runConditions(args: Record<string, unknown>): Promise<ToolResult> {
-  const wanted = teks(args.negeri, 80) || readLocation() || "";
+  const wanted = textValue(args.negeri, 80) || readLocation() || "";
   const state = STATES.find(
     (s) => s.nama.toLowerCase() === wanted.toLowerCase() || s.nama.toLowerCase().replace(/^wp /, "") === wanted.toLowerCase(),
   );
@@ -377,7 +377,7 @@ async function trainingSummary(args: Record<string, unknown>): Promise<ToolResul
 }
 
 function listRaces(args: Record<string, unknown>): ToolResult {
-  const negeri = teks(args.negeri, 60).toLowerCase();
+  const negeri = textValue(args.negeri, 60).toLowerCase();
   const today = todayMY();
   const races = RACES
     .filter((r) => r.tarikh >= today && (!negeri || r.negeri.toLowerCase().includes(negeri)))
@@ -434,11 +434,11 @@ async function activityDetail(args: Record<string, unknown>): Promise<ToolResult
 }
 
 async function prepareMark(args: Record<string, unknown>): Promise<ToolOutcome> {
-  const sessionId = teks(args.sessionId, 20);
-  if (!sessionId) return ralat("Sesi yang nak ditanda tiada.");
+  const sessionId = textValue(args.sessionId, 20);
+  if (!sessionId) return errorOutcome("Sesi yang nak ditanda tiada.");
   const st = await activePlanState();
   if (!st.ok)
-    return ralat(
+    return errorOutcome(
       st.sebab === "mula"
         ? "Pelan aktif belum ada tarikh mula. Set tarikh mula dulu."
         : st.sebab === "enjin"
@@ -446,8 +446,8 @@ async function prepareMark(args: Record<string, unknown>): Promise<ToolOutcome> 
           : "Tiada pelan aktif. Jadikan pelan aktif dulu.",
     );
   const sesi = st.plan.sesi.find((s) => s.id === sessionId);
-  if (!sesi) return ralat("Sesi itu tiada dalam pelan aktif.");
-  if (readList(st.plan.kunci).includes(sessionId)) return ralat("Sesi itu dah ditanda siap.");
+  if (!sesi) return errorOutcome("Sesi itu tiada dalam pelan aktif.");
+  if (readList(st.plan.kunci).includes(sessionId)) return errorOutcome("Sesi itu dah ditanda siap.");
   const info = describePlan(st.plan.kunci);
   return {
     proposal: {
@@ -490,11 +490,21 @@ export async function runTool(name: string, rawArgs: string): Promise<ToolOutcom
         return { result: await listPlans() };
       case "get_plan": {
         await pullCloud();
-        const key = teks(args.key, 100);
+        const key = textValue(args.key, 100);
         const plan = key ? describePlan(key) : null;
         return {
           result: plan
-            ? { key: plan.key, name: plan.name, detail: plan.detail, done: plan.done, total: plan.total, params: plan.params }
+            ? { key: plan.key, name: plan.name, detail: plan.detail, done: plan.done, total: plan.total, params: plan.params, href: plan.href }
+            : { ralat: "Pelan itu tiada dalam akaun ini." },
+        };
+      }
+      case "open_plan": {
+        await pullCloud();
+        const key = textValue(args.key, 100);
+        const plan = key ? describePlan(key) : null;
+        return {
+          result: plan
+            ? { title: "Pelan anda", message: plan.name, href: plan.href, label: "Buka pelan" }
             : { ralat: "Pelan itu tiada dalam akaun ini." },
         };
       }
@@ -502,7 +512,7 @@ export async function runTool(name: string, rawArgs: string): Promise<ToolOutcom
         return { result: await listActivities(args) };
       case "list_events": {
         const events = await fetchEvents(false);
-        return { result: events ? { events: events.slice(0, 20).map(ringkasAcara) } : { ralat: "Tak dapat baca larian kumpulan sekarang." } };
+        return { result: events ? { events: events.slice(0, 20).map(eventSummary) } : { ralat: "Tak dapat baca larian kumpulan sekarang." } };
       }
       case "get_run_conditions":
         return { result: await runConditions(args) };

@@ -60,6 +60,7 @@ atau argumen gagal semakan -> hasil `{ "ralat": "..." }` kepada model, tiada apa
 | `get_profile` | baca | `readProfile()` (`lib/profile.ts`) |
 | `list_plans` | baca | `pullCloud()` + `savedPlans()` (`lib/plan-list.ts`) + pelan aktif |
 | `get_plan` | baca | `describePlan(key)` + params + minggu siap |
+| `open_plan` | baca | `describePlan(key)` -> kad `Buka pelan` (href), bukan navigasi paksa |
 | `list_activities` | baca | `GET /me/apps/nubi/activities?from=` - ringkasan sahaja (tarikh, km, masa, pace, nadi, % lari) |
 | `list_events` | baca | `GET /me/apps/nubi/events` (akan datang + RSVP saya) |
 | `get_run_conditions` | baca | IPU + ramalan MET + waktu solat JAKIM; `run-check.ts` |
