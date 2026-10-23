@@ -14,7 +14,8 @@ const og = Astro.site && new URL("/og.png", Astro.site);
 ---
 
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- interactive-widget: papan kekunci Android kecilkan dvh, jadi kotak tulis chat NUNI kekal di atasnya. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content" />
 <title>{title}</title>
 <meta name="description" content={description} />
 {noindex && <meta name="robots" content="noindex" />}

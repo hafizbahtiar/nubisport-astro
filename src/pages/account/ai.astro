@@ -62,6 +62,16 @@ import Icon from "../../components/ui/Icon.astro";
           aria-label="Perbualan"
         >
         </ul>
+        <button
+          class="ai-turun"
+          type="button"
+          id="turun"
+          aria-label="Ke mesej terkini"
+          title="Ke mesej terkini"
+          hidden
+        >
+          <Icon name="bawah" />
+        </button>
       </div>
 
       <div class="ai-saran" id="saran">
@@ -161,9 +171,19 @@ import Icon from "../../components/ui/Icon.astro";
   let assistant: { row: HTMLLIElement; bubble: HTMLElement } | null = null;
   let thinking: { row: HTMLLIElement; label: HTMLElement } | null = null;
 
-  const scrollBottom = () => {
-    skrin.scrollTop = skrin.scrollHeight;
+  // Ikut mesej baru hanya bila pengguna sudah di bawah; kalau sedang baca mesej lama, tunjuk butang turun.
+  const turun = $("turun") as HTMLButtonElement;
+  let diBawah = true;
+  const scrollBottom = (paksa = false) => {
+    if (paksa || diBawah) skrin.scrollTop = skrin.scrollHeight;
   };
+  skrin.addEventListener("scroll", () => {
+    diBawah = skrin.scrollHeight - skrin.scrollTop - skrin.clientHeight < 48;
+    turun.hidden = diBawah;
+  });
+  turun.addEventListener("click", () =>
+    skrin.scrollTo({ top: skrin.scrollHeight, behavior: "smooth" }),
+  );
 
   const copyText = async (text: string) => {
     try {
@@ -252,7 +272,7 @@ import Icon from "../../components/ui/Icon.astro";
     bubble.textContent = text;
     bubble.dataset.text = text;
     log.append(row);
-    scrollBottom();
+    scrollBottom(true);
   };
 
   const renderAssistant = (text: string) => {
@@ -571,12 +591,15 @@ import Icon from "../../components/ui/Icon.astro";
     await showChat();
   };
 
+  const sentuh = matchMedia("(pointer: coarse)").matches;
+  if (sentuh) teks.enterKeyHint = "enter";
   teks.addEventListener("input", () => {
     kira.textContent = `${teks.value.length.toLocaleString("ms-MY")} / 2,000`;
     resizeTeks();
   });
   teks.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
+    // Telefon: Enter = baris baru, hantar guna butang (macam app chat lain).
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing && !sentuh) {
       e.preventDefault();
       void sendQuestion();
     }

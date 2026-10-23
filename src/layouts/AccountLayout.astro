@@ -499,6 +499,9 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
   .app-kandungan {
     padding: 1.5rem;
     display: grid;
+    /* Satu perkataan panjang (nama fail .fit, URL) tak boleh lebarkan lajur melepasi skrin. */
+    grid-template-columns: minmax(0, 1fr);
+    overflow-wrap: anywhere;
     gap: 1.5rem;
     align-content: start;
   }

@@ -98,6 +98,8 @@
 .ai-chat {
   position: relative;
   width: 100%;
+  padding-block: 0;
+  /* <section>: global.css beri padding-block 4rem+ */
   height: calc(100vh - var(--navbar-h) - 3rem);
   height: calc(100dvh - var(--navbar-h) - 3rem);
   display: flex;
@@ -145,7 +147,8 @@
   line-height: 1;
 }
 
-.ai-avatar-bot {
+.ai-avatar-bot,
+.ai-avatar-assistant {
   background: var(--navy);
   color: var(--orange);
 }
@@ -194,6 +197,26 @@
   align-content: start;
   gap: 1rem;
   padding: 1rem 0;
+}
+
+.ai-turun {
+  position: sticky;
+  bottom: 0.5rem;
+  justify-self: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--paper);
+  color: var(--navy);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.12);
+  cursor: pointer;
+}
+
+.ai-turun[hidden] {
+  display: none;
 }
 
 .ai-log {
