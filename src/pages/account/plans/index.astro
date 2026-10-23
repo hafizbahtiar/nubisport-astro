@@ -2,42 +2,69 @@
 // One list for all running plans (5K, 10K, 21K, 42K) -> /account/plans/<distance>/view. Index = reusable Table.
 import AccountLayout from "../../../layouts/AccountLayout.astro";
 import Table from "../../../components/ui/Table.astro";
+import Dropdown from "../../../components/ui/Dropdown.astro";
 ---
 
 <AccountLayout title="Pelan larian">
-  <section class="plans-header">
-    <div>
-      <p class="eyebrow">Pelan latihan</p>
-      <h2 class="display">Pelan larian</h2>
-      <p class="muted">
-        Semua pelan anda - 5K, 10K, 21K dan 42K. Lihat, edit atau padam.
-      </p>
-    </div>
-    <div class="actions">
-      <a class="btn btn-primary" href="/account/plans/5k/new">Buat pelan 5K</a>
-      <a class="btn btn-outline" href="/account/plans/10k/new">Buat pelan 10K</a
-      >
-      <a class="btn btn-outline" href="/account/plans/21k/new">Buat pelan 21K</a
-      >
-      <a class="btn btn-outline" href="/account/plans/42k/new">Buat pelan 42K</a
-      >
-    </div>
-  </section>
+  <ul class="stat" aria-label="Ringkasan pelan">
+    <li><span>Pelan</span><strong id="bil-pelan">0</strong></li>
+    <li><span>Sesi siap</span><strong id="bil-siap">0</strong></li>
+    <li><span>Awan</span><strong id="bil-awan">0</strong></li>
+  </ul>
 
-  <Table
-    id="plans-table"
-    columns={[
-      { label: "Pelan" },
-      { label: "Kemajuan" },
-      { label: "Storan" },
-      { label: "Status" },
-      { label: "Tindakan", srOnly: true },
-    ]}
-    searchPlaceholder="Cari pelan…"
-    empty="Belum ada pelan larian."
-    emptyHint="Mulakan dengan pelan 5K atau 10K pertama anda."
-    emptyIcon="pemasa"
-  />
+  <section class="panel" aria-labelledby="t-pelan">
+    <div class="panel-kepala">
+      <h3 class="display" id="t-pelan">Pelan larian</h3>
+      <div class="actions plans-actions">
+        <a class="btn btn-primary btn-sm" href="/account/plans/5k/new"
+          >Buat pelan 5K</a
+        >
+        <a class="btn btn-outline btn-sm" href="/account/plans/10k/new"
+          >Buat pelan 10K</a
+        >
+        <a class="btn btn-outline btn-sm" href="/account/plans/21k/new"
+          >Buat pelan 21K</a
+        >
+        <a class="btn btn-outline btn-sm" href="/account/plans/42k/new"
+          >Buat pelan 42K</a
+        >
+      </div>
+    </div>
+    <p class="muted">
+      Semua pelan anda - 5K, 10K, 21K dan 42K. Lihat, edit atau padam.
+    </p>
+
+    <Table
+      id="plans-table"
+      variant="full"
+      columns={[
+        { label: "Pelan" },
+        { label: "Kemajuan" },
+        { label: "Storan" },
+        { label: "Status" },
+        { label: "Tindakan", srOnly: true },
+      ]}
+      searchPlaceholder="Cari pelan…"
+      empty="Belum ada pelan larian."
+      emptyHint="Mulakan dengan pelan 5K atau 10K pertama anda."
+      emptyIcon="pemasa"
+    >
+      <div slot="filters">
+        <label class="sr-only" for="jarak-butang">Jarak</label>
+        <Dropdown
+          id="jarak"
+          value="semua"
+          options={[
+            { value: "semua", label: "Semua jarak" },
+            { value: "5k", label: "5K" },
+            { value: "10k", label: "10K" },
+            { value: "21k", label: "21K" },
+            { value: "42k", label: "42K" },
+          ]}
+        />
+      </div>
+    </Table>
+  </section>
 </AccountLayout>
 
 <script>
@@ -52,6 +79,8 @@ import Table from "../../../components/ui/Table.astro";
   } from "../../../lib/cloud-sync";
   import { deletePlan } from "../../../lib/saved-plans";
 
+  const byId = <T extends HTMLElement = HTMLElement>(id: string) =>
+    document.getElementById(id) as T;
   const textSpan = (text: string, className?: string) => {
     const span = document.createElement("span");
     if (className) span.className = className;
@@ -124,35 +153,37 @@ import Table from "../../../components/ui/Table.astro";
     search: (row) => `${row.name} ${row.detail} ${row.kind}`,
   });
 
+  byId<HTMLSelectElement>("jarak").addEventListener("change", (event) => {
+    const kind = (event.target as HTMLSelectElement).value;
+    table.filter(kind === "semua" ? null : (row) => row.kind === kind);
+  });
+
   async function load() {
     table.loading();
     await pullCloud(); // cloud plans join the local list
     const [cloud, current] = await Promise.all([listCloud(), activePlan()]);
     cloudKeys = new Set(cloud?.items.map((item) => item.key) ?? []);
     activeKey = current?.kunci ?? null;
-    table.data(savedPlans());
+    const plans = savedPlans();
+    table.data(plans);
+    byId("bil-pelan").textContent = String(plans.length);
+    byId("bil-siap").textContent = String(
+      plans.reduce((total, plan) => total + plan.done, 0),
+    );
+    byId("bil-awan").textContent = String(
+      plans.filter((plan) => cloudKeys.has(plan.key)).length,
+    );
   }
 
   await load();
 </script>
 
 <style>
-  .plans-header {
-    padding: 0; /* bukan section awam (global.css beri padding besar) */
-    margin-bottom: 1.5rem;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 1rem;
+  .stat.stat {
+    margin-bottom: 1rem;
   }
-  .plans-header h2 {
-    margin: 0.15rem 0;
-    font-size: clamp(2rem, 4vw, 2.75rem);
-    color: var(--navy);
-  }
-  .plans-header p {
-    margin: 0;
+  .panel.panel {
+    justify-items: stretch;
   }
   /* Sel dijana skrip (tiada atribut skop Astro) - perlu :global. */
   :global(.plan-cell) {
@@ -163,12 +194,12 @@ import Table from "../../../components/ui/Table.astro";
     color: var(--navy);
   }
   @media (max-width: 40rem) {
-    .plans-header .actions {
+    .plans-actions {
       display: grid;
       grid-template-columns: 1fr 1fr;
       width: 100%;
     }
-    .plans-header .btn {
+    .plans-actions .btn {
       padding-inline: 0.75rem; /* label muat sebaris */
     }
   }

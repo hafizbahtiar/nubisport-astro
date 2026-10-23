@@ -272,7 +272,8 @@ Item yang dah siap dibuang (lihat git history).
 ## 🗂 Struktur pelan - index / view / new (2026-10-22)
 
 - [x] **Satu senarai semua pelan**: `/account/plans` (label "Pelan larian") = index Table
-  (5K, 10K, 21K, 42K). 5K -> view/edit baru; jarak lain -> halaman sedia ada.
+  (5K, 10K, 21K, 42K) -> `/account/plans/<jarak>/view`. Nama/detail/href = `describePlan` (`lib/plan-list.ts`),
+  dikongsi dengan Dashboard.
 - [x] **5K dulu** (experiment): `/account/plans/5k/new` = borang, `/account/plans/5k/view?kunci=`
   = paparan + mod edit. Borang awam `/plan-5k` kekal tanpa akaun.
 - [x] **Borang awam vs akaun berbeza**: awam dalam `PageHero` (ringkas, tanpa MAF); akaun dalam panel
@@ -283,6 +284,41 @@ Item yang dah siap dibuang (lihat git history).
   view/edit, `DistancePlan` `mode`); index + Dashboard paut ke view. Halaman lama dibuang.
 - URL lama `/account/plan-5k`, `/account/distance-plan`, `/account/plan-42k` dibuang - tiada redirect.
   Pautan dalam app guna `/account/plans/...`; nav "Pelan larian" = satu-satunya pintu senarai.
+- [x] **Audit + pembaikan** (2026-10-23): open redirect `?next=` (tab/baris baru) -> `internalPath`; kunci
+  prototaip dari URL (`tahap=constructor`, `jarak=__proto__`) -> `Object.hasOwn` dalam enjin; link berparam
+  (`hantar=1`) dan `view?kunci=` asing tak lagi cipta pelan; "Kemas kini" = butang submit (validasi pelayar,
+  Enter = kemas kini); "Sambung dari Minggu N" Dashboard kini bawa `kunci`; view tiada auto-scroll, skrol
+  ikut reduced motion; butang tindakan 2 lajur sama lebar di telefon. Formula 5K/10K/21K/42K, MAF, Riegel,
+  ics, Ramadan, plan-sync disemak bebas - tiada perubahan.
+- [ ] **Keputusan owner**: param URL mengatasi params tersimpan di view (borang pace/ujian bergantung padanya)
+  - link dengan kunci anda boleh ubah pelan + pangkas tanda siap di pelayar (awan kekal). Biar, atau params
+  tersimpan menang?
+- [ ] `nextPlan` (`lib/pace.ts`): masa tepat 30:00 dilabel "bawah 30 minit" (`m <= TARGET_MINUTES`).
+- [ ] `Maf.astro:243`, `pace.astro:179`: `behavior: "smooth"` abaikan reduced motion - buang opsyen
+  (CSS `html` dah urus), sama macam pelan.
+- [ ] Uji "Sambung dari Minggu N" Dashboard dengan akaun ahli + pelan aktif sebenar; uji flow pelan di
+  Safari/telefon.
+
+## 🍽 Kalkulator defisit (dirancang 2026-10-23)
+
+Diminta kawan owner. Pelan penuh: **`docs/plans/deficit-calculator.md`** (formula, had keselamatan, privasi,
+luar skop). Awam, dalam pelayar, tiada simpanan - corak kalkulator peluh.
+
+- [ ] Owner putuskan: `/deficit` halaman sendiri (cadangan) atau seksyen `/guide#defisit`; isi km dari pelan
+  aktif (cadangan: tidak untuk v1); siapa semak kandungan (dietitian).
+- [x] Formula disemak 2026-10-23 (sumber + contoh kira tangan dalam pelan): Mifflin-St Jeor (umur 19-78),
+  PAL FAO 2004 (1.40/1.55/1.75/2.00 - faktor 1.2-1.725 dibuang), larian 1.0 kcal/kg/km dari persamaan ACSM,
+  lantai 1,200/1,500 (Harvard), ≤ 1% seminggu (Helms 2014), keto/rendah karbo (Feinman 2015).
+- [ ] Masih belum disahkan (jangan petik di page sampai sah): teks MDG 2020 KKM (0.5-1 kg seminggu), teks RNI
+  2017 (julat lemak), julat karbo g/kg AND/DC/ACSM 2016 (teks penuh berbayar).
+- [ ] `src/lib/deficit.ts` (`calcDeficit`) + `scripts/check-deficit.ts` - lantai 1,200/1,500 kcal, defisit
+  ≤ 25% keperluan, sasaran ≤ 1% berat seminggu, umur luar 19-78 / hamil / gangguan makan = tiada nombor.
+  Fixture = contoh kira tangan dalam pelan (lelaki 70 kg → 2,157 kcal; kes lantai → 1,200).
+- [ ] Page + satu entri `ALAT` (`Header.astro`) + `sitemap` + README "Apa ada"; penafian standard.
+- [ ] **Templat makro** (diminta kawan 2026-10-23): `DIET_TEMPLATES` - Seimbang (RNI), Pelari (1.6 g/kg),
+  Protein tinggi (2.0 g/kg), Rendah karbo; gram karbo/protein/lemak dari sasaran kcal. Contoh kiraan, bukan
+  pelan makan. Ambang "karbo < 3 g/kg" dibuang (tak dapat disahkan).
+- [ ] Owner putuskan **keto** (cadangan: tidak untuk v1 - bukti tak cukup untuk prestasi; kalau masuk = amaran tetap).
 
 ## 💡 Idea
 
