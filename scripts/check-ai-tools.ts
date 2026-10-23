@@ -27,6 +27,10 @@ for (const name of WRITE_TOOLS) {
 }
 ok(typeof ralat(await runTool("tool-asing", "{}")) === "string", "tool asing ditolak");
 ok(typeof ralat(await runTool("get_plan", '{"key":"tiada"}')) === "string", "pelan asing ditolak");
+const races = await runTool("list_races", "{}");
+ok("result" in races && Array.isArray((races.result as any).races), "list_races pulang senarai");
+ok(typeof ralat(await runTool("get_run_conditions", '{}')) === "string", "run conditions tanpa negeri = ralat jelas");
+ok(typeof ralat(await runTool("get_activity_detail", "{}")) === "string", "activity id tak sah = ralat");
 
 const plan = await runTool("create_plan", JSON.stringify({ distance: "10k", minggu: 12, masa: 45, hari: 3 }));
 ok("proposal" in plan && plan.proposal.title.includes("10K"), "create_plan = cadangan, bukan tulisan");

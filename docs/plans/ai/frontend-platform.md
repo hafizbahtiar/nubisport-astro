@@ -1,6 +1,6 @@
 # Pembantu AI - frontend, fasa 1 (AI platform)
 
-Status: **fasa 1c dibina** (2026-10-23): page, persetujuan, kuota, tool baca, tool tulis dengan kad Sahkan, dan copy mesej. Fail utama pelan (keputusan, seni bina, keselamatan):
+Status: **fasa 1c + tool lanjutan dibina** (2026-10-23): page, persetujuan, kuota, tool baca, tool tulis dengan kad Sahkan, copy mesej, cuaca/race/activity detail. Fail utama pelan (keputusan, seni bina, keselamatan):
 **`hono-workers/docs/plans/ai/README.md`**. Separuh backend: `hono-workers/docs/plans/ai/backend-platform.md`.
 
 ## Tujuan
@@ -62,6 +62,11 @@ atau argumen gagal semakan -> hasil `{ "ralat": "..." }` kepada model, tiada apa
 | `get_plan` | baca | `describePlan(key)` + params + minggu siap |
 | `list_activities` | baca | `GET /me/apps/nubi/activities?from=` - ringkasan sahaja (tarikh, km, masa, pace, nadi, % lari) |
 | `list_events` | baca | `GET /me/apps/nubi/events` (akan datang + RSVP saya) |
+| `get_run_conditions` | baca | IPU + ramalan MET + waktu solat JAKIM; `run-check.ts` |
+| `get_training_summary` | baca | Aktiviti 1-365 hari + pelan aktif; `plan-sync.ts` |
+| `list_races` | baca | `RACES` (`data/races.ts`), hanya acara akan datang |
+| `get_activity_detail` | baca | Ringkasan + zon nadi + ketinggian + semakan sesi; tiada koordinat |
+| `mark_session_done` | tulis | Tanda sesi pelan aktif siap + sync awan |
 | `update_profile` | tulis | `saveProfile({ ...semasa, ...ubah })` |
 | `create_plan` | tulis | `savePlan()` baru (bawah) |
 | `update_plan` | tulis | `savePlan()` dengan `key` sedia ada (kunci + rekod awan sama) |

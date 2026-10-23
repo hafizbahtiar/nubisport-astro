@@ -7,8 +7,8 @@ import Icon from "../../components/ui/Icon.astro";
 ---
 
 <AccountLayout
-  title="Pembantu AI"
-  description="Pembantu AI Nubi untuk profil, pelan, aktiviti dan larian kumpulan anda."
+  title="NUNI"
+  description="NUNI, pembantu AI Nubi Sport untuk profil, pelan, aktiviti dan larian kumpulan awak."
 >
   <Alert variant="info" title="Ciri untuk ahli" id="bukan-ahli" hidden>
     <p>
@@ -40,10 +40,18 @@ import Icon from "../../components/ui/Icon.astro";
     <button class="btn btn-primary" type="button" id="setuju">
       Setuju dan mula
     </button>
+    <p class="muted">
+      <a class="link" href="/privacy">Dasar Privasi</a> ·
+      <a class="link" href="/terms">Terma Penggunaan</a>
+    </p>
   </section>
 
   <div id="chat" hidden>
-    <section class="ai-chat" aria-label="Pembantu AI">
+    <section
+      class="ai-chat"
+      id="ai-chat"
+      aria-label="NUNI, pembantu AI Nubi Sport"
+    >
       <div class="ai-skrin" id="skrin">
         <ul
           class="ai-log"
@@ -52,6 +60,32 @@ import Icon from "../../components/ui/Icon.astro";
           aria-live="polite"
           aria-label="Perbualan"
         >
+        </ul>
+      </div>
+
+      <div class="ai-saran" id="saran">
+        <ul aria-label="Cadangan soalan">
+          <li>
+            <button type="button" data-contoh="Minggu ini pelan saya apa?">
+              Minggu ini pelan saya apa?
+            </button>
+          </li>
+          <li>
+            <button
+              type="button"
+              data-contoh="Aktiviti saya bulan ini macam mana?"
+            >
+              Aktiviti bulan ini macam mana?
+            </button>
+          </li>
+          <li>
+            <button
+              type="button"
+              data-contoh="Larian kumpulan akan datang apa?"
+            >
+              Larian akan datang apa?
+            </button>
+          </li>
         </ul>
       </div>
 
@@ -83,31 +117,11 @@ import Icon from "../../components/ui/Icon.astro";
         </div>
       </form>
 
-      <div class="ai-saran" id="saran">
-        <ul aria-label="Cadangan soalan">
-          <li>
-            <button type="button" data-contoh="Minggu ini pelan saya apa?">
-              Minggu ini pelan saya apa?
-            </button>
-          </li>
-          <li>
-            <button
-              type="button"
-              data-contoh="Aktiviti saya bulan ini macam mana?"
-            >
-              Aktiviti bulan ini macam mana?
-            </button>
-          </li>
-          <li>
-            <button
-              type="button"
-              data-contoh="Larian kumpulan akan datang apa?"
-            >
-              Larian akan datang apa?
-            </button>
-          </li>
-        </ul>
-      </div>
+      <p class="ai-legal" id="legal">
+        <a class="link" href="/privacy">Dasar Privasi</a>
+        <span aria-hidden="true">·</span>
+        <a class="link" href="/terms">Terma Penggunaan</a>
+      </p>
     </section>
   </div>
 </AccountLayout>
@@ -124,6 +138,8 @@ import Icon from "../../components/ui/Icon.astro";
     type ToolProposal,
     type ToolResult,
   } from "../../lib/ai-tools";
+
+  document.body.classList.add("ai-page");
 
   const $ = (id: string) => document.getElementById(id)!;
   const ralat = (m: string | null) => {
@@ -202,7 +218,7 @@ import Icon from "../../components/ui/Icon.astro";
     wrap.className = "ai-msg-wrap";
     const nama = document.createElement("span");
     nama.className = "ai-nama";
-    nama.textContent = role === "assistant" ? "Nubi" : namaSaya;
+    nama.textContent = role === "assistant" ? "NUNI" : namaSaya;
     const bubble = document.createElement("div");
     bubble.className = "ai-msg";
     wrap.append(nama, bubble);
@@ -310,10 +326,60 @@ import Icon from "../../components/ui/Icon.astro";
       sahkan.focus();
     });
 
+  const paparHasil = (result: ToolResult) => {
+    const { row, bubble } = buatBaris("assistant", false);
+    row.classList.add("ai-row-proposal");
+    bubble.classList.add("ai-kad");
+    const salah = typeof result.ralat === "string";
+    const batal = result.dibatalkan === true;
+    bubble.classList.add(
+      salah ? "ai-kad-ralat" : batal ? "ai-kad-batal" : "ai-kad-selesai",
+    );
+    const tajuk = document.createElement("strong");
+    tajuk.className = "ai-kad-tajuk";
+    tajuk.textContent = salah
+      ? "Tak dapat simpan"
+      : batal
+        ? "Dibatalkan"
+        : "Selesai";
+    const butiran = document.createElement("p");
+    butiran.className = "ai-kad-butiran";
+    const mesej = salah
+      ? String(result.ralat)
+      : batal
+        ? "Tiada perubahan dibuat."
+        : String(result.message ?? "Dah selesai.");
+    butiran.textContent =
+      result.awan === "penuh" && !salah && !batal
+        ? `${mesej} Pelan disimpan pada peranti ini; slot awan penuh.`
+        : mesej;
+    bubble.append(tajuk, butiran);
+    const pautan = typeof result.href === "string" ? result.href : "";
+    if (
+      !salah &&
+      !batal &&
+      pautan.startsWith("/") &&
+      !pautan.startsWith("//")
+    ) {
+      const a = document.createElement("a");
+      a.className = "btn btn-primary btn-sm";
+      a.href = pautan;
+      a.textContent = typeof result.label === "string" ? result.label : "Buka";
+      bubble.append(a);
+    }
+    log.append(row);
+    scrollBottom();
+  };
+
   const setBusy = (v: boolean) => {
     sibuk = v;
     hantar.disabled = v;
     hantar.setAttribute("aria-busy", String(v));
+  };
+
+  const setMula = (mula: boolean) => {
+    $("ai-chat").classList.toggle("ai-chat--mula", mula);
+    $("legal").hidden = !mula;
   };
 
   const setQuota = (q: { used: number; limit: number | null } | null) => {
@@ -339,6 +405,7 @@ import Icon from "../../components/ui/Icon.astro";
   const tunjukChat = async () => {
     $("persetujuan").hidden = true;
     $("chat").hidden = false;
+    setMula(messages.length === 0);
     await muatKuota();
     if (messages.length === 0 && matchMedia("(pointer: fine)").matches)
       teks.focus();
@@ -376,6 +443,7 @@ import Icon from "../../components/ui/Icon.astro";
     ralat(null);
     saran.hidden = true;
     messages.push({ role: "user", content: text });
+    setMula(false);
     paparUser(text);
     teks.value = "";
     resizeTeks();
@@ -386,6 +454,7 @@ import Icon from "../../components/ui/Icon.astro";
 
     try {
       let reply = "";
+      let wrote = false;
       for (let round = 0; round < 6; round++) {
         if (round) pikir("Menyusun jawapan…");
         const res = await api("/me/ai/chat", {
@@ -422,6 +491,7 @@ import Icon from "../../components/ui/Icon.astro";
           const hasil = await runTool(call.name, call.arguments);
           let result: ToolResult;
           if ("proposal" in hasil) {
+            wrote = true;
             selesaiPikir();
             const sah = await paparKad(hasil.proposal);
             if (!sah) result = { dibatalkan: true };
@@ -430,6 +500,7 @@ import Icon from "../../components/ui/Icon.astro";
               result = await hasil.proposal.jalankan();
               selesaiPikir();
             }
+            paparHasil(result);
           } else {
             result = hasil.result;
           }
@@ -438,6 +509,11 @@ import Icon from "../../components/ui/Icon.astro";
             toolCallId: call.id,
             content: toolContent(result),
           });
+        }
+        // Selepas tulis, UI jadi sumber kebenaran: jangan minta model mengesahkan lagi.
+        if (wrote) {
+          selesaiPikir();
+          return;
         }
       }
       selesaiPikir();

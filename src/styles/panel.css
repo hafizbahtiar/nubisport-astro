@@ -84,16 +84,55 @@
   gap: 0.75rem;
 }
 
+/* AI page: scrollbar pada main content, bukan dalam chat. */
+.ai-page .app-kandungan {
+  height: calc(100vh - var(--navbar-h));
+  height: calc(100dvh - var(--navbar-h));
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-content: stretch;
+}
+
 /* ---------- Pembantu AI (page chat) ---------- */
 .ai-chat {
+  position: relative;
   width: min(100%, 52rem);
-  /* Isi seluruh content: viewport - navbar 4rem - padding atas/bawah 3rem. */
-  height: calc(100vh - var(--navbar-h) - 3rem);
-  height: calc(100dvh - var(--navbar-h) - 3rem);
+  /* Main content yang scroll; chat cuma isi ruang, bukan scroll container. */
+  min-height: calc(100vh - var(--navbar-h) - 3rem);
+  min-height: calc(100dvh - var(--navbar-h) - 3rem);
   margin-inline: auto;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+}
+
+/* Kali pertama: composer + cadangan di tengah, legal di bawah. */
+.ai-chat--mula {
+  justify-content: center;
+}
+
+.ai-chat--mula .ai-skrin {
+  display: none;
+}
+
+.ai-chat--mula .ai-saran {
+  padding-bottom: 0.25rem;
+}
+
+.ai-chat--mula .ai-borangan {
+  padding-bottom: 0;
+}
+
+.ai-legal {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  margin: 0;
+  padding: 0.5rem 0 1rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-align: center;
 }
 
 .ai-avatar {
@@ -150,9 +189,8 @@
 }
 
 .ai-skrin {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto;
   display: grid;
   align-content: start;
   gap: 1rem;
@@ -282,6 +320,22 @@
   gap: 0.45rem;
 }
 
+.ai-msg.ai-kad-selesai {
+  border-color: var(--success-line);
+}
+
+.ai-kad-selesai .ai-kad-tajuk {
+  color: var(--success-ink);
+}
+
+.ai-msg.ai-kad-ralat {
+  border-color: var(--danger-line);
+}
+
+.ai-kad-ralat .ai-kad-tajuk {
+  color: var(--danger-ink);
+}
+
 .ai-copy svg {
   width: 0.95rem;
   height: 0.95rem;
@@ -369,6 +423,13 @@
   display: grid;
   gap: 0.35rem;
   padding: 0.75rem 0 1rem;
+}
+
+.ai-chat:not(.ai-chat--mula) .ai-borangan {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  background: var(--paper-2);
 }
 
 .ai-kotak {
@@ -474,8 +535,8 @@
 
 @media (max-width: 40rem) {
   .ai-chat {
-    height: calc(100vh - var(--navbar-h) - 2rem);
-    height: calc(100dvh - var(--navbar-h) - 2rem);
+    min-height: calc(100vh - var(--navbar-h) - 2rem);
+    min-height: calc(100dvh - var(--navbar-h) - 2rem);
   }
 }
 

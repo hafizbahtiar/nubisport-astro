@@ -2,12 +2,35 @@
 // setiap tool guna laluan /me sedia ada dengan sesi ahli. Baca terus; tulis = cadangan + kad
 // Sahkan. Tiada tool padam.
 import { api, json } from "./api";
-import { pullCloud, saveToCloud } from "./cloud-sync";
+import { pullCloud, saveToCloud, syncProgress } from "./cloud-sync";
 import { describePlan, savedPlans } from "./plan-list";
 import { previewPlan, savePlan, type PlanKind } from "./plan-save";
-import { setActivePlan } from "./plan-sync";
+import {
+  activePlanState,
+  activitiesBetween,
+  sessionFor,
+  sessionLabel,
+  setActivePlan,
+} from "./plan-sync";
 import { readProfile, saveProfile, type TrainingProfile } from "./profile";
 import { DISTANCES } from "./distance-plan";
+import { RACES } from "../data/races";
+import { addDays, todayMY } from "./date";
+import { readList, writeList } from "./saved-plans";
+import {
+  STATES,
+  aqiLevel,
+  fetchAqi,
+  fetchForecast,
+  fetchPrayerTimes,
+  highestAqi,
+  nowTimeMY,
+  readLocation,
+  runWindows,
+  weatherAdvice,
+} from "./run-check";
+import { altitudeSeries, fitRecords, heartSeries, hrZones } from "./activity-file";
+import { checkSession } from "./activity-analysis";
 import {
   EVENTS,
   closed,
@@ -48,6 +71,7 @@ export const WRITE_TOOLS = new Set([
   "set_active_plan",
   "rsvp_event",
   "cancel_rsvp",
+  "mark_session_done",
 ]);
 
 /** Argumen tool mesti JSON objek; nilai lain = ralat kepada model, bukan throw. */
@@ -185,7 +209,14 @@ async function preparePlan(name: "create_plan" | "update_plan", args: Record<str
         const saved = savePlan(kind, raw, key || undefined);
         if (!saved.ok) return { ralat: saved.error };
         const awan = await saveToCloud(saved.key);
-        return { disimpan: true, key: saved.key, href: saved.href, awan };
+        return {
+          disimpan: true,
+          message: name === "create_plan" ? "Pelan disimpan." : "Pelan dikemas kini.",
+          key: saved.key,
+          href: saved.href,
+          label: "Lihat pelan",
+          awan,
+        };
       },
     },
   };
@@ -207,7 +238,13 @@ async function prepareProfile(args: Record<string, unknown>): Promise<ToolOutcom
       detail: lines.join("\n"),
       jalankan: async () => {
         if (!(await saveProfile(merged))) return { ralat: "Tak dapat simpan profil sekarang." };
-        return { disimpan: true, fields: Object.keys(changes) };
+        return {
+          disimpan: true,
+          message: "Profil disimpan.",
+          fields: Object.keys(changes),
+          href: "/account/profile/training",
+          label: "Buka profil",
+        };
       },
     },
   };
@@ -224,7 +261,15 @@ async function prepareActive(args: Record<string, unknown>): Promise<ToolOutcome
       detail: plan.name,
       jalankan: async () => {
         const baru = await setActivePlan(key);
-        return baru === null ? { ralat: "Tak dapat jadikan pelan aktif sekarang." } : { aktif: true, sesiBaru: baru };
+        return baru === null
+          ? { ralat: "Tak dapat jadikan pelan aktif sekarang." }
+          : {
+            aktif: true,
+            message: "Pelan aktif ditetapkan.",
+            sesiBaru: baru,
+            href: plan.href,
+            label: "Lihat pelan",
+          };
       },
     },
   };
@@ -247,7 +292,171 @@ async function prepareRsvp(name: "rsvp_event" | "cancel_rsvp", args: Record<stri
         const res = await api(`${EVENTS}/${event.id}/rsvp`, { method: name === "rsvp_event" ? "PUT" : "DELETE" }).catch(() => null);
         if (!res) return { ralat: "Tiada sambungan. Semak internet dan cuba lagi." };
         if (!res.ok) return { ralat: await eventError(res) };
-        return { rsvp: name === "rsvp_event" };
+        return {
+          rsvp: name === "rsvp_event",
+          message: name === "rsvp_event" ? "RSVP disimpan." : "RSVP dibatalkan.",
+          href: `/account/events/view?id=${event.id}`,
+          label: "Lihat larian",
+        };
+      },
+    },
+  };
+}
+
+async function runConditions(args: Record<string, unknown>): Promise<ToolResult> {
+  const wanted = teks(args.negeri, 80) || readLocation() || "";
+  const state = STATES.find(
+    (s) => s.nama.toLowerCase() === wanted.toLowerCase() || s.nama.toLowerCase().replace(/^wp /, "") === wanted.toLowerCase(),
+  );
+  if (!state)
+    return {
+      ralat: "Negeri belum dipilih. Beritahu negeri atau pilih lokasi di Nubi.",
+      negeri: STATES.map((s) => s.nama),
+    };
+
+  const today = todayMY();
+  const [air, forecast, prayer] = await Promise.all([
+    fetchAqi(state.nama),
+    fetchForecast(state.met),
+    fetchPrayerTimes(state.zon),
+  ]);
+  const station = air ? highestAqi(air) : null;
+  const level = station?.api != null ? aqiLevel(station.api) : null;
+  const day = forecast?.find((d) => d.date === today) ?? forecast?.[0] ?? null;
+  const windows = prayer ? runWindows(prayer, nowTimeMY(), day) : [];
+  return {
+    negeri: state.nama,
+    tarikh: today,
+    aqi: station && level
+      ? { nilai: station.api, label: level.label, nasihat: level.nasihat, stesen: station.station, bahan: station.pollutant }
+      : null,
+    cuaca: day
+      ? { ringkasan: day.summary, min: day.min, max: day.max, nasihat: weatherAdvice(day) }
+      : null,
+    waktuLari: windows.map((w) => ({ nama: w.nama, dari: w.dari, hingga: w.hingga, nota: w.nota, ribut: w.ribut })),
+    nota: !air || !forecast || !prayer ? "Sebahagian data cuaca/solat tak dapat dimuatkan." : null,
+  };
+}
+
+async function trainingSummary(args: Record<string, unknown>): Promise<ToolResult> {
+  const days = Math.min(365, Math.max(1, Number(args.days) || 28));
+  const from = addDays(todayMY(), -days);
+  const [activities, active] = await Promise.all([activitiesBetween(from), activePlanState()]);
+  const rows = activities ?? [];
+  const distanceM = rows.reduce((n, a) => n + (Number(a.distanceM) || 0), 0);
+  const movingS = rows.reduce((n, a) => n + (Number(a.movingS) || 0), 0);
+  let plan: ToolResult | null = null;
+  if (active.ok) {
+    const p = active.plan;
+    const done = new Set(readList(p.kunci));
+    const next = p.sesi.find((s) => !done.has(s.id));
+    const info = describePlan(p.kunci);
+    plan = {
+      nama: info?.name ?? p.kunci,
+      href: info?.href ?? "/account/plans",
+      siap: done.size,
+      jumlah: p.sesi.length,
+      sesiSeterusnya: next ? { id: next.id, label: sessionLabel(next), tarikh: next.tarikh } : null,
+    };
+  }
+  return {
+    hari: days,
+    aktiviti: { bilangan: rows.length, jarakKm: +(distanceM / 1000).toFixed(2), masaMin: Math.round(movingS / 60) },
+    pelanAktif: plan,
+    nota: activities === null ? "Aktiviti tak dapat dimuatkan sekarang." : null,
+  };
+}
+
+function listRaces(args: Record<string, unknown>): ToolResult {
+  const negeri = teks(args.negeri, 60).toLowerCase();
+  const today = todayMY();
+  const races = RACES
+    .filter((r) => r.tarikh >= today && (!negeri || r.negeri.toLowerCase().includes(negeri)))
+    .slice(0, 20)
+    .map((r) => ({
+      id: r.id,
+      nama: r.nama,
+      tarikh: r.tarikh,
+      mula: r.mula,
+      tempat: r.tempat,
+      negeri: r.negeri,
+      jarak: r.jarak,
+      yuran: r.yuran ?? null,
+      tutup: r.tutup ?? null,
+      pautan: r.pautan,
+    }));
+  return { hariIni: today, races };
+}
+
+async function activityDetail(args: Record<string, unknown>): Promise<ToolResult> {
+  const id = Number(args.id);
+  if (!Number.isInteger(id) || id <= 0) return { ralat: "Aktiviti tak sah." };
+  const res = await api(`/me/apps/nubi/activities/${id}`).catch(() => null);
+  if (!res?.ok) return { ralat: "Aktiviti itu tiada dalam akaun ini." };
+  const a = (await json(res)).data as Record<string, unknown>;
+  const out: ToolResult = { activity: activitySummary(a) };
+  const file = await api(`/me/apps/nubi/activities/${id}/file`).catch(() => null);
+  if (!file?.ok) return { ...out, nota: "Fail FIT tak dapat dimuatkan; ringkasan sahaja." };
+  try {
+    const rekod = await fitRecords(await file.arrayBuffer());
+    const hr = heartSeries(rekod);
+    if (typeof a.maxHr === "number" && a.maxHr > 0 && hr.length) out.hrZones = hrZones(hr, a.maxHr);
+    const alt = altitudeSeries(rekod);
+    if (alt.length) {
+      const heights = alt.map(([, m]) => m);
+      out.ketinggian = { min: Math.round(Math.min(...heights)), max: Math.round(Math.max(...heights)) };
+    }
+    const matched = await sessionFor(a as never).catch(() => null);
+    if (matched && (matched.sesi.jenis === "interval" || matched.sesi.jenis === "tempo")) {
+      const c = checkSession(rekod, matched.sesi.segmen, matched.sesi.usaha);
+      if (c)
+        out.semakanSesi = {
+          sesi: sessionLabel(matched.sesi),
+          sasaranSPerKm: c.target,
+          lulus: c.lulus,
+          jumlah: c.jumlah,
+          purataSPerKm: c.purata,
+        };
+    }
+  } catch {
+    out.nota = "Fail FIT tak dapat dibaca; ringkasan sahaja.";
+  }
+  return out;
+}
+
+async function prepareMark(args: Record<string, unknown>): Promise<ToolOutcome> {
+  const sessionId = teks(args.sessionId, 20);
+  if (!sessionId) return ralat("Sesi yang nak ditanda tiada.");
+  const st = await activePlanState();
+  if (!st.ok)
+    return ralat(
+      st.sebab === "mula"
+        ? "Pelan aktif belum ada tarikh mula. Set tarikh mula dulu."
+        : st.sebab === "enjin"
+          ? "Pelan aktif guna enjin lama. Kemas kini pelan itu dulu."
+          : "Tiada pelan aktif. Jadikan pelan aktif dulu.",
+    );
+  const sesi = st.plan.sesi.find((s) => s.id === sessionId);
+  if (!sesi) return ralat("Sesi itu tiada dalam pelan aktif.");
+  if (readList(st.plan.kunci).includes(sessionId)) return ralat("Sesi itu dah ditanda siap.");
+  const info = describePlan(st.plan.kunci);
+  return {
+    proposal: {
+      title: "Tanda sesi siap",
+      detail: `${sessionLabel(sesi)}\n${sesi.tarikh}`,
+      jalankan: async () => {
+        const siap = new Set(readList(st.plan.kunci));
+        siap.add(sessionId);
+        writeList(st.plan.kunci, [...siap]);
+        const awan = await saveToCloud(st.plan.kunci);
+        if (awan !== "ok") syncProgress(st.plan.kunci);
+        return {
+          disimpan: true,
+          message: "Sesi ditanda siap.",
+          href: info?.href ?? "/account/plans",
+          label: "Lihat pelan",
+          awan,
+        };
       },
     },
   };
@@ -258,6 +467,7 @@ export async function runTool(name: string, rawArgs: string): Promise<ToolOutcom
   const args = parseToolArgs(rawArgs);
   if (args.ralat) return { result: args };
   try {
+    if (name === "mark_session_done") return await prepareMark(args);
     if (name === "update_profile") return await prepareProfile(args);
     if (name === "create_plan" || name === "update_plan") return await preparePlan(name, args);
     if (name === "set_active_plan") return await prepareActive(args);
@@ -284,6 +494,14 @@ export async function runTool(name: string, rawArgs: string): Promise<ToolOutcom
         const events = await fetchEvents(false);
         return { result: events ? { events: events.slice(0, 20).map(ringkasAcara) } : { ralat: "Tak dapat baca larian kumpulan sekarang." } };
       }
+      case "get_run_conditions":
+        return { result: await runConditions(args) };
+      case "get_training_summary":
+        return { result: await trainingSummary(args) };
+      case "list_races":
+        return { result: listRaces(args) };
+      case "get_activity_detail":
+        return { result: await activityDetail(args) };
       default:
         return { result: { ralat: "Tool tak dikenali." } };
     }
