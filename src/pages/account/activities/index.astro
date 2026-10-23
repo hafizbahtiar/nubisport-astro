@@ -220,6 +220,7 @@ import Table from "../../../components/ui/Table.astro";
     movingS: number;
     avgHr: number | null;
     hasGpx: boolean;
+    updatedAt: string;
   }
 
   const tarikh = (iso: string) =>
@@ -407,7 +408,7 @@ import Table from "../../../components/ui/Table.astro";
           "akt-nama",
           a.name || SPORT_LABELS[a.sport],
         ) as HTMLAnchorElement;
-        n.href = `/account/activities/view?id=${a.id}`;
+        n.href = `/account/activities/view?id=${a.id}&v=${encodeURIComponent(a.updatedAt)}`;
         const d = el("span", "akt-sel");
         d.append(n, el("span", "muted", SPORT_LABELS[a.sport]));
         if (a.hasGpx) d.append(el("span", "lencana", "+ GPX"));

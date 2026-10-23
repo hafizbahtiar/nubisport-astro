@@ -208,8 +208,10 @@ import { LIFESTYLES, RATES } from "../../lib/deficit";
 
 <style is:global>
   /* Global: keputusan dirender dengan innerHTML. */
+  /* Rata atas: petunjuk "19-78 tahun" di bawah Umur tak meregang Tinggi/Berat sebaris. */
   .defisit-ukuran {
     grid-template-columns: minmax(0, 1fr);
+    align-items: start;
     gap: 1rem;
   }
   @media (min-width: 48rem) {

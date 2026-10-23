@@ -250,6 +250,16 @@ const GAYA: {
     RasterDEMSourceSpecification,
   } from "maplibre-gl";
 
+  // Mula download besar serta-merta; jangan tunggu /me, row, fail atau padanan pelan.
+  const PETA = Promise.all([
+    import("maplibre-gl"),
+    // Vite tidak nampak URL worker maplibre (dikira masa jalan) -> emit sendiri dan beritahu.
+    import("maplibre-gl/dist/maplibre-gl-worker.mjs?url"),
+    import("maplibre-gl/dist/maplibre-gl.css"),
+  ]);
+  void PETA.catch(() => {});
+  void import("@garmin/fitsdk").catch(() => {});
+
   const $ = (id: string) => document.getElementById(id)!;
   const BASE = "/me/apps/nubi/activities";
   // DEM Terrarium percuma tanpa kunci (Copernicus GLO-30 dll., global sehingga z12, tiada SLA).
@@ -283,6 +293,7 @@ const GAYA: {
     avgHr: number | null;
     maxHr: number | null;
     runRatio: number | null;
+    updatedAt: string;
   }
 
   async function mula() {
@@ -292,9 +303,17 @@ const GAYA: {
       $("bukan-ahli").hidden = false;
       return;
     }
-    const id = Number(new URLSearchParams(location.search).get("id"));
-    const r =
-      Number.isSafeInteger(id) && id > 0 ? await api(`${BASE}/${id}`) : null;
+    const params = new URLSearchParams(location.search);
+    const id = Number(params.get("id"));
+    const version = params.get("v");
+    const sah = Number.isSafeInteger(id) && id > 0;
+    const fileUrl = (v: string) =>
+      `${BASE}/${id}/file?v=${encodeURIComponent(v)}`;
+    // Row + fail serentak untuk link baharu. Link lama (tiada v) baca row dulu supaya
+    // URL fail guna updatedAt semasa - immutable tak boleh dipakai pada URL tanpa versi.
+    const fileP =
+      sah && version ? api(fileUrl(version)).catch(() => null) : null;
+    const r = sah ? await api(`${BASE}/${id}`) : null;
     if (!r?.ok) {
       $("tiada").hidden = false;
       return;
@@ -357,8 +376,11 @@ const GAYA: {
 
     let rekod: any[];
     try {
-      const f = await api(`${BASE}/${a.id}/file`);
-      if (!f.ok) throw new Error();
+      const currentVersion = a.updatedAt;
+      const f = await (fileP && version === currentVersion
+        ? fileP
+        : api(fileUrl(currentVersion)).catch(() => null));
+      if (!f?.ok) throw new Error();
       rekod = await fitRecords(await f.arrayBuffer());
     } catch {
       $("peta").hidden = true;
@@ -368,8 +390,12 @@ const GAYA: {
     }
     nadi(heartSeries(rekod), a.maxHr);
     tinggi(altitudeSeries(rekod), a.elevationGainM);
-    const m = await sesiPelan;
-    if (m) semakan(m.sesi, rekod);
+    // Padanan pelan tak perlu menyekat peta.
+    void sesiPelan
+      .then((m) => {
+        if (m) semakan(m.sesi, rekod);
+      })
+      .catch(() => {});
     await peta(routeOf(rekod));
   }
 
@@ -495,12 +521,7 @@ const GAYA: {
       return;
     }
     try {
-      const [ml, pekerja] = await Promise.all([
-        import("maplibre-gl"),
-        // Vite tidak nampak URL worker maplibre (dikira masa jalan) -> emit sendiri dan beritahu.
-        import("maplibre-gl/dist/maplibre-gl-worker.mjs?url"),
-        import("maplibre-gl/dist/maplibre-gl.css"),
-      ]);
+      const [ml, pekerja] = await PETA;
       ml.setWorkerUrl(pekerja.default);
       const warna = getComputedStyle(document.documentElement);
       const oren = warna.getPropertyValue("--orange").trim() || "#ff5a1f";

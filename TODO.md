@@ -260,6 +260,13 @@ Item yang dah siap dibuang (lihat git history).
 
 ## 🛠 Frontend - seterusnya
 
+- [x] **Detail aktiviti lambat** (`/account/activities/view`, didiagnosis 2026-10-23, dibaiki): `mula()`
+  berjalan satu demi satu - `/me` -> baris aktiviti -> fail `.fit` (R2) -> parser FIT 430 KB baru dimuat ->
+  tunggu pelan -> **baru** maplibre 1.1 MB + gaya + tiles. Baiki: (1) mula `import("maplibre-gl")` + parser FIT
+  serta-merta bila page dibuka; (2) baris aktiviti + `.fit` serentak (id dari URL); (3) lukis peta dulu,
+  padanan pelan kemudian. Backend: `Cache-Control: private, max-age=31536000, immutable` pada
+  `/activities/:id/file` (fail tak pernah berubah) - dah ditambah. Senarai aktiviti diukur laju secara tempatan (180-225 ms,
+  300 baris) - kalau perlahan di production, itu rangkaian/API (`/me` dulu, kemudian 3 panggilan).
 - [ ] Favicon 16px: dua garis N terlalu halus di tab - minta pereka versi favicon garis lebih tebal.
 - [ ] Label hero "Running Community · Sejak 2026" - kekal atau buang (wordmark kini "NUBI SPORT").
 - [ ] Gambar sebenar komuniti (larian kumpulan) - laman kini teks + jata saja. Perlu kebenaran orang
@@ -322,15 +329,19 @@ luar skop). Akaun sahaja, dikira dalam pelayar, diisi dari profil latihan; keput
   profil (baca saja - kalkulator tak pernah menulis). `/privacy` dikemas kini (23 Okt).
 - [ ] Nanti kalau diminta: km dari pelan aktif, anggaran minggu ke berat sasaran.
 
-## 🤖 AI (dirancang 2026-10-23)
+## 🤖 Pembantu AI - chat (dirancang 2026-10-23)
 
-Diminta kawan owner. Pelan dalam backend: **`hono-workers/docs/plans/ai-byok.md`** (AI platform + kunci API
-sendiri: Claude, OpenAI, OpenRouter, Command Code).
+Diminta kawan owner. Fail utama: **`hono-workers/docs/plans/ai/README.md`**; frontend: `docs/plans/ai/frontend-platform.md` (fasa 1) dan `docs/plans/ai/frontend-byok.md` (fasa 2). Keputusan owner: chat yang
+faham konteks dan boleh baca / cipta / ubah data **ahli itu sahaja**; ahli ke atas; AI platform dulu, kunci
+API sendiri (Claude, OpenAI, OpenRouter, Command Code) fasa 2.
 
-- [ ] Owner putuskan dulu: ciri AI pertama (apa AI buat untuk pelari?), platform dulu atau BYOK sekarang,
-  siapa boleh guna, kuota ikut tier.
-- [ ] Frontend: `/account/ai` (pilih penyedia, kunci `type=password`, model, Simpan / Padam; papar hujung
-  kunci sahaja) + kemas kini `/privacy` dan `/terms`.
+- [ ] Dulu: `lib/plan-save.ts` (`savePlan`) - satu laluan simpan pelan untuk borang dan tool AI.
+- [ ] `/account/ai` "Pembantu AI" (sidebar, ahli+): chat, persetujuan `nubi/aiconsent` (berasingan daripada persetujuan aktiviti), baris kuota.
+- [ ] `lib/ai-tools.ts` + `scripts/check-ai-tools.ts`: tool berjalan dalam pelayar guna API `/me` sedia ada
+  (profil, pelan, aktiviti, larian kumpulan); tulis = kad Sahkan / Batal; tiada tool padam.
+- [ ] Teks AI dipapar dengan `textContent`, bukan `innerHTML`.
+- [ ] `/privacy` + `/terms`: bahagian AI.
+- [ ] Fasa 2 (bila diminta): bahagian "Guna kunci API sendiri" dalam `/account/ai` - lihat `frontend-byok.md`.
 
 ## 💡 Idea
 
