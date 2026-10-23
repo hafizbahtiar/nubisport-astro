@@ -29,7 +29,7 @@ import { LIFESTYLES, RATES } from "../../lib/deficit";
           { value: "perempuan", label: "Perempuan" },
         ]}
       />
-      <div class="dua">
+      <div class="form-group defisit-ukuran">
         <Field label="Umur" hint="19-78 tahun">
           <input
             class="input"
@@ -66,20 +66,20 @@ import { LIFESTYLES, RATES } from "../../lib/deficit";
             required
           />
         </Field>
-        <Field label="Larian seminggu (km)" hint="0 kalau belum mula">
-          <input
-            class="input"
-            type="number"
-            name="km"
-            min="0"
-            max="200"
-            step="1"
-            inputmode="numeric"
-            value="0"
-            required
-          />
-        </Field>
       </div>
+      <Field label="Larian seminggu (km)" hint="0 kalau belum mula">
+        <input
+          class="input"
+          type="number"
+          name="km"
+          min="0"
+          max="200"
+          step="1"
+          inputmode="numeric"
+          value="0"
+          required
+        />
+      </Field>
       <ChipGroup
         legend="Hari biasa anda (tanpa larian)"
         name="gaya"
@@ -208,10 +208,20 @@ import { LIFESTYLES, RATES } from "../../lib/deficit";
 
 <style is:global>
   /* Global: keputusan dirender dengan innerHTML. */
-  .dua {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  .defisit-ukuran {
+    grid-template-columns: minmax(0, 1fr);
     gap: 1rem;
+  }
+  @media (min-width: 48rem) {
+    .defisit-ukuran {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  .defisit-ukuran .field {
+    min-width: 0;
+  }
+  .defisit-ukuran .input {
+    width: 100%;
   }
   .defisit-angka {
     display: grid;

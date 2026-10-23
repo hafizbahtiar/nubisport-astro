@@ -322,6 +322,16 @@ luar skop). Akaun sahaja, dikira dalam pelayar, diisi dari profil latihan; keput
   profil (baca saja - kalkulator tak pernah menulis). `/privacy` dikemas kini (23 Okt).
 - [ ] Nanti kalau diminta: km dari pelan aktif, anggaran minggu ke berat sasaran.
 
+## 🤖 AI (dirancang 2026-10-23)
+
+Diminta kawan owner. Pelan dalam backend: **`hono-workers/docs/plans/ai-byok.md`** (AI platform + kunci API
+sendiri: Claude, OpenAI, OpenRouter, Command Code).
+
+- [ ] Owner putuskan dulu: ciri AI pertama (apa AI buat untuk pelari?), platform dulu atau BYOK sekarang,
+  siapa boleh guna, kuota ikut tier.
+- [ ] Frontend: `/account/ai` (pilih penyedia, kunci `type=password`, model, Simpan / Padam; papar hujung
+  kunci sahaja) + kemas kini `/privacy` dan `/terms`.
+
 ## 💡 Idea
 
 Semua idea (belum diputuskan, disusun ikut gelombang) dalam **`IDEA.md`**. Yang diputuskan -> pindah ke sini.

@@ -33,27 +33,35 @@ type NavItem = {
 const NAV: { tajuk: string; items: NavItem[] }[] = [
   {
     tajuk: "Utama",
+    items: [{ href: "/account", label: "Dashboard", ikon: "rumah" }],
+  },
+  {
+    tajuk: "Latihan",
     items: [
-      { href: "/account", label: "Dashboard", ikon: "rumah" },
+      { href: "/account/plans", label: "Pelan larian", ikon: "pemasa" },
       {
         href: "/account/activities",
         label: "Aktiviti",
         ikon: "aktiviti",
         members: true,
       },
-      { href: "/account/events", label: "Larian kumpulan", ikon: "kalendar" },
     ],
   },
   {
-    tajuk: "Latihan",
+    tajuk: "Alat",
     items: [
-      { href: "/account/plans", label: "Pelan larian", ikon: "pemasa" },
       { href: "/account/maf", label: "Kira MAF", ikon: "nadi" },
       {
         href: "/account/deficit",
         label: "Kalkulator defisit",
         ikon: "bendera",
       },
+    ],
+  },
+  {
+    tajuk: "Komuniti",
+    items: [
+      { href: "/account/events", label: "Larian kumpulan", ikon: "kalendar" },
     ],
   },
   {
