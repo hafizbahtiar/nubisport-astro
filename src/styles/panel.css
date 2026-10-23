@@ -97,11 +97,9 @@
 /* ---------- Pembantu AI (page chat) ---------- */
 .ai-chat {
   position: relative;
-  width: min(100%, 52rem);
-  /* Main content yang scroll; chat cuma isi ruang, bukan scroll container. */
-  min-height: calc(100vh - var(--navbar-h) - 3rem);
-  min-height: calc(100dvh - var(--navbar-h) - 3rem);
-  margin-inline: auto;
+  width: 100%;
+  height: calc(100vh - var(--navbar-h) - 3rem);
+  height: calc(100dvh - var(--navbar-h) - 3rem);
   display: flex;
   flex-direction: column;
 }
@@ -189,8 +187,9 @@
 }
 
 .ai-skrin {
-  flex: 1 1 auto;
+  flex: 1;
   min-height: 0;
+  overflow-y: auto;
   display: grid;
   align-content: start;
   gap: 1rem;
@@ -198,8 +197,9 @@
 }
 
 .ai-log {
+  width: min(100%, 52rem);
+  margin-inline: auto;
   list-style: none;
-  margin: 0;
   padding: 0;
   display: grid;
   gap: 1.1rem;
@@ -254,6 +254,72 @@
   background: var(--navy);
   color: var(--paper);
   border-top-right-radius: 0.3rem;
+}
+
+.ai-msg-rich {
+  white-space: normal;
+}
+
+.ai-msg-rich p {
+  margin: 0 0 0.55em;
+}
+
+.ai-msg-rich p:last-child {
+  margin-bottom: 0;
+}
+
+.ai-msg-rich ul,
+.ai-msg-rich ol {
+  margin: 0.3em 0 0.6em;
+  padding-left: 1.25em;
+}
+
+.ai-msg-rich li {
+  margin: 0.15em 0;
+}
+
+.ai-msg-rich h3,
+.ai-msg-rich h4 {
+  margin: 0.1em 0 0.35em;
+  color: var(--navy);
+  font-size: 1.05em;
+}
+
+.ai-msg-rich a {
+  color: var(--orange-ink);
+  font-weight: 600;
+  text-underline-offset: 0.15em;
+}
+
+.ai-msg-user .ai-msg-rich a {
+  color: var(--orange);
+}
+
+.ai-msg-rich code {
+  padding: 0.1em 0.3em;
+  border-radius: 0.3em;
+  background: var(--line);
+  font-size: 0.88em;
+}
+
+.ai-msg-rich pre {
+  margin: 0.4em 0;
+  padding: 0.6rem 0.75rem;
+  overflow-x: auto;
+  border-radius: var(--radius);
+  background: var(--navy);
+  color: var(--paper);
+}
+
+.ai-msg-rich pre code {
+  padding: 0;
+  background: none;
+  color: inherit;
+  white-space: pre;
+}
+
+.ai-msg-user .ai-msg-rich code {
+  background: var(--navy-2);
 }
 
 .ai-msg-tindakan {
@@ -389,7 +455,9 @@
 }
 
 .ai-saran {
-  padding: 0 0 1rem;
+  width: min(100%, 52rem);
+  margin-inline: auto;
+  padding: 0 0 0.5rem;
 }
 
 .ai-saran ul {
@@ -420,16 +488,11 @@
 }
 
 .ai-borangan {
+  width: min(100%, 52rem);
+  margin-inline: auto;
   display: grid;
   gap: 0.35rem;
   padding: 0.75rem 0 1rem;
-}
-
-.ai-chat:not(.ai-chat--mula) .ai-borangan {
-  position: sticky;
-  bottom: 0;
-  z-index: 3;
-  background: var(--paper-2);
 }
 
 .ai-kotak {
@@ -512,10 +575,6 @@
 }
 
 @media (max-width: 48rem) {
-  .ai-chat {
-    width: 100%;
-  }
-
   .ai-skrin {
     padding: 0.75rem 0;
   }
@@ -535,8 +594,14 @@
 
 @media (max-width: 40rem) {
   .ai-chat {
-    min-height: calc(100vh - var(--navbar-h) - 2rem);
-    min-height: calc(100dvh - var(--navbar-h) - 2rem);
+    height: calc(100vh - var(--navbar-h) - 2rem);
+    height: calc(100dvh - var(--navbar-h) - 2rem);
+  }
+
+  .ai-log,
+  .ai-saran,
+  .ai-borangan {
+    width: 100%;
   }
 }
 

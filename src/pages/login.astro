@@ -149,6 +149,7 @@ import { TURNSTILE_SITE_KEY } from "../data/site";
         body: JSON.stringify({
           email,
           password,
+          app: "nubi",
           captchaToken:
             String(f.get("cf-turnstile-response") ?? "") || undefined,
         }),

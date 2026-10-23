@@ -58,6 +58,8 @@ export type ToolResult = Record<string, unknown>;
 export interface ToolProposal {
   title: string;
   detail: string;
+  href?: string;
+  label?: string;
   jalankan: () => Promise<ToolResult>;
 }
 export type ToolOutcome =
@@ -205,6 +207,7 @@ async function preparePlan(name: "create_plan" | "update_plan", args: Record<str
     proposal: {
       title: `${name === "create_plan" ? "Cipta pelan" : "Ubah pelan"}: ${planDetail(kind, preview.params)}`,
       detail: name === "update_plan" && existing ? existing.name : "Pelan ini akan disimpan dalam akaun awak.",
+      ...(existing ? { href: existing.href, label: "Lihat pelan" } : {}),
       jalankan: async () => {
         const saved = savePlan(kind, raw, key || undefined);
         if (!saved.ok) return { ralat: saved.error };
@@ -236,6 +239,8 @@ async function prepareProfile(args: Record<string, unknown>): Promise<ToolOutcom
     proposal: {
       title: "Kemas kini profil",
       detail: lines.join("\n"),
+      href: "/account/profile/training",
+      label: "Lihat profil",
       jalankan: async () => {
         if (!(await saveProfile(merged))) return { ralat: "Tak dapat simpan profil sekarang." };
         return {
@@ -259,6 +264,8 @@ async function prepareActive(args: Record<string, unknown>): Promise<ToolOutcome
     proposal: {
       title: "Jadikan pelan aktif",
       detail: plan.name,
+      href: plan.href,
+      label: "Lihat pelan",
       jalankan: async () => {
         const baru = await setActivePlan(key);
         return baru === null
@@ -288,6 +295,8 @@ async function prepareRsvp(name: "rsvp_event" | "cancel_rsvp", args: Record<stri
     proposal: {
       title: name === "rsvp_event" ? "Saya datang" : "Batal RSVP",
       detail: `${event.title}\n${whenText(event.startsAt)} · ${event.location}`,
+      href: `/account/events/view?id=${event.id}`,
+      label: "Lihat larian",
       jalankan: async () => {
         const res = await api(`${EVENTS}/${event.id}/rsvp`, { method: name === "rsvp_event" ? "PUT" : "DELETE" }).catch(() => null);
         if (!res) return { ralat: "Tiada sambungan. Semak internet dan cuba lagi." };
@@ -444,6 +453,7 @@ async function prepareMark(args: Record<string, unknown>): Promise<ToolOutcome> 
     proposal: {
       title: "Tanda sesi siap",
       detail: `${sessionLabel(sesi)}\n${sesi.tarikh}`,
+      ...(info ? { href: info.href, label: "Lihat pelan" } : {}),
       jalankan: async () => {
         const siap = new Set(readList(st.plan.kunci));
         siap.add(sessionId);

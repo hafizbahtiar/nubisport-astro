@@ -129,6 +129,7 @@ import Icon from "../../components/ui/Icon.astro";
 <script>
   import { api, currentUser, json } from "../../lib/api";
   import { icon } from "../../lib/icon";
+  import { renderMarkdown } from "../../lib/chat-markdown";
   import {
     runTool,
     toolContent,
@@ -190,7 +191,7 @@ import Icon from "../../components/ui/Icon.astro";
   };
 
   const salinMesej = async (bubble: HTMLElement, button: HTMLButtonElement) => {
-    if (await salinTeks(bubble.textContent ?? "")) {
+    if (await salinTeks(bubble.dataset.teks ?? bubble.textContent ?? "")) {
       button.innerHTML = icon("tanda");
       button.classList.add("disalin");
       button.setAttribute("aria-label", "Disalin");
@@ -242,6 +243,7 @@ import Icon from "../../components/ui/Icon.astro";
   const paparUser = (text: string) => {
     const { row, bubble } = buatBaris("user");
     bubble.textContent = text;
+    bubble.dataset.teks = text;
     log.append(row);
     scrollBottom();
   };
@@ -251,7 +253,9 @@ import Icon from "../../components/ui/Icon.astro";
       assistant = buatBaris("assistant");
       log.append(assistant.row);
     }
-    assistant.bubble.textContent = text;
+    assistant.bubble.classList.add("ai-msg-rich");
+    assistant.bubble.dataset.teks = text;
+    renderMarkdown(assistant.bubble, text);
     scrollBottom();
   };
 
@@ -296,6 +300,17 @@ import Icon from "../../components/ui/Icon.astro";
       butiran.textContent = proposal.detail;
       const tindakan = document.createElement("div");
       tindakan.className = "ai-kad-tindakan";
+      if (
+        proposal.href &&
+        proposal.href.startsWith("/") &&
+        !proposal.href.startsWith("//")
+      ) {
+        const pautan = document.createElement("a");
+        pautan.className = "btn btn-outline btn-sm";
+        pautan.href = proposal.href;
+        pautan.textContent = proposal.label ?? "Lihat";
+        tindakan.append(pautan);
+      }
       const batal = document.createElement("button");
       batal.type = "button";
       batal.className = "btn btn-outline btn-sm";
