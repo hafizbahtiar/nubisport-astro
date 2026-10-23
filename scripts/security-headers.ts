@@ -1,6 +1,9 @@
 // Lepas `astro build`: tambah header keselamatan ke dist/_headers (pentest 2026-10-22 F-02).
 // CSP tanpa 'unsafe-inline' untuk skrip: setiap <script> sebaris dalam dist/**/*.html dapat hash sha256
 // (hash berubah setiap build - sebab itu dijana, bukan ditulis tangan). Asal luar yang dibenarkan:
+// Nota: Cloudflare Bot Fight Mode / JavaScript Detections menyuntik <script> __CF$cv$params selepas
+// response (token berubah setiap request), jadi hash build tak boleh cover. Untuk kekal strict CSP,
+// matikan Bot Fight Mode / JavaScript Detections di Cloudflare; jangan tambah hash statik untuknya.
 // Turnstile, Cloudflare Web Analytics (beacon disuntik edge), Google Fonts, tile peta (OpenFreeMap, DEM Mapterhorn). Tambah sumber luar baru = tambah di sini.
 // Bun runtime (Nubi tiada jenis Node/Bun dalam tsconfig - cukup apa yang skrip ini guna).
 declare const Bun: {

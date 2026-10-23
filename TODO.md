@@ -253,6 +253,9 @@ Item yang dah siap dibuang (lihat git history).
 - [ ] Semak pratonton pautan lepas deploy (WhatsApp / Facebook debugger) - `og.png`.
 - [ ] Uji dengan fail Strava sebenar (deploy aktiviti v2 dah live 2026-10-22): padanan pelan aktif, % lari,
   semua gaya peta, bottom sheet + zoom dua jari di telefon, seksyen Nadi.
+- [ ] **Cloudflare Bot Fight Mode / JavaScript Detections**: ia menyuntik `<script>__CF$cv$params</script>`
+  selepas response dengan token berubah, jadi CSP hash strict akan blok (console). Pilih satu: matikan
+  ciri itu untuk Nubi (kekalkan CSP strict), atau terima `'unsafe-inline'` pada `script-src` (kurang selamat).
 - [ ] **Header keselamatan** (pentest 2026-10-22 F-02 - dah dibuat): `bun run build` kini jalankan
   `scripts/security-headers.ts` -> HSTS, `X-Frame-Options: DENY`, nosniff, Referrer/Permissions-Policy dan CSP
   ber-hash (tiada `unsafe-inline` skrip) dalam `dist/_headers`. Lepas deploy: `curl -sI
