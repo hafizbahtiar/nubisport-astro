@@ -374,23 +374,26 @@ import Icon from "../../components/ui/Icon.astro";
     bubble.classList.add("ai-kad");
     const salah = typeof result.ralat === "string";
     const batal = result.dibatalkan === true;
-    bubble.classList.add(
-      salah ? "ai-kad-ralat" : batal ? "ai-kad-batal" : "ai-kad-selesai",
-    );
+    const navigasi = typeof result.title === "string";
+    if (salah) bubble.classList.add("ai-kad-ralat");
+    else if (batal) bubble.classList.add("ai-kad-batal");
+    else if (!navigasi) bubble.classList.add("ai-kad-selesai");
     const tajuk = document.createElement("strong");
     tajuk.className = "ai-kad-tajuk";
     tajuk.textContent = salah
       ? "Tak dapat simpan"
       : batal
         ? "Dibatalkan"
-        : "Selesai";
+        : navigasi
+          ? String(result.title)
+          : "Selesai";
     const butiran = document.createElement("p");
     butiran.className = "ai-kad-butiran";
     const mesej = salah
       ? String(result.ralat)
       : batal
         ? "Tiada perubahan dibuat."
-        : String(result.message ?? "Dah selesai.");
+        : String(result.message ?? (navigasi ? "" : "Dah selesai."));
     butiran.textContent =
       result.awan === "penuh" && !salah && !batal
         ? `${mesej} Pelan disimpan pada peranti ini; slot awan penuh.`

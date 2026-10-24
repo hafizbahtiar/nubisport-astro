@@ -391,6 +391,9 @@ API sendiri (Claude, OpenAI, OpenRouter, Command Code) fasa 2.
 - [x] `lib/ai-tools.ts` + `scripts/check-ai-tools.ts`: tool **baca** berjalan dalam pelayar guna API `/me`
   sedia ada (profil, pelan, aktiviti, larian kumpulan); tool tulis masih ditolak.
 - [x] Fasa 1c: tool tulis + kad Sahkan / Batal (tiada tool padam).
+- [x] **Kad `open_plan` + prompt** (2026-10-24): `list_plans` pulangkan `href`; kad navigasi guna
+  `title` (bukan "Selesai"); prompt backend larang URL placeholder dan wajib `open_plan`. Semak
+  `check-ai-tools` + backend `verify-ai`. Deploy backend untuk prompt berkuat kuasa.
 - [x] Copy button pada setiap bubble user/assistant.
 - [x] Teks AI dipapar dengan `textContent`, bukan `innerHTML`.
 - [x] `/privacy` + `/terms`: bahagian AI.

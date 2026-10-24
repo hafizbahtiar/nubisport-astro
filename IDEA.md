@@ -2,7 +2,7 @@
 
 Belum diputuskan: bincang dulu sebelum bina. Disusun ikut nilai untuk **pemula**, kemudian kos
 (Cloudflare, masa bina, risiko). Kerja yang dah diputuskan pergi ke `TODO.md`.
-Semakan terakhir: 2026-10-22.
+Semakan terakhir: 2026-10-24.
 
 ## Dah ada
 
@@ -49,6 +49,74 @@ Semua dibina - lihat "Dah ada" dan `TODO.md`.
 | **Log larian ringkas** | Lihat kemajuan sebenar vs pelan | Sebahagian dah ada untuk ahli: aktiviti Strava + bar beban mingguan. Baki: log manual untuk bukan ahli / tanpa jam (`app_items` kind `log`: tarikh, jarak, masa, rasa 1-5) |
 | **Peranan `coach`** | Jurulatih pantau ahli yang setuju | Role baru `app_roles`; ahli pilih "kongsi pelan dengan coach" (lalai tak). Bergantung pada semakan jurulatih bertauliah dulu |
 | **Langganan kalendar** | `.ics` sekali tak ikut perubahan | `webcal://` dari backend ikut token peribadi (boleh ditarik balik). Kos rendah, cache |
+
+## Gelombang 4 - kalendar universal (cadangan 2026-10-24)
+
+Satu halaman `/account/calendar` (AccountLayout, sidebar "Latihan" -> "Kalendar") yang himpun semua
+benda Nubi dalam satu bulan. Ini **view dalam app**, bukan feed `.ics` - feed sedia ada
+(`nubi_calendar_feeds`, migration 035) kekal untuk langganan kalendar telefon.
+
+| Sumber | Dari mana | Dalam kalendar |
+|---|---|---|
+| Sesi pelan | `readList` + `pullCloud` + `planSessions` (browser) | Tajuk sesi, minggu, tick / kosong / "terlepas" |
+| Aktiviti Strava | `GET /me/apps/nubi/activities?from=&to=` | Nama, km, pace; pautan detail |
+| Larian kumpulan | `nubi_events` + RSVP | Tajuk, masa, "Saya datang" / hadir |
+| Lumba | `src/data/races.ts` | Nama, jarak, tutup pendaftaran |
+| Tugasan sendiri | belum diputuskan | Tajuk, tick (fasa 2) |
+
+### Status tick
+
+- **Dah buat** - ada dalam `readList(kunci)` atau aktiviti sebenar padan dengan sesi
+  (`matchActivities`, sama seperti Dashboard/plan view). Bulatan tick.
+- **Hari ini / akan datang** - bulatan kosong.
+- **Terlepas** - tarikh < hari ini dan belum tick. Bulatan kosong + label "Terlepas"; tidak
+  auto-pindah. "Sambung dari Minggu N" kekal tindakan di halaman pelan.
+- **Aktiviti tanpa sesi** - tetap muncul sebagai aktiviti; jangan paksa padan.
+- **Race/test** - penanda khas (hari lumba).
+
+### Frontend
+
+- Bulan grid 42 sel (`monthGrid`) Isnin dahulu; hari dipilih -> senarai bawah. Mobile: grid + senarai.
+- Tapis: Semua / Pelan / Aktiviti / Larian kumpulan / Lumba / Tugasan. Bulan dalam URL (`?bulan=YYYY-MM`),
+  tapis dalam page (localStorage kalau perlu).
+- Pautan item: pelan (`?kunci=`), aktiviti detail, event detail, `/races`.
+- Guna token/kelas sedia ada; tiada warna/butang baru. Kalendar bukan halaman baru yang berat -
+  semua kiraan dalam pelayar.
+- Pelan tanpa `mula`: tak boleh letak sesi; tunjuk "Tetapkan tarikh mula" -> page pelan.
+- Pelan lama (`engine` != `ENGINE_VERSION`): tanda siap/padanan mungkin tak tepat; tunjuk nota.
+- Satu pelan aktif diserlahkan; pelan lain boleh ditapis. (Keputusan owner: semua atau aktif saja.)
+
+### Backend
+
+- **v1 tiada jadual baru.** View ini read-only; sumber sudah ada. Jangan simpan sesi pelan dalam D1 -
+  sesi dijana dari param pelan, menyalinnya ke DB akan drift bila enjin berubah.
+- Aktiviti: endpoint sedia ada `?from=&to=`.
+- Larian kumpulan: endpoint sedia ada hanya akan datang + 7 hari lepas (`listEvents`). Untuk bulan
+  lepas, tambah `GET /me/apps/nubi/events?from=&to=` (range pada `starts_at`, index sedia ada).
+  Route kekal `requirePermission('account.read')`; RSVP/kehadiran ikut peranan sedia ada.
+- Kalau nak satu round trip: `GET /me/apps/nubi/calendar?from=&to=` yang pulangkan aktiviti + event
+  (dan tugasan nanti); jangan masukkan enjin pelan ke backend.
+- **Tugasan sendiri (fasa 2, hanya kalau diminta):** mula dengan `app_items` kind `kalendar`
+  (satu rekod, kuota 1) ikut peraturan sedia ada. Kalau perlu query tarikh di server, peringatan
+  atau join, baru buat jadual **`nubi_calendar_entries`** - prefix `nubi_` kerana data app Nubi
+  (contoh lain: `nubi_events`, `nubi_activities`, `nubi_calendar_feeds`). Jangan reka jadual gabungan
+  aktiviti+pelan+event; itu salinan sumber dan akan drift.
+- Data peribadi: kalendar hanya data sendiri; laluan aktiviti kekal milik ahli. Larian kumpulan
+  nampak kepada akaun berdaftar, RSVP ikut peranan sedia ada.
+
+### Keputusan owner
+
+- Kalendar untuk semua akaun, atau ahli saja? (Cadangan: semua akaun; aktiviti/RSVP tetap ikut peranan.)
+- Semua pelan atau pelan aktif saja? (Cadangan: aktif diserlahkan, semua boleh ditapis.)
+- Tugasan sendiri sekarang atau nanti?
+- Larian kumpulan lepas berbulan-bulan perlu? Kalau ya, endpoint range wajib.
+- Perlu notifikasi/peringatan? (v1 tidak; feed `.ics` kekal.)
+
+### Bukan v1
+
+- Drag/drop, edit sesi dari kalendar, sync dua hala dengan Google Calendar.
+- Ringkasan AI, leaderboard, kongsi kalendar awam.
+- Simpan snapshot bulanan dalam D1.
 
 ## AI - owner & admin Nubi saja
 

@@ -135,6 +135,7 @@ async function listPlans(): Promise<ToolResult> {
     detail: p.detail,
     done: p.done,
     total: p.total,
+    href: p.href,
   }));
   const active = await api("/me/apps/nubi/active").then(async (r) => (r.ok ? (await json(r)).data?.items?.[0]?.data?.plan ?? null : null)).catch(() => null);
   return { plans, active };
