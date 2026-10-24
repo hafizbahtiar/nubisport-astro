@@ -37,7 +37,7 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self' data:",
   "img-src 'self' data: blob:",
-  "connect-src 'self' https://tiles.openfreemap.org https://tiles.mapterhorn.com https://cloudflareinsights.com",
+  "connect-src 'self' https://tiles.openfreemap.org https://tiles.mapterhorn.com https://tiles.maps.eox.at https://cloudflareinsights.com",
   "worker-src 'self' blob:",
   "frame-src https://challenges.cloudflare.com",
 ].join("; ");

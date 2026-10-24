@@ -64,6 +64,13 @@ const GAYA: {
     url: `${OFM}positron`,
     ikon: "gunung",
   },
+  {
+    id: "satelit",
+    label: "Satelit",
+    nota: "Imej 2016, kabur bila zum dekat",
+    url: "", // gaya objek SATELIT dalam skrip
+    ikon: "satelit",
+  },
 ];
 ---
 
@@ -80,19 +87,69 @@ const GAYA: {
   </Alert>
 
   <div id="isi" hidden>
-    <div class="peta-split" id="peta-split">
-      <section class="panel peta-panel">
-        <div class="panel-kepala">
-          <div class="tajuk">
-            <h3 class="display" id="nama"></h3>
-            <p class="muted" id="bila"></p>
-            <p id="sesi-pelan" hidden></p>
-          </div>
-          <button class="btn btn-outline btn-sm" type="button" id="padam"
-            >Padam</button
-          >
-        </div>
+    <!-- Susunan ikut Strava: tajuk, angka utama, butiran + cuaca, peta + split, analisis. -->
+    <div class="panel-kepala kepala-aktiviti">
+      <div class="tajuk">
+        <h3 class="display" id="nama"></h3>
+        <p class="muted" id="bila"></p>
+        <p id="sesi-pelan" hidden></p>
+      </div>
+      <button class="btn btn-outline btn-sm" type="button" id="padam"
+        >Padam</button
+      >
+    </div>
 
+    <ul class="stat" aria-label="Ringkasan">
+      <li><span>Jarak</span><strong id="s-jarak"></strong></li>
+      <li><span>Masa bergerak</span><strong id="s-masa"></strong></li>
+      <li><span>Pace</span><strong id="s-pace"></strong></li>
+    </ul>
+
+    <section class="panel butiran" aria-label="Butiran aktiviti">
+      <dl class="butiran-senarai">
+        <div id="s-gap-baris" hidden>
+          <dt title="Pace setara larian rata (GAP)">GAP</dt><dd id="s-gap"></dd>
+        </div>
+        <div><dt>Masa berlalu</dt><dd id="s-berlalu"></dd></div>
+        <div id="s-henti-baris" hidden>
+          <dt>Masa berhenti</dt><dd id="s-henti"></dd>
+        </div>
+        <div><dt>Ketinggian naik</dt><dd id="s-tinggi"></dd></div>
+        <div><dt>Nadi purata</dt><dd id="s-nadi"></dd></div>
+        <div><dt>Nadi maks</dt><dd id="s-nadi-maks"></dd></div>
+        <div id="s-kadens-baris" hidden>
+          <dt title="Langkah seminit (spm)">Kadens</dt><dd id="s-kadens"></dd>
+        </div>
+        <div id="s-lari-baris" hidden>
+          <dt>Masa lari</dt><dd id="s-lari"></dd>
+        </div>
+        <div id="s-kalori-baris" hidden>
+          <dt>Kalori</dt><dd id="s-kalori"></dd>
+        </div>
+      </dl>
+      <div class="cuaca" id="cuaca" hidden>
+        <h4 class="sub" id="cuaca-tajuk">Cuaca</h4>
+        <dl class="butiran-senarai" aria-labelledby="cuaca-tajuk">
+          <div id="cuaca-suhu" hidden><dt>Suhu</dt><dd id="s-suhu"></dd></div>
+          <div id="cuaca-rasa" hidden>
+            <dt>Rasa macam</dt><dd id="s-rasa"></dd>
+          </div>
+          <div id="cuaca-lembap" hidden>
+            <dt>Kelembapan</dt><dd id="s-lembap"></dd>
+          </div>
+          <div id="cuaca-angin" hidden>
+            <dt>Angin</dt><dd id="s-angin"></dd>
+          </div>
+          <div id="cuaca-arah" hidden>
+            <dt>Arah angin</dt><dd id="s-arah"></dd>
+          </div>
+        </dl>
+        <p class="muted kecil" id="cuaca-sumber"></p>
+      </div>
+    </section>
+
+    <div class="peta-split" id="peta-split">
+      <section class="panel peta-panel" aria-label="Peta laluan">
         <div class="peta" id="peta" aria-label="Peta laluan">
           <!-- Dalam bekas peta supaya kekal kelihatan dalam skrin penuh. Desktop: show() = popover; telefon: showModal() = sheet. -->
           <dialog class="gaya" id="pilih-gaya" aria-labelledby="gaya-tajuk">
@@ -175,78 +232,6 @@ const GAYA: {
       </section>
     </div>
 
-    <ul class="stat" aria-label="Ringkasan">
-      <li><span>Jarak</span><strong id="s-jarak"></strong></li>
-      <li><span>Masa</span><strong id="s-masa"></strong></li>
-      <li><span>Pace</span><strong id="s-pace"></strong></li>
-      <li id="s-gap-baris" hidden>
-        <span title="Pace setara larian rata (GAP)">GAP</span><strong id="s-gap"
-        ></strong>
-      </li>
-      <li><span>Ketinggian naik</span><strong id="s-tinggi"></strong></li>
-      <li><span>Nadi purata</span><strong id="s-nadi"></strong></li>
-      <li><span>Nadi maks</span><strong id="s-nadi-maks"></strong></li>
-      <li id="s-kadens-baris" hidden>
-        <span title="Langkah seminit (spm)">Kadens</span><strong id="s-kadens"
-        ></strong>
-      </li>
-      <li id="s-lari-baris" hidden>
-        <span>Masa lari</span><strong id="s-lari"></strong>
-      </li>
-    </ul>
-
-    <section class="panel" id="cuaca" aria-labelledby="cuaca-tajuk" hidden>
-      <h3 class="display" id="cuaca-tajuk">Cuaca</h3>
-      <ul class="stat" aria-label="Cuaca semasa aktiviti">
-        <li id="cuaca-suhu" hidden>
-          <span>Suhu</span><strong id="s-suhu"></strong>
-        </li>
-        <li id="cuaca-rasa" hidden>
-          <span>Rasa macam</span><strong id="s-rasa"></strong>
-        </li>
-        <li id="cuaca-lembap" hidden>
-          <span>Kelembapan</span><strong id="s-lembap"></strong>
-        </li>
-        <li id="cuaca-angin" hidden>
-          <span>Angin</span><strong id="s-angin"></strong>
-        </li>
-        <li id="cuaca-arah" hidden>
-          <span>Arah angin</span><strong id="s-arah"></strong>
-        </li>
-      </ul>
-      <p class="muted kecil">Dari fail FIT, jika peranti merekod cuaca.</p>
-    </section>
-
-    <section class="panel" id="nadi" aria-labelledby="nadi-tajuk" hidden>
-      <h3 class="display" id="nadi-tajuk">Nadi</h3>
-      <figure class="carta">
-        <div class="carta-badan">
-          <span class="paksi-y" aria-hidden="true"
-            ><span id="nadi-hi"></span><span id="nadi-lo"></span></span
-          >
-          <svg
-            id="nadi-carta"
-            viewBox="0 0 600 160"
-            preserveAspectRatio="none"
-            role="img"
-          >
-            <polygon id="nadi-kawasan" class="kawasan"></polygon>
-            <polyline
-              id="nadi-garis"
-              class="garis"
-              vector-effect="non-scaling-stroke"></polyline>
-          </svg>
-        </div>
-        <figcaption class="paksi-x" aria-hidden="true">
-          <span>0m</span><span id="nadi-tempoh"></span>
-        </figcaption>
-      </figure>
-      <h4 class="sub">Masa dalam zon</h4>
-      <ul class="zon" id="nadi-zon"></ul>
-      <p class="muted kecil" id="nadi-asas"></p>
-      <p class="muted kecil" id="nadi-drift" hidden></p>
-    </section>
-
     <section class="panel" id="tinggi" aria-labelledby="tinggi-tajuk" hidden>
       <h3 class="display" id="tinggi-tajuk">Ketinggian</h3>
       <figure class="carta tinggi">
@@ -283,6 +268,36 @@ const GAYA: {
       <p class="muted kecil" id="tinggi-nota"></p>
     </section>
 
+    <section class="panel" id="nadi" aria-labelledby="nadi-tajuk" hidden>
+      <h3 class="display" id="nadi-tajuk">Nadi</h3>
+      <figure class="carta">
+        <div class="carta-badan">
+          <span class="paksi-y" aria-hidden="true"
+            ><span id="nadi-hi"></span><span id="nadi-lo"></span></span
+          >
+          <svg
+            id="nadi-carta"
+            viewBox="0 0 600 160"
+            preserveAspectRatio="none"
+            role="img"
+          >
+            <polygon id="nadi-kawasan" class="kawasan"></polygon>
+            <polyline
+              id="nadi-garis"
+              class="garis"
+              vector-effect="non-scaling-stroke"></polyline>
+          </svg>
+        </div>
+        <figcaption class="paksi-x" aria-hidden="true">
+          <span>0m</span><span id="nadi-tempoh"></span>
+        </figcaption>
+      </figure>
+      <h4 class="sub">Masa dalam zon</h4>
+      <ul class="zon" id="nadi-zon"></ul>
+      <p class="muted kecil" id="nadi-asas"></p>
+      <p class="muted kecil" id="nadi-drift" hidden></p>
+    </section>
+
     <section class="panel" id="semakan" aria-labelledby="semakan-tajuk" hidden>
       <h3 class="display" id="semakan-tajuk">Semakan sesi</h3>
       <p id="semakan-ringkas"></p>
@@ -306,6 +321,8 @@ const GAYA: {
     trackOf,
     trackAt,
     paceGradient,
+    paceAt,
+    nearestDistance,
     WARNA_PACE,
     type TrackPoint,
     type ActivityWeather,
@@ -343,6 +360,7 @@ const GAYA: {
     LngLatBoundsLike,
     Marker,
     RasterDEMSourceSpecification,
+    StyleSpecification,
   } from "maplibre-gl";
 
   // Mula download besar serta-merta; jangan tunggu /me, row, fail atau padanan pelan.
@@ -368,6 +386,25 @@ const GAYA: {
     attribution:
       '<a href="https://mapterhorn.com/attribution">© Mapterhorn</a>',
   };
+  // Satelit percuma + boleh komersial: hanya EOX Sentinel-2 cloudless 2016 (CC BY 4.0; 2017+ = bukan komersial).
+  // 10 m -> kabur pada zum dekat (maxzoom 14, selebihnya overzoom). Sumber tajam perlukan kunci:
+  // senarai alternatif dalam docs/plans/map-improvements.md (Esri / MapTiler / Stadia / Google).
+  const SATELIT: StyleSpecification = {
+    version: 8,
+    sources: {
+      eox: {
+        type: "raster",
+        tiles: [
+          "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/{z}/{y}/{x}.jpg",
+        ],
+        tileSize: 256,
+        maxzoom: 14,
+        attribution:
+          '<a href="https://s2maps.eu">Sentinel-2 cloudless - https://s2maps.eu</a> by <a href="https://eox.at">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2016)',
+      },
+    },
+    layers: [{ id: "eox", type: "raster", source: "eox" }],
+  };
   const SIMPAN_GAYA = "nubi/peta-gaya";
   const SIMPAN_3D = "nubi/peta-3d";
   const SIMPAN_WARNA = "nubi/peta-warna";
@@ -389,6 +426,7 @@ const GAYA: {
     avgHr: number | null;
     maxHr: number | null;
     runRatio: number | null;
+    weather: ActivityWeather | null; // MET Norway masa upload (migration 040 backend)
     updatedAt: string;
   }
 
@@ -447,6 +485,12 @@ const GAYA: {
       a.elevationGainM == null ? "-" : `${Math.round(a.elevationGainM)} m`;
     $("s-nadi").textContent = a.avgHr ? `${Math.round(a.avgHr)} bpm` : "-";
     $("s-nadi-maks").textContent = a.maxHr ? `${Math.round(a.maxHr)} bpm` : "-";
+    $("s-berlalu").textContent = formatDuration(a.elapsedS);
+    if (a.elapsedS - a.movingS >= 60) {
+      $("s-henti").textContent = formatDuration(a.elapsedS - a.movingS);
+      $("s-henti-baris").hidden = false;
+    }
+    cuaca(a.weather, MET_NOTA);
     if (a.runRatio != null) {
       $("s-lari").textContent =
         `${Math.round(a.runRatio * 100)}% masa bergerak`;
@@ -480,7 +524,11 @@ const GAYA: {
       if (!f?.ok) throw new Error();
       const data = await fitData(await f.arrayBuffer());
       rekod = data.records;
-      cuaca(data.weather);
+      if (data.weather) cuaca(data.weather, "Dari fail FIT (peranti).");
+      if (data.calories) {
+        $("s-kalori").textContent = `${Math.round(data.calories)} kcal`;
+        $("s-kalori-baris").hidden = false;
+      }
     } catch {
       $("peta").hidden = true;
       $("peta-status").textContent =
@@ -488,7 +536,12 @@ const GAYA: {
       return;
     }
     nadi(heartSeries(rekod), a.maxHr);
-    tinggi(altitudeSeries(rekod), a.elevationGainM);
+    const track = trackOf(rekod);
+    tinggi(
+      altitudeSeries(rekod),
+      a.elevationGainM,
+      track.length >= 2 ? track : null,
+    );
     const splits = activitySplits(rekod);
     const gap = a.sport === "run" ? gradeAdjustedPace(splits) : null;
     if (gap !== null) {
@@ -515,7 +568,6 @@ const GAYA: {
         if (m) semakan(m.sesi, rekod);
       })
       .catch(() => {});
-    const track = trackOf(rekod);
     const laluan =
       track.length >= 2
         ? track.map((p): [number, number] => [p.lat, p.lon])
@@ -614,8 +666,13 @@ const GAYA: {
   const ARAH_ANGIN = ["U", "TL", "T", "TG", "S", "BD", "B", "BL"];
 
   /** Cuaca dari FIT: hanya field yang ada; panel tersembunyi jika tiada data. */
-  function cuaca(w: ActivityWeather | null) {
+  // Teks tetap (tiada data pengguna) -> innerHTML selamat; pautan = atribusi CC BY 4.0.
+  const MET_NOTA =
+    'Anggaran jam larian di sekitar titik mula, dari <a href="https://api.met.no/">MET Norway</a> (CC BY 4.0), diambil semasa upload.';
+
+  function cuaca(w: ActivityWeather | null, nota: string) {
     if (!w) return;
+    $("cuaca-sumber").innerHTML = nota;
     const set = (row: string, id: string, teks: string | null) => {
       const el = $(row);
       if (teks === null) {
@@ -718,10 +775,16 @@ const GAYA: {
 
   // Diisi oleh peta() bila laluan ada track: jarak (m) dari profil -> titik di peta; null = sembunyi.
   let penunjukPeta: ((jarakM: number | null) => void) | null = null;
+  // Diisi oleh tinggi(): hover laluan di peta -> penunjuk + bacaan di profil (gaya Analysis Strava).
+  let tunjukProfil: ((jarakM: number | null) => void) | null = null;
 
   /** Profil ketinggian (SVG sebaris). Tiada altitude = seksyen kekal tersembunyi.
    *  Tetikus / seret / anak panah pada profil = penunjuk jarak + titik sama di peta. */
-  function tinggi(siri: [number, number][], naik: number | null) {
+  function tinggi(
+    siri: [number, number][],
+    naik: number | null,
+    track: TrackPoint[] | null,
+  ) {
     if (siri.length < 2) return;
     let lo = Infinity,
       hi = -Infinity;
@@ -766,10 +829,20 @@ const GAYA: {
         penunjuk.setAttribute("x1", px);
         penunjuk.setAttribute("x2", px);
         penunjuk.setAttribute("visibility", "visible");
-        baca.textContent = `${formatKm(x)} · ${Math.round(alt)} m`;
+        const pace = track && paceAt(track, x);
+        const bpm = track?.find((p) => p.distanceM >= x)?.heartRate;
+        baca.textContent = [
+          formatKm(x),
+          `${Math.round(alt)} m`,
+          pace && `${formatPace(pace)}/km`,
+          bpm && `${bpm} bpm`,
+        ]
+          .filter(Boolean)
+          .join(" · ");
       }
       penunjukPeta?.(kini);
     };
+    tunjukProfil = tunjuk;
     const dariTetikus = (e: PointerEvent) => {
       const r = svg.getBoundingClientRect();
       tunjuk(((e.clientX - r.left) / r.width) * T);
@@ -803,7 +876,6 @@ const GAYA: {
       ml.setWorkerUrl(pekerja.default);
       const warna = getComputedStyle(document.documentElement);
       const oren = warna.getPropertyValue("--orange").trim() || "#ff5a1f";
-      const navy = warna.getPropertyValue("--navy").trim() || "#0a1a33";
       const lonLat = titik.map(([lat, lon]) => [lon, lat] as [number, number]);
       const lon = lonLat.map((t) => t[0]),
         lat = lonLat.map((t) => t[1]);
@@ -818,7 +890,9 @@ const GAYA: {
         ...document.querySelectorAll<HTMLInputElement>('input[name="gaya"]'),
       ];
       const urlGaya = (g: string) =>
-        pilihan.find((p) => p.value === g)?.dataset.url;
+        g === "satelit"
+          ? SATELIT
+          : pilihan.find((p) => p.value === g)?.dataset.url;
       let gaya = "standard",
         tigaD = false;
       try {
@@ -1205,7 +1279,10 @@ const GAYA: {
         map.on("error", (e) => {
           const sid = (e as { sourceId?: string }).sourceId;
           // Gaya lain atau DEM gagal = kembali Standard; ralat jubin biasa (ada sourceId lain) diabaikan.
-          if (gaya !== "standard" && (!sid || sid.startsWith("dem"))) {
+          if (
+            gaya !== "standard" &&
+            (!sid || sid.startsWith("dem") || sid === "eox")
+          ) {
             tukarGaya("standard");
             jatuh = true;
             status.textContent =
@@ -1221,8 +1298,13 @@ const GAYA: {
       kredit?.classList.remove("maplibregl-compact-show");
       kredit?.removeAttribute("open");
       for (const [label, isi, titikNya] of [
-        ["Mula", navy, lonLat[0]],
-        ["Tamat", oren, lonLat.at(-1)!],
+        // Gaya Strava: mula hijau, tamat bendera petak.
+        ["Mula", "#16a34a", lonLat[0]],
+        [
+          "Tamat",
+          "repeating-conic-gradient(#111 0 25%, #fff 0 50%) 50% / 6px 6px",
+          lonLat.at(-1)!,
+        ],
       ] as const) {
         const el = document.createElement("div");
         el.className = "penanda";
@@ -1243,6 +1325,19 @@ const GAYA: {
           titikProfil.setLngLat([p.lon, p.lat]);
           if (!el.isConnected) titikProfil.addTo(map);
         };
+        // Hover / ketik laluan = titik terdekat; bacaan muncul di profil bila profil ada.
+        const dariPeta = (d: number | null) =>
+          tunjukProfil ? tunjukProfil(d) : penunjukPeta?.(d);
+        const hover = (e: { lngLat: { lng: number; lat: number } }) => {
+          map.getCanvas().style.cursor = "crosshair";
+          dariPeta(nearestDistance(track, e.lngLat.lng, e.lngLat.lat));
+        };
+        map.on("mousemove", "laluan-tepi", hover);
+        map.on("click", "laluan-tepi", hover);
+        map.on("mouseleave", "laluan-tepi", () => {
+          map.getCanvas().style.cursor = "";
+          dariPeta(null);
+        });
       }
       if (track && duration && !introDone && !introOn && !introTimer) {
         // Buffer supaya peta sempat muncul; reduced motion terus tunjuk laluan penuh.
@@ -1278,6 +1373,49 @@ const GAYA: {
     align-items: flex-start;
   }
 
+  .kepala-aktiviti {
+    align-items: flex-start;
+    margin-bottom: 1rem;
+  }
+  /* Butiran: angka kedua (Strava-style) - padat, label atas nilai; baris kosong tersembunyi. */
+  .butiran-senarai {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+    gap: 0.85rem 1.5rem;
+    margin: 0;
+  }
+  .butiran-senarai div {
+    display: grid;
+    gap: 0.1rem;
+    min-width: 0;
+  }
+  .butiran-senarai div[hidden] {
+    display: none;
+  }
+  .butiran-senarai dt {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .butiran-senarai dd {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--navy);
+  }
+  .cuaca {
+    display: grid;
+    gap: 0.6rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--line);
+  }
+  .cuaca[hidden] {
+    display: none;
+  }
   .tajuk {
     display: grid;
     gap: 0.2rem;
@@ -1593,6 +1731,10 @@ const GAYA: {
   .contoh-terrain {
     background: var(--info-bg);
     color: var(--info-ink);
+  }
+  .contoh-satelit {
+    background: #2f4a2c; /* hijau gelap imej satelit */
+    color: #fff;
   }
   .gaya-teks {
     display: grid;

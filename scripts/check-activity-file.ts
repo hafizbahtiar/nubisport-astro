@@ -2,7 +2,7 @@
 // FIT dijana di sini dengan Encoder SDK Garmin (koordinat rekaan di tengah laut, 0°N 0°E) - tiada
 // fail larian sebenar dalam repo. Nilai meniru larian contoh owner: 2,663 m, 1,876 s, nadi purata 140 / maks 164.
 import { Encoder, Profile } from "@garmin/fitsdk";
-import { readGpx, buildUploadForm, fitData, fitRoute, fitRecords, trackOf, trackAt, paceGradient, heartSeries, altitudeSeries, hrZones, nameFromFile, paceFromDistance, pairFiles, isoSeconds, toSport, formatDuration } from "../src/lib/activity-file";
+import { readGpx, buildUploadForm, fitData, fitRoute, fitRecords, trackOf, trackAt, paceGradient, paceAt, nearestDistance, heartSeries, altitudeSeries, hrZones, nameFromFile, paceFromDistance, pairFiles, isoSeconds, toSport, formatDuration } from "../src/lib/activity-file";
 
 let gagal = 0;
 const ok = (c: unknown, msg: string) => {
@@ -64,6 +64,7 @@ const fail = (bait: BlobPart, nama: string) => new File([bait], nama);
   ok(r?.name === "Night Run", "nama dari nama fail");
   ok(aktiviti[0].gpx === null, "tiada GPX");
   ok(r?.runRatio === null, "tiada kadens = runRatio null");
+  ok(r?.start && Math.abs(r.start.lat) < 1 && r.start.lat === Math.round(r.start.lat * 100) / 100, `start 2 perpuluhan ${JSON.stringify(r?.start)}`);
   const track = trackOf(await fitRecords(fit().buffer));
   ok(track.length === 82, `track ${track.length} titik GPS`);
   ok(track[0]?.t === 0 && track.at(-1)?.t === 81, `masa track ${track[0]?.t}-${track.at(-1)?.t}`);
@@ -78,6 +79,9 @@ const fail = (bait: BlobPart, nama: string) => new File([bait], nama);
   ok(pg?.stops.every(([x], i, a) => x > 0 && x < 1 && (i === 0 || x > a[i - 1][0])), "pace: progress menaik ketat");
   ok(Math.round(pg?.laju ?? 0) === 300 && Math.round(pg?.perlahan ?? 0) === 420, `pace: skala ${pg?.laju}-${pg?.perlahan}`);
   ok(pg?.stops[0][1] === "rgb(220,38,38)" && pg?.stops.at(-1)?.[1] === "rgb(37,99,235)", "pace: laju merah, perlahan biru");
+  ok(Math.round(paceAt(lurus, 500) ?? 0) === 300 && Math.round(paceAt(lurus, 1500) ?? 0) === 420, "paceAt ikut km");
+  ok(paceAt(lurus.slice(0, 1), 0) === null, "paceAt satu titik = null");
+  ok(nearestDistance(lurus, lurus[123].lon + 1e-6, 0.0001) === 1230, "nearestDistance");
   ok(paceGradient(lurus.slice(0, 5)) === null && paceGradient([]) === null, "pace: terlalu pendek = null");
 
   const data = await fitData(fit().buffer);

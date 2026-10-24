@@ -41,6 +41,30 @@ OpenFreeMap + DEM Mapterhorn, 3D, terrain, profil ketinggian, animasi laluan).
   pilihan "Satelit" bergantung token Mapbox, dimuat hanya bila dipilih, atribusi Mapbox + Vantor
   wajib; sahkan dulu terma Mapbox untuk tile raster dalam MapLibre dan kos ikut jumlah paparan.
 
+## Satelit tanpa Mapbox - alternatif (disemak 2026-10-24)
+
+Nubi dianggap **komersial** (tier berbayar dirancang), jadi pelan "percuma = bukan komersial" tidak layak.
+
+| Sumber | Kunci | Komersial | Ketajaman | Nota |
+|---|---|---|---|---|
+| **EOX Sentinel-2 cloudless 2016** (`tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/{z}/{y}/{x}.jpg`) | Tiada | Ya, **CC BY 4.0** (abstrak WMTS disemak) | 10 m, imej 2016 | Tile KL z14 = 200. Kabur pada zum larian (z15+): nampak tasik/taman, bukan jalan kecil. 2017+ = CC BY-NC-SA (tidak boleh). Tiada SLA. Atribusi: "Sentinel-2 cloudless - https://s2maps.eu by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2016)" |
+| **Esri World Imagery** | Ya (ArcGIS Location Platform, akaun percuma) | Ya, dengan akaun/kunci | Tajam (< 1 m di bandar) | URL tile jawab tanpa kunci, tetapi terma Esri perlukan akaun untuk aplikasi bukan-Esri. Kuota percuma dilaporkan ~2 juta tile/bulan (sumber pihak ketiga - sahkan). Kunci kelihatan di pelayar: hadkan ikut referrer |
+| MapTiler Satellite | Ya | Pelan percuma = bukan komersial; Flex $25/bln | Tajam | - |
+| Stadia Alidade Satellite | Ya | Percuma = bukan komersial; Starter $20/bln | Tajam | - |
+| Google Map Tiles API | Ya + akaun bil | Ya | Paling tajam | Terma ketat (atribusi/logo Google) |
+| Azure Maps (imagery) | Ya + akaun Azure | Ya, berbayar ikut transaksi | Tajam | Tidak disemak mendalam |
+| NASA GIBS | Tiada | Ya (domain awam) | 250 m - 30 m | Terlalu kasar untuk laluan larian |
+| OpenAerialMap | Tiada | CC BY 4.0 | Tajam (dron) | Hanya kawasan yang dimuat naik komuniti - hampir tiada di KL |
+| EOX cloudless 2017-2025 | Tiada | **Tidak** (CC BY-NC-SA) | 10 m | Lebih baharu tetapi bukan komersial |
+
+**Dibina (2026-10-24): EOX 2016** sebagai gaya "Satelit" dalam dialog Gaya peta (`SATELIT` dalam `view.astro`,
+raster `maxzoom: 14`, CSP `connect-src` + `tiles.maps.eox.at` dalam `scripts/security-headers.ts`; gagal muat =
+kembali Standard). Tukar ke sumber tajam = tukar URL tile + atribusi (+ kunci) dalam `SATELIT` sahaja.
+
+Cadangan: **EOX 2016** sebagai pilihan "Satelit" percuma sekarang (jangka kabur pada zum dekat), dan **Esri dengan kunci
+ArcGIS percuma** jika mahu setajam Strava - sahkan terma + kuota dulu. Hybrid = satelit + label/jalan OpenFreeMap di
+atas (lapisan simbol dari gaya vektor) - kerja tambahan, buat selepas satelit sahaja terbukti berguna.
+
 ## Cadangan (ikut nilai / kos)
 
 ### 1. Laluan berwarna ikut pace / nadi / kecerunan - kecil, nilai tertinggi
@@ -60,6 +84,11 @@ track (tiada masa GPS) = butang tiada. Nadi / Cerun: belum - fungsi warna lain a
 - Legenda kecil (min - maks) di bawah peta; warna mesti ada label teks (bukan warna sahaja).
 - Nadi tiada dalam fail = pilihan Nadi disembunyikan.
 
+### 1b. Penanda gaya Strava
+
+**Dibina (2026-10-24):** mula = bulatan hijau, tamat = bendera petak (conic-gradient), kedua-duanya berlabel
+(`aria-label` Mula/Tamat).
+
 ### 2. Garis kontur - sederhana, paling dekat dengan rupa Strava
 
 - `maplibre-contour` 0.1.1 (BSD-3-Clause, npm 2026-09-17): lukis kontur dari tile raster-dem di
@@ -77,7 +106,9 @@ track (tiada masa GPS) = butang tiada. Nadi / Cerun: belum - fungsi warna lain a
 
 **Dibina (2026-10-24), satu arah: profil -> peta.** Tetikus / seret mendatar (`touch-action: pan-y`) /
 anak panah (2% jarak, Esc sembunyi) pada profil = garis penunjuk + bacaan "km · m" (`aria-live`) + titik
-oren di peta (`penunjukPeta`, hanya bila ada track). Peta -> profil: belum (nilai kecil).
+oren di peta (`penunjukPeta`, hanya bila ada track). Peta -> profil: **dibina** (2026-10-24, "carta analisis sync"): hover / ketik laluan (`laluan-tepi`) = titik
+track terdekat (`nearestDistance`) -> penunjuk + bacaan di profil. Bacaan = jarak · ketinggian · pace (`paceAt`,
+tetingkap 100 m) · nadi. Had: bacaan hanya di bawah profil, bukan tooltip atas peta; profil tiada = titik sahaja.
 
 - Profil ketinggian sudah ada (SVG). Tambah: gerak penunjuk di profil = titik bergerak di laluan
   (`Marker` sedia ada), dan sebaliknya. Papan kekunci: anak panah gerak penunjuk.
@@ -108,6 +139,7 @@ sahaja; hillshade pada Standard tidak dibuat).
 - Intermap: https://www.intermap.com (produk; tiada harga/API awam).
 - UP42 NEXTMap: https://docs.up42.com/data/nextmap
 - Mapterhorn sumber: https://download.mapterhorn.com/attribution.json (`glo30`).
+- EOX cloudless: https://cloudless.eox.at/pricing ; Esri: https://wiki.openstreetmap.org/wiki/Esri ; MapTiler: https://www.maptiler.com/cloud/terms/ ; Stadia: https://docs.stadiamaps.com/limits/
 - Vantor: https://vantor.com ; Open Data: https://registry.opendata.aws/vantor-open-data/
 - Mapbox Satellite sumber: https://docs.mapbox.com/data/tilesets/reference/mapbox-satellite
 - maplibre-contour: https://www.npmjs.com/package/maplibre-contour

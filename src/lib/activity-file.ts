@@ -17,6 +17,8 @@ export interface ActivitySummary {
   avgHr: number | null;
   maxHr: number | null;
   runRatio: number | null; // bahagian masa bergerak pada kadens lari (0..1); null = tiada kadens
+  // Titik GPS pertama, 2 tempat perpuluhan (~1 km): Worker guna sekali untuk cuaca MET Norway, tidak disimpan.
+  start?: { lat: number; lon: number } | null;
 }
 
 export interface ActivityFiles {
@@ -96,6 +98,10 @@ export async function summarizeFit(bait: ArrayBuffer, nama: string): Promise<Act
     avgHr: s.avgHeartRate ?? (nadi.length ? bulat(nadi.reduce((a, b) => a + b, 0) / nadi.length, 1) : null),
     maxHr: s.maxHeartRate ?? (nadi.length ? Math.max(...nadi) : null),
     runRatio: runShare(rekod),
+    start: (() => {
+      const [lat, lon] = routeOf(rekod)[0] ?? [];
+      return lat === undefined ? null : { lat: bulat(lat, 2), lon: bulat(lon, 2) };
+    })(),
   };
 }
 
@@ -111,6 +117,7 @@ export interface ActivityWeather {
 export interface FitData {
   records: any[];
   weather: ActivityWeather | null;
+  calories: number | null; // kcal dari sesi FIT; null = peranti tak kira
 }
 
 const angka = (v: unknown): number | null =>
@@ -132,6 +139,7 @@ export async function fitData(bait: ArrayBuffer): Promise<FitData> {
     : null;
   return {
     records: messages.recordMesgs ?? [],
+    calories: angka(messages.sessionMesgs?.[0]?.totalCalories) || null,
     weather:
       weather && Object.values(weather).some((v) => v !== null)
         ? weather
@@ -237,6 +245,25 @@ export function paceGradient(track: TrackPoint[], langkahM = 100) {
   const perlahan = isih[Math.ceil(isih.length * 0.95) - 1];
   const f = (p: number) => (perlahan > laju ? Math.min(1, Math.max(0, (perlahan - p) / (perlahan - laju))) : 0.5);
   return { stops: bahagian.map(([x, p]): [number, string] => [x, warnaPace(f(p))]), laju, perlahan };
+}
+
+/** Pace (saat/km) di sekitar jarak `d`: masa merentas tetingkap ~100 m berpusat di `d`. null = tiada gerak. */
+export function paceAt(track: TrackPoint[], d: number, tetingkapM = 100): number | null {
+  const a = track.find((p) => p.distanceM >= d - tetingkapM / 2) ?? track[0];
+  const b = track.find((p) => p.distanceM >= d + tetingkapM / 2) ?? track.at(-1);
+  if (!a || !b || b.distanceM <= a.distanceM || b.t <= a.t) return null;
+  return ((b.t - a.t) / (b.distanceM - a.distanceM)) * 1000;
+}
+
+/** Jarak (m) titik track paling dekat dengan lon/lat (hover laluan di peta). */
+export function nearestDistance(track: TrackPoint[], lon: number, lat: number): number {
+  const k = Math.cos((lat * Math.PI) / 180);
+  let terbaik = track[0], min = Infinity;
+  for (const p of track) {
+    const j = ((p.lon - lon) * k) ** 2 + (p.lat - lat) ** 2;
+    if (j < min) ((min = j), (terbaik = p));
+  }
+  return terbaik?.distanceM ?? 0;
 }
 
 export interface TrackPosition {
