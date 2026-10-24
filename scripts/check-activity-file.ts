@@ -2,7 +2,7 @@
 // FIT dijana di sini dengan Encoder SDK Garmin (koordinat rekaan di tengah laut, 0°N 0°E) - tiada
 // fail larian sebenar dalam repo. Nilai meniru larian contoh owner: 2,663 m, 1,876 s, nadi purata 140 / maks 164.
 import { Encoder, Profile } from "@garmin/fitsdk";
-import { readGpx, buildUploadForm, fitData, fitRoute, fitRecords, trackOf, trackAt, heartSeries, altitudeSeries, hrZones, nameFromFile, paceFromDistance, pairFiles, isoSeconds, toSport, formatDuration } from "../src/lib/activity-file";
+import { readGpx, buildUploadForm, fitData, fitRoute, fitRecords, trackOf, trackAt, paceGradient, heartSeries, altitudeSeries, hrZones, nameFromFile, paceFromDistance, pairFiles, isoSeconds, toSport, formatDuration } from "../src/lib/activity-file";
 
 let gagal = 0;
 const ok = (c: unknown, msg: string) => {
@@ -71,6 +71,14 @@ const fail = (bait: BlobPart, nama: string) => new File([bait], nama);
   const tengah = trackAt(track, 40.5);
   ok(tengah?.index === 40 && Math.abs((tengah?.lat ?? 0) - 0.0415) < 1e-6, `interpolasi track ${tengah?.lat}`);
   ok(trackOf([]).length === 0 && trackAt([], 1) === null, "track kosong");
+  // 2 km di khatulistiwa: km pertama 5:00/km, km kedua 7:00/km.
+  const lurus = Array.from({ length: 201 }, (_, i) => ({ lat: 0, lon: (i * 10) / 111_320, t: i < 100 ? i * 3 : 300 + (i - 100) * 4.2, distanceM: i * 10, elevation: null, heartRate: null, speed: null }));
+  const pg = paceGradient(lurus);
+  ok(pg?.stops.length === 20, `pace: ${pg?.stops.length} hentian 100 m`);
+  ok(pg?.stops.every(([x], i, a) => x > 0 && x < 1 && (i === 0 || x > a[i - 1][0])), "pace: progress menaik ketat");
+  ok(Math.round(pg?.laju ?? 0) === 300 && Math.round(pg?.perlahan ?? 0) === 420, `pace: skala ${pg?.laju}-${pg?.perlahan}`);
+  ok(pg?.stops[0][1] === "rgb(220,38,38)" && pg?.stops.at(-1)?.[1] === "rgb(37,99,235)", "pace: laju merah, perlahan biru");
+  ok(paceGradient(lurus.slice(0, 5)) === null && paceGradient([]) === null, "pace: terlalu pendek = null");
 
   const data = await fitData(fit().buffer);
   ok(data.records.length === 83, `fitData records ${data.records.length}`);

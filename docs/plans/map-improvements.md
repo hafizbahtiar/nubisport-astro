@@ -45,6 +45,12 @@ OpenFreeMap + DEM Mapterhorn, 3D, terrain, profil ketinggian, animasi laluan).
 
 ### 1. Laluan berwarna ikut pace / nadi / kecerunan - kecil, nilai tertinggi
 
+**Dibina (2026-10-24): Pace sahaja.** Butang toggle **Pace** di sebelah 3D (bukan dalam dialog Gaya peta -
+dua pilihan tak perlu dialog), diingat `nubi/peta-warna`. `paceGradient(track)` dalam
+`src/lib/activity-file.ts` (hentian 100 m, skala persentil 5-95, biru perlahan -> kuning -> merah laju;
+semak `bun scripts/check-activity-file.ts`). Legenda atas-kiri dengan pace laju/perlahan dalam teks. Tiada
+track (tiada masa GPS) = butang tiada. Nadi / Cerun: belum - fungsi warna lain atas hentian yang sama.
+
 - MapLibre `line-gradient` (sumber GeoJSON dengan `lineMetrics: true`); warna diinterpolasi ikut
   `line-progress` (0..1 sepanjang laluan).
 - Data sudah ada dalam record FIT yang sama (`fitRecords` -> jarak, masa, nadi, altitude). Kira

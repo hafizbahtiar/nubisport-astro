@@ -146,6 +146,11 @@ const GAYA: {
               <span>Main</span>
             </button>
           </div>
+          <div class="pace-legenda" id="pace-legenda" hidden>
+            <span>Laju <strong id="pace-laju"></strong></span>
+            <span class="pace-bar" id="pace-bar" aria-hidden="true"></span>
+            <span><strong id="pace-perlahan"></strong> Perlahan</span>
+          </div>
         </div>
         <p class="muted" id="peta-status">Memuatkan laluan…</p>
         <p class="muted kecil">Laluan ini hanya kelihatan kepada anda.</p>
@@ -291,6 +296,8 @@ const GAYA: {
     routeOf,
     trackOf,
     trackAt,
+    paceGradient,
+    WARNA_PACE,
     type TrackPoint,
     type ActivityWeather,
     heartSeries,
@@ -321,6 +328,7 @@ const GAYA: {
   import { formatPace } from "../../../lib/plan-5k";
   import { formatTime } from "../../../lib/distance-plan";
   import type {
+    ExpressionSpecification,
     GeoJSONSource,
     IControl,
     LngLatBoundsLike,
@@ -353,6 +361,7 @@ const GAYA: {
   };
   const SIMPAN_GAYA = "nubi/peta-gaya";
   const SIMPAN_3D = "nubi/peta-3d";
+  const SIMPAN_WARNA = "nubi/peta-warna";
   const simpan = (k: string, v: string) => {
     try {
       localStorage.setItem(k, v);
@@ -768,6 +777,20 @@ const GAYA: {
         tigaD = localStorage.getItem(SIMPAN_3D) === "1";
       } catch {}
       const sudut = () => (tigaD ? 60 : 0);
+      // Warna ikut pace perlukan masa + jarak (track); tanpa itu butang Pace tiada.
+      const gradien = track ? paceGradient(track) : null;
+      const garisPace: ExpressionSpecification | undefined = gradien
+        ? ([
+            "interpolate",
+            ["linear"],
+            ["line-progress"],
+            ...gradien.stops.flat(),
+          ] as unknown as ExpressionSpecification)
+        : undefined;
+      let warnaPace = false;
+      try {
+        warnaPace = !!gradien && localStorage.getItem(SIMPAN_WARNA) === "pace";
+      } catch {}
 
       // Tiada WebGL = konstruktor melontar -> catch di bawah.
       const map = new ml.Map({
@@ -943,6 +966,33 @@ const GAYA: {
       b3d.classList.add("kawal-teks");
       b3d.setAttribute("aria-pressed", String(tigaD));
 
+      const legenda = $("pace-legenda");
+      const setPace = (on: boolean) => {
+        warnaPace = on;
+        bPace?.setAttribute("aria-pressed", String(on));
+        legenda.hidden = !on;
+        if (map.getLayer("laluan"))
+          map.setPaintProperty(
+            "laluan",
+            "line-gradient",
+            on ? garisPace : undefined,
+          );
+      };
+      const bPace =
+        gradien &&
+        butang("Warna laluan ikut pace", "Pace", () => {
+          setPace(!warnaPace);
+          simpan(SIMPAN_WARNA, warnaPace ? "pace" : "biasa");
+        });
+      if (gradien && bPace) {
+        bPace.classList.add("kawal-teks");
+        $("pace-laju").textContent = `${formatPace(gradien.laju)}/km`;
+        $("pace-perlahan").textContent = `${formatPace(gradien.perlahan)}/km`;
+        $("pace-bar").style.background =
+          `linear-gradient(90deg, ${[...WARNA_PACE].reverse().join(", ")})`;
+        setPace(warnaPace);
+      }
+
       const dlg = $("pilih-gaya") as HTMLDialogElement;
       const telefon = matchMedia("(max-width: 40rem)");
       const bGaya = butang("Gaya peta", icon("lapisan"), () => {
@@ -961,7 +1011,10 @@ const GAYA: {
         map.fitBounds(sempadan, { padding: 24, pitch: sudut(), bearing: 0 }),
       );
 
-      map.addControl(kumpulan(b3d, bGaya), "top-right");
+      map.addControl(
+        kumpulan(b3d, ...(bPace ? [bPace] : []), bGaya),
+        "top-right",
+      );
       map.addControl(new ml.FullscreenControl(), "top-right");
       // Bawah-kanan: kawalan baru masuk di atas -> susunan (atas ke bawah) pusat semula, zum, atribusi.
       map.addControl(
@@ -1015,6 +1068,7 @@ const GAYA: {
         }
         map.addSource("laluan", {
           type: "geojson",
+          lineMetrics: true, // line-progress untuk warna pace
           data: {
             type: "Feature",
             properties: {},
@@ -1035,6 +1089,8 @@ const GAYA: {
           layout: garis,
           paint: { "line-color": oren, "line-width": 5 },
         });
+        if (warnaPace)
+          map.setPaintProperty("laluan", "line-gradient", garisPace);
         if (track && track.length >= 2) {
           map.addSource("main-kemajuan", {
             type: "geojson",
@@ -1234,6 +1290,31 @@ const GAYA: {
     .peta :global(.main-titik) {
       animation: none;
     }
+  }
+
+  /* Legenda pace: overlay atas-kiri (bawah-kiri = Main, kanan = kawalan); label teks, bukan warna sahaja. */
+  .pace-legenda {
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.6rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--paper);
+    font-size: 0.8rem;
+    box-shadow: 0 0.25rem 0.75rem rgb(10 26 51 / 0.15);
+  }
+  .pace-legenda[hidden] {
+    display: none;
+  }
+  .pace-bar {
+    width: 3rem;
+    height: 0.5rem;
+    border-radius: 999px;
   }
 
   /* Main: overlay bawah-kiri peta; kekal dalam skrin penuh. */

@@ -202,6 +202,43 @@ export function trackOf(rekod: any[]): TrackPoint[] {
   return titik.length >= 2 ? titik : [];
 }
 
+/** Warna laluan ikut pace: perlahan -> sederhana -> laju. */
+export const WARNA_PACE = ["#2563eb", "#eab308", "#dc2626"] as const;
+
+const rgb = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+function warnaPace(f: number): string {
+  const [a, b, g] = f < 0.5 ? [WARNA_PACE[0], WARNA_PACE[1], f * 2] : [WARNA_PACE[1], WARNA_PACE[2], f * 2 - 1];
+  const x = rgb(a), y = rgb(b);
+  return `rgb(${x.map((v, i) => Math.round(v + (y[i] - v) * g)).join(",")})`;
+}
+
+/** Hentian line-gradient MapLibre: [line-progress 0..1, warna] setiap ~100 m, pace dalam saat/km.
+ *  Progress = jarak geometri titik (sama asas dengan line-progress); pace = masa / distance FIT bahagian itu.
+ *  Skala = persentil 5-95 supaya satu henti di lampu isyarat tak ratakan warna lain. null = tiada pace. */
+export function paceGradient(track: TrackPoint[], langkahM = 100) {
+  const geo = [0];
+  for (let i = 1; i < track.length; i++) {
+    const a = track[i - 1], b = track[i];
+    const x = (b.lon - a.lon) * Math.cos((((a.lat + b.lat) / 2) * Math.PI) / 180);
+    geo.push(geo[i - 1] + Math.hypot(x, b.lat - a.lat) * 111_320);
+  }
+  const jumlah = geo.at(-1) ?? 0;
+  const bahagian: [number, number][] = [];
+  let i0 = 0;
+  for (let i = 1; jumlah > 0 && i < track.length; i++) {
+    if (geo[i] - geo[i0] < langkahM && i < track.length - 1) continue;
+    const dd = track[i].distanceM - track[i0].distanceM, dt = track[i].t - track[i0].t;
+    if (dd > 0 && dt > 0 && geo[i] > geo[i0]) bahagian.push([(geo[i0] + geo[i]) / 2 / jumlah, (dt / dd) * 1000]);
+    i0 = i;
+  }
+  if (bahagian.length < 2) return null;
+  const isih = bahagian.map((b) => b[1]).sort((a, b) => a - b);
+  const laju = isih[Math.floor(isih.length * 0.05)];
+  const perlahan = isih[Math.ceil(isih.length * 0.95) - 1];
+  const f = (p: number) => (perlahan > laju ? Math.min(1, Math.max(0, (perlahan - p) / (perlahan - laju))) : 0.5);
+  return { stops: bahagian.map(([x, p]): [number, string] => [x, warnaPace(f(p))]), laju, perlahan };
+}
+
 export interface TrackPosition {
   lat: number;
   lon: number;

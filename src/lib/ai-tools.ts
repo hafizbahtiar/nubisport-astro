@@ -65,6 +65,10 @@ export interface ToolProposal {
 export interface ActivityMapView {
   activityId: number;
   route: [number, number][];
+  name: string | null;
+  startedAt: string;
+  distanceM: number;
+  movingS: number;
 }
 export type ToolOutcome =
   | { result: ToolResult; view?: ActivityMapView }
@@ -424,7 +428,8 @@ async function activityDetail(args: Record<string, unknown>): Promise<ToolOutcom
   const res = await api(`/me/apps/nubi/activities/${id}`).catch(() => null);
   if (!res?.ok) return { result: { ralat: "Aktiviti itu tiada dalam akaun ini." } };
   const a = (await json(res)).data as Record<string, unknown>;
-  const out: ToolResult = { activity: activitySummary(a) };
+  const ringkasan = activitySummary(a);
+  const out: ToolResult = { activity: ringkasan };
   const file = await api(`/me/apps/nubi/activities/${id}/file`).catch(() => null);
   if (!file?.ok) return { result: { ...out, nota: "Fail FIT tak dapat dimuatkan; ringkasan sahaja." } };
   try {
@@ -452,7 +457,21 @@ async function activityDetail(args: Record<string, unknown>): Promise<ToolOutcom
     const route = routeOf(rekod);
     return {
       result: out,
-      ...(route.length >= 2 ? { view: { activityId: id, route } } : {}),
+      ...(route.length >= 2
+        ? {
+          view: {
+            activityId: id,
+            route,
+            name: ringkasan.name,
+            startedAt:
+              typeof ringkasan.startedAt === "string"
+                ? ringkasan.startedAt
+                : "",
+            distanceM: Number(a.distanceM) || 0,
+            movingS: Number(a.movingS) || 0,
+          },
+        }
+        : {}),
     };
   } catch {
     out.nota = "Fail FIT tak dapat dibaca; ringkasan sahaja.";

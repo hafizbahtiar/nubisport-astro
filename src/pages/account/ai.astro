@@ -139,6 +139,7 @@ import Icon from "../../components/ui/Icon.astro";
 
 <script>
   import { api, currentUser, json } from "../../lib/api";
+  import { formatDuration, formatKm } from "../../lib/activity-file";
   import { icon } from "../../lib/icon";
   import { renderMarkdown } from "../../lib/chat-markdown";
   import {
@@ -496,17 +497,37 @@ import Icon from "../../components/ui/Icon.astro";
     }
   };
 
+  const tarikhMY = (iso: string) =>
+    new Date(iso).toLocaleString("ms-MY", {
+      timeZone: "Asia/Kuala_Lumpur",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
   const renderActivityMap = (view: ActivityMapView) => {
     const { row, bubble } = createRow("assistant", false);
-    row.classList.add("ai-row-proposal");
+    row.classList.add("ai-row-proposal", "ai-row-peta");
     bubble.classList.add("ai-kad");
     const tajuk = document.createElement("strong");
     tajuk.className = "ai-kad-tajuk";
-    tajuk.textContent = "Peta aktiviti";
+    tajuk.textContent = view.name || "Aktiviti";
+    const butir = [
+      view.startedAt ? tarikhMY(view.startedAt) : "",
+      view.distanceM > 0 ? formatKm(view.distanceM) : "",
+      view.movingS > 0 ? formatDuration(view.movingS) : "",
+    ].filter(Boolean);
+    const meta = document.createElement("p");
+    meta.className = "ai-kad-butiran";
+    meta.textContent = butir.join(" · ");
     const petaEl = document.createElement("div");
     petaEl.className = "ai-peta";
     petaEl.textContent = "Memuatkan peta…";
-    bubble.append(tajuk, petaEl);
+    bubble.append(tajuk);
+    if (butir.length) bubble.append(meta);
+    bubble.append(petaEl);
     const a = document.createElement("a");
     a.className = "btn btn-outline btn-sm";
     a.href = `/account/activities/view?id=${view.activityId}`;
