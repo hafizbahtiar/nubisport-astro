@@ -143,3 +143,12 @@ sahaja; hillshade pada Standard tidak dibuat).
 - Vantor: https://vantor.com ; Open Data: https://registry.opendata.aws/vantor-open-data/
 - Mapbox Satellite sumber: https://docs.mapbox.com/data/tilesets/reference/mapbox-satellite
 - maplibre-contour: https://www.npmjs.com/package/maplibre-contour
+
+## Satu peta macam Strava (2026-10-24)
+
+Strava tiada gaya "Terrain" berasingan - bukit terbina dalam peta. Sekarang: gaya **Terrain dibuang**; **Terperinci**
+(OpenFreeMap Liberty) = lalai, sentiasa ada hillshade Mapterhorn; butang **3D** = pitch 60 + relief (`setTerrain`,
+hanya bila 3D - 2D kekal ringan untuk telefon) + bangunan 3D Liberty. DEM gagal = Terperinci kekal tanpa bukit
+(bukan jatuh ke Standard). Pilihan lain (Standard, Cerah, Gelap, Fiord, Satelit) kekal dalam dialog. Kunci lama
+`nubi/peta-gaya = terrain` tidak sah lagi -> lalai Terperinci.
+

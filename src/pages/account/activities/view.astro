@@ -5,7 +5,7 @@
 // Peta: maplibre-gl dimuat malas (JS + CSS hanya di page ini), gaya vektor OpenFreeMap (GAYA di bawah).
 // Atribusi datang dari gaya dan wajib kelihatan. Tiada WebGL = mesej gagal.
 // Kawalan dalam kanvas (docs/plans/map-3d.md): 3D, gaya peta (popover / bottom sheet bawah 40rem),
-// skrin penuh, pusat semula, zum. Gaya + 3D diingat dalam localStorage, lalai Standard 2D.
+// skrin penuh, pusat semula, zum. Gaya + 3D diingat dalam localStorage, lalai Terperinci (+ bukit) 2D.
 import AccountLayout from "../../../layouts/AccountLayout.astro";
 import Alert from "../../../components/ui/Alert.astro";
 import Icon from "../../../components/ui/Icon.astro";
@@ -22,19 +22,20 @@ const GAYA: {
   url: string;
   ikon: IconName;
 }[] = [
+  // Lalai = Terperinci + bukit (macam Strava: satu peta, terrain terbina, 3D on/off). Tiada gaya Terrain berasingan.
+  {
+    id: "liberty",
+    label: "Terperinci",
+    nota: "Jalan, bukit dan bangunan - tekan 3D untuk relief",
+    url: `${OFM}liberty`,
+    ikon: "bangunan",
+  },
   {
     id: "standard",
     label: "Standard",
     nota: "Kelabu lembut, laluan paling jelas",
     url: `${OFM}positron`,
     ikon: "peta",
-  },
-  {
-    id: "liberty",
-    label: "Terperinci",
-    nota: "Jalan, taman dan bangunan 3D",
-    url: `${OFM}liberty`,
-    ikon: "bangunan",
   },
   {
     id: "bright",
@@ -56,13 +57,6 @@ const GAYA: {
     nota: "Biru gelap, laluan menonjol",
     url: `${OFM}fiord`,
     ikon: "ombak",
-  },
-  {
-    id: "terrain",
-    label: "Terrain",
-    nota: "Bukit dan lembah - tekan 3D untuk relief",
-    url: `${OFM}positron`,
-    ikon: "gunung",
   },
   {
     id: "satelit",
@@ -893,7 +887,7 @@ const GAYA: {
         g === "satelit"
           ? SATELIT
           : pilihan.find((p) => p.value === g)?.dataset.url;
-      let gaya = "standard",
+      let gaya = "liberty",
         tigaD = false;
       try {
         const g = localStorage.getItem(SIMPAN_GAYA);
@@ -1079,8 +1073,10 @@ const GAYA: {
         onRemove: () => {},
       });
 
+      const RELIEF = { source: "dem", exaggeration: 1.5 };
       const set3d = (on: boolean) => {
         tigaD = on;
+        if (map.getSource("dem")) map.setTerrain(on ? RELIEF : null);
         b3d.setAttribute("aria-pressed", String(on));
         map.easeTo({ pitch: sudut(), ...(on ? {} : { bearing: 0 }) });
       };
@@ -1174,7 +1170,7 @@ const GAYA: {
       // setStyle buang semua lapisan sendiri -> lukis semula laluan (dan DEM) setiap kali gaya siap.
       const garis = { "line-join": "round", "line-cap": "round" } as const;
       map.on("style.load", () => {
-        if (gaya === "terrain") {
+        if (gaya === "liberty") {
           map.addSource("dem", DEM);
           map.addSource("dem-bukit", DEM); // MapLibre: hillshade + terrain lebih cantik dengan sumber berasingan
           const label = map
@@ -1195,7 +1191,7 @@ const GAYA: {
             },
             label,
           );
-          map.setTerrain({ source: "dem", exaggeration: 1.5 });
+          if (tigaD) map.setTerrain(RELIEF); // 2D = hillshade sahaja (ringan untuk telefon)
         }
         map.addSource("laluan", {
           type: "geojson",
@@ -1278,11 +1274,14 @@ const GAYA: {
         map.once("load", ok);
         map.on("error", (e) => {
           const sid = (e as { sourceId?: string }).sourceId;
-          // Gaya lain atau DEM gagal = kembali Standard; ralat jubin biasa (ada sourceId lain) diabaikan.
-          if (
-            gaya !== "standard" &&
-            (!sid || sid.startsWith("dem") || sid === "eox")
-          ) {
+          // DEM gagal = Terperinci kekal, cuma tanpa bukit/relief (bukit ialah tambahan, bukan peta).
+          if (sid?.startsWith("dem")) {
+            map.setTerrain(null);
+            if (map.getLayer("bukit")) map.removeLayer("bukit");
+            return;
+          }
+          // Gaya lain gagal = kembali Standard; ralat jubin biasa (ada sourceId lain) diabaikan.
+          if (gaya !== "standard" && (!sid || sid === "eox")) {
             tukarGaya("standard");
             jatuh = true;
             status.textContent =
@@ -1436,10 +1435,11 @@ const GAYA: {
   @media (min-width: 60rem) {
     .peta-split.ada-split {
       grid-template-columns: minmax(0, 1.7fr) minmax(19rem, 1fr);
-      align-items: start;
+      align-items: stretch;
     }
     .peta-split.ada-split .split-panel {
-      max-height: 32rem;
+      /* Tinggi ikut map card; senarai split scroll dalam kad yang sama tinggi. */
+      contain: size;
       overflow-y: auto;
     }
   }
@@ -1727,10 +1727,6 @@ const GAYA: {
   .contoh-fiord {
     background: var(--navy-2);
     color: var(--on-dark);
-  }
-  .contoh-terrain {
-    background: var(--info-bg);
-    color: var(--info-ink);
   }
   .contoh-satelit {
     background: #2f4a2c; /* hijau gelap imej satelit */
