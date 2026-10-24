@@ -146,9 +146,9 @@ sahaja; hillshade pada Standard tidak dibuat).
 
 ## Satu peta macam Strava (2026-10-24)
 
-Strava tiada gaya "Terrain" berasingan - bukit terbina dalam peta. Sekarang: gaya **Terrain dibuang**; **Terperinci**
-(OpenFreeMap Liberty) = lalai, sentiasa ada hillshade Mapterhorn; butang **3D** = pitch 60 + relief (`setTerrain`,
-hanya bila 3D - 2D kekal ringan untuk telefon) + bangunan 3D Liberty. DEM gagal = Terperinci kekal tanpa bukit
-(bukan jatuh ke Standard). Pilihan lain (Standard, Cerah, Gelap, Fiord, Satelit) kekal dalam dialog. Kunci lama
-`nubi/peta-gaya = terrain` tidak sah lagi -> lalai Terperinci.
-
+Strava satu peta, bukit terbina, tiada pemilih gaya. Sekarang sama: **pemilih gaya dibuang** (dialog, Standard,
+Cerah, Gelap, Fiord, Terrain dan Satelit EOX semuanya dibuang; CSP EOX dibuang). Peta tunggal = OpenFreeMap
+**Liberty** (`PETA_GAYA` dalam `view.astro`) + hillshade Mapterhorn sentiasa. Butang **3D** = pitch 60 + relief
+(`setTerrain`, hanya bila 3D) + bangunan 3D. DEM gagal = peta kekal tanpa bukit. Kawalan: 3D, Pace, skrin penuh,
+pusat semula, zum. Kunci localStorage `nubi/peta-gaya` diabaikan. Satelit: jadual alternatif di atas kekal sebagai
+rujukan jika mahu dikembalikan (cth. satu toggle Satelit).

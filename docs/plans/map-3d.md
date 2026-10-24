@@ -1,6 +1,7 @@
 # Peta aktiviti: zoom, 3D dan terrain
 
-Status: **dibina** (2026-10-22). Halaman: `/account/activities/view` (MapLibre GL + OpenFreeMap).
+Status: **dibina** (2026-10-22). **Pemilih gaya dibuang 2026-10-24** - satu peta Liberty + bukit, lihat
+[map-improvements.md](./map-improvements.md). Halaman: `/account/activities/view` (MapLibre GL + OpenFreeMap).
 
 Apa yang dibina (v2, 2026-10-22 - kawalan dalam kanvas, ganti ChipGroup "Jenis peta"):
 - `cooperativeGestures: true` + teks bantuan MapLibre dalam BM (`locale`).

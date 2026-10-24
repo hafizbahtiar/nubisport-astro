@@ -2,70 +2,13 @@
 // Detail satu aktiviti: peta laluan (MapLibre GL + OpenFreeMap), ringkasan dan nadi. /account/activities/view?id=<id>.
 // Laluan dan nadi dilukis di pelayar dari fail .fit asal (GET /me/apps/nubi/activities/:id/file - milik
 // sendiri sahaja, diurai sekali); Worker tidak menghurai apa-apa. Peta hanya untuk ahli itu - tiada perkongsian.
-// Peta: maplibre-gl dimuat malas (JS + CSS hanya di page ini), gaya vektor OpenFreeMap (GAYA di bawah).
+// Peta: maplibre-gl dimuat malas (JS + CSS hanya di page ini), gaya vektor OpenFreeMap (PETA_GAYA di bawah).
 // Atribusi datang dari gaya dan wajib kelihatan. Tiada WebGL = mesej gagal.
-// Kawalan dalam kanvas (docs/plans/map-3d.md): 3D, gaya peta (popover / bottom sheet bawah 40rem),
-// skrin penuh, pusat semula, zum. Gaya + 3D diingat dalam localStorage, lalai Terperinci (+ bukit) 2D.
+// Satu peta macam Strava (docs/plans/map-improvements.md): OpenFreeMap Liberty + bukit Mapterhorn, tiada
+// pemilih gaya. Kawalan dalam kanvas: 3D (relief + bangunan), Pace, skrin penuh, pusat semula, zum.
 import AccountLayout from "../../../layouts/AccountLayout.astro";
 import Alert from "../../../components/ui/Alert.astro";
 import Icon from "../../../components/ui/Icon.astro";
-import type { IconName } from "../../../lib/icon";
-
-// Semua URL disemak 200 (2026-10-22). OpenFreeMap: percuma, tiada kunci/had paparan, komersial dibenarkan.
-// Satelit sengaja tiada: tiada sumber percuma tanpa kunci yang jelas boleh guna komersial (EOX s2cloudless
-// 2018+ = CC BY-NC-SA; Esri perlu akaun).
-const OFM = "https://tiles.openfreemap.org/styles/";
-const GAYA: {
-  id: string;
-  label: string;
-  nota: string;
-  url: string;
-  ikon: IconName;
-}[] = [
-  // Lalai = Terperinci + bukit (macam Strava: satu peta, terrain terbina, 3D on/off). Tiada gaya Terrain berasingan.
-  {
-    id: "liberty",
-    label: "Terperinci",
-    nota: "Jalan, bukit dan bangunan - tekan 3D untuk relief",
-    url: `${OFM}liberty`,
-    ikon: "bangunan",
-  },
-  {
-    id: "standard",
-    label: "Standard",
-    nota: "Kelabu lembut, laluan paling jelas",
-    url: `${OFM}positron`,
-    ikon: "peta",
-  },
-  {
-    id: "bright",
-    label: "Cerah",
-    nota: "Warna penuh, macam peta biasa",
-    url: `${OFM}bright`,
-    ikon: "matahari",
-  },
-  {
-    id: "dark",
-    label: "Gelap",
-    nota: "Selesa untuk mata waktu malam",
-    url: `${OFM}dark`,
-    ikon: "bulan",
-  },
-  {
-    id: "fiord",
-    label: "Fiord",
-    nota: "Biru gelap, laluan menonjol",
-    url: `${OFM}fiord`,
-    ikon: "ombak",
-  },
-  {
-    id: "satelit",
-    label: "Satelit",
-    nota: "Imej 2016, kabur bila zum dekat",
-    url: "", // gaya objek SATELIT dalam skrip
-    ikon: "satelit",
-  },
-];
 ---
 
 <AccountLayout title="Aktiviti">
@@ -145,47 +88,6 @@ const GAYA: {
     <div class="peta-split" id="peta-split">
       <section class="panel peta-panel" aria-label="Peta laluan">
         <div class="peta" id="peta" aria-label="Peta laluan">
-          <!-- Dalam bekas peta supaya kekal kelihatan dalam skrin penuh. Desktop: show() = popover; telefon: showModal() = sheet. -->
-          <dialog class="gaya" id="pilih-gaya" aria-labelledby="gaya-tajuk">
-            <div class="gaya-isi">
-              <span class="pemegang" aria-hidden="true"></span>
-              <div class="gaya-kepala">
-                <h4 id="gaya-tajuk">Gaya peta</h4>
-                <button
-                  class="gaya-tutup"
-                  type="button"
-                  aria-label="Tutup"
-                  data-tutup><Icon name="tutup" /></button
-                >
-              </div>
-              <fieldset>
-                <legend class="sr-only">Pilih gaya peta</legend>
-                {
-                  GAYA.map((g) => (
-                    <label class="gaya-pilihan">
-                      <input
-                        class="sr-only"
-                        type="radio"
-                        name="gaya"
-                        value={g.id}
-                        data-url={g.url}
-                      />
-                      <span class={`contoh contoh-${g.id}`} aria-hidden="true">
-                        <Icon name={g.ikon} />
-                      </span>
-                      <span class="gaya-teks">
-                        <strong>{g.label}</strong>
-                        <small>{g.nota}</small>
-                      </span>
-                      <span class="gaya-tanda" aria-hidden="true">
-                        <Icon name="tanda" />
-                      </span>
-                    </label>
-                  ))
-                }
-              </fieldset>
-            </div>
-          </dialog>
           <div class="main-semula" id="main-semula" hidden>
             <button
               class="main-main"
@@ -354,7 +256,6 @@ const GAYA: {
     LngLatBoundsLike,
     Marker,
     RasterDEMSourceSpecification,
-    StyleSpecification,
   } from "maplibre-gl";
 
   // Mula download besar serta-merta; jangan tunggu /me, row, fail atau padanan pelan.
@@ -380,26 +281,9 @@ const GAYA: {
     attribution:
       '<a href="https://mapterhorn.com/attribution">© Mapterhorn</a>',
   };
-  // Satelit percuma + boleh komersial: hanya EOX Sentinel-2 cloudless 2016 (CC BY 4.0; 2017+ = bukan komersial).
-  // 10 m -> kabur pada zum dekat (maxzoom 14, selebihnya overzoom). Sumber tajam perlukan kunci:
-  // senarai alternatif dalam docs/plans/map-improvements.md (Esri / MapTiler / Stadia / Google).
-  const SATELIT: StyleSpecification = {
-    version: 8,
-    sources: {
-      eox: {
-        type: "raster",
-        tiles: [
-          "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/{z}/{y}/{x}.jpg",
-        ],
-        tileSize: 256,
-        maxzoom: 14,
-        attribution:
-          '<a href="https://s2maps.eu">Sentinel-2 cloudless - https://s2maps.eu</a> by <a href="https://eox.at">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2016)',
-      },
-    },
-    layers: [{ id: "eox", type: "raster", source: "eox" }],
-  };
-  const SIMPAN_GAYA = "nubi/peta-gaya";
+  // OpenFreeMap: percuma, tiada kunci/had paparan, komersial dibenarkan. Pilihan gaya/satelit dibuang
+  // (2026-10-24) - alternatif satelit kekal didokumenkan dalam docs/plans/map-improvements.md.
+  const PETA_GAYA = "https://tiles.openfreemap.org/styles/liberty";
   const SIMPAN_3D = "nubi/peta-3d";
   const SIMPAN_WARNA = "nubi/peta-warna";
   const simpan = (k: string, v: string) => {
@@ -880,18 +764,8 @@ const GAYA: {
         Math.max(...lat),
       ];
 
-      const pilihan = [
-        ...document.querySelectorAll<HTMLInputElement>('input[name="gaya"]'),
-      ];
-      const urlGaya = (g: string) =>
-        g === "satelit"
-          ? SATELIT
-          : pilihan.find((p) => p.value === g)?.dataset.url;
-      let gaya = "liberty",
-        tigaD = false;
+      let tigaD = false;
       try {
-        const g = localStorage.getItem(SIMPAN_GAYA);
-        if (g && urlGaya(g)) gaya = g;
         tigaD = localStorage.getItem(SIMPAN_3D) === "1";
       } catch {}
       const sudut = () => (tigaD ? 60 : 0);
@@ -913,7 +787,7 @@ const GAYA: {
       // Tiada WebGL = konstruktor melontar -> catch di bawah.
       const map = new ml.Map({
         container: "peta",
-        style: urlGaya(gaya)!,
+        style: PETA_GAYA,
         bounds: sempadan,
         fitBoundsOptions: { padding: 24 },
         pitch: sudut(),
@@ -1114,28 +988,11 @@ const GAYA: {
         setPace(warnaPace);
       }
 
-      const dlg = $("pilih-gaya") as HTMLDialogElement;
-      const telefon = matchMedia("(max-width: 40rem)");
-      const bGaya = butang("Gaya peta", icon("lapisan"), () => {
-        if (dlg.open) return dlg.close();
-        for (const p of pilihan) p.checked = p.value === gaya;
-        if (telefon.matches)
-          dlg.showModal(); // sheet: fokus terperangkap, Esc, latar (native)
-        else dlg.show(); // popover dalam kanvas
-        bGaya.setAttribute("aria-expanded", "true");
-        pilihan.find((p) => p.checked)?.focus();
-      });
-      bGaya.setAttribute("aria-haspopup", "dialog");
-      bGaya.setAttribute("aria-controls", dlg.id);
-      bGaya.setAttribute("aria-expanded", "false");
       const bPusat = butang("Pusat semula", icon("pusat"), () =>
         map.fitBounds(sempadan, { padding: 24, pitch: sudut(), bearing: 0 }),
       );
 
-      map.addControl(
-        kumpulan(b3d, ...(bPace ? [bPace] : []), bGaya),
-        "top-right",
-      );
+      map.addControl(kumpulan(b3d, ...(bPace ? [bPace] : [])), "top-right");
       map.addControl(new ml.FullscreenControl(), "top-right");
       // Bawah-kanan: kawalan baru masuk di atas -> susunan (atas ke bawah) pusat semula, zum, atribusi.
       map.addControl(
@@ -1144,33 +1001,10 @@ const GAYA: {
       );
       map.addControl(kumpulan(bPusat), "bottom-right");
 
-      dlg.addEventListener("close", () => {
-        bGaya.setAttribute("aria-expanded", "false");
-        if (
-          !document.activeElement ||
-          document.activeElement === document.body ||
-          dlg.contains(document.activeElement)
-        )
-          bGaya.focus();
-      });
-      // Popover bukan modal: Esc dan klik di luar tutup sendiri. Modal: klik pada latar = target dialog.
-      dlg.addEventListener("keydown", (e) => e.key === "Escape" && dlg.close());
-      dlg.addEventListener("click", (e) => {
-        const t = e.target as Element;
-        if (t === dlg || t.closest("[data-tutup]")) dlg.close();
-        // Klik tetikus/sentuh pada pilihan = pilih dan tutup; anak panah papan kekunci = pratonton, kekal buka.
-        else if ((e as MouseEvent).detail && t.closest(".gaya-pilihan"))
-          dlg.close();
-      });
-      document.addEventListener("pointerdown", (e) => {
-        const t = e.target as Node;
-        if (dlg.open && !dlg.contains(t) && !bGaya.contains(t)) dlg.close();
-      });
-
-      // setStyle buang semua lapisan sendiri -> lukis semula laluan (dan DEM) setiap kali gaya siap.
+      // Laluan + bukit dilukis bila gaya siap.
       const garis = { "line-join": "round", "line-cap": "round" } as const;
       map.on("style.load", () => {
-        if (gaya === "liberty") {
+        {
           map.addSource("dem", DEM);
           map.addSource("dem-bukit", DEM); // MapLibre: hillshade + terrain lebih cantik dengan sumber berasingan
           const label = map
@@ -1257,19 +1091,6 @@ const GAYA: {
           if (!introDone && duration) setRoute(false, oren);
         }
       });
-      let jatuh = false; // dah kembali ke Standard sebab gaya/DEM gagal -> mesej kekal kelihatan
-      const tukarGaya = (g: string) => {
-        gaya = g;
-        for (const p of pilihan) p.checked = p.value === g;
-        map.setStyle(urlGaya(g)!, { diff: false }); // diff:false = gaya baru penuh -> style.load pasti berbunyi
-      };
-      dlg.addEventListener("change", (e) => {
-        const g = (e.target as HTMLInputElement).value;
-        status.hidden = true;
-        jatuh = false;
-        tukarGaya(g);
-        simpan(SIMPAN_GAYA, g);
-      });
       await new Promise((ok, gagal) => {
         map.once("load", ok);
         map.on("error", (e) => {
@@ -1280,14 +1101,8 @@ const GAYA: {
             if (map.getLayer("bukit")) map.removeLayer("bukit");
             return;
           }
-          // Gaya lain gagal = kembali Standard; ralat jubin biasa (ada sourceId lain) diabaikan.
-          if (gaya !== "standard" && (!sid || sid === "eox")) {
-            tukarGaya("standard");
-            jatuh = true;
-            status.textContent =
-              "Gaya peta ini tak dapat dimuatkan sekarang. Kami tunjuk Standard dulu.";
-            status.hidden = false;
-          } else if (!map.loaded() && !sid) gagal(e.error);
+          // Ralat jubin biasa (ada sourceId) diabaikan; gaya gagal sebelum load = mesej gagal di bawah.
+          if (!map.loaded() && !sid) gagal(e.error);
         });
       });
       // Kredit mula tertutup: MapLibre buka compact sekali sahaja, jadi tutup sekali selepas load memadai.
@@ -1345,7 +1160,7 @@ const GAYA: {
           : 600;
         introTimer = window.setTimeout(intro, delay);
       }
-      status.hidden = !jatuh;
+      status.hidden = true;
     } catch {
       $("peta").hidden = true;
       status.textContent =
@@ -1588,167 +1403,9 @@ const GAYA: {
   .peta :global(.kawal-teks) {
     font: 700 0.95rem / 1 var(--body);
   }
-  .peta :global(.kawal[aria-pressed="true"]),
-  .peta :global(.kawal[aria-expanded="true"]) {
+  .peta :global(.kawal[aria-pressed="true"]) {
     background: var(--navy);
     color: #fff;
-  }
-
-  /* Pilih gaya: popover dalam kanvas (desktop) / bottom sheet (telefon, :modal). */
-  .gaya {
-    position: absolute;
-    top: 10px;
-    right: 64px; /* kiri lajur kawalan atas-kanan (44px + jidar) */
-    left: auto;
-    z-index: 3;
-    width: min(21rem, calc(100% - 80px));
-    max-height: calc(100% - 20px);
-    margin: 0;
-    padding: 0;
-    overflow: auto;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    background: var(--paper);
-    color: var(--ink);
-    box-shadow: 0 0.75rem 1.5rem rgb(10 26 51 / 0.2);
-  }
-  .gaya:modal {
-    position: fixed;
-    inset: auto 0 0;
-    width: 100%;
-    max-width: none;
-    max-height: 85dvh;
-    border: 0;
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-  .gaya::backdrop {
-    background: var(--scrim);
-  }
-  .gaya-isi {
-    display: grid;
-    gap: 0.25rem;
-    padding: 0.5rem;
-  }
-  .pemegang {
-    display: none;
-    justify-self: center;
-    width: 2.5rem;
-    height: 0.25rem;
-    margin: 0.25rem 0;
-    border-radius: 999px;
-    background: var(--line);
-  }
-  .gaya:modal .pemegang {
-    display: block;
-  }
-  .gaya:modal .gaya-isi {
-    padding: 0.5rem 1rem 1rem;
-  }
-  .gaya-kepala {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-left: 0.5rem;
-  }
-  .gaya-kepala h4 {
-    margin: 0;
-    font-size: 1rem;
-    color: var(--navy);
-  }
-  .gaya-tutup {
-    display: grid;
-    place-items: center;
-    width: 44px;
-    height: 44px;
-    border: 0;
-    border-radius: var(--radius);
-    background: none;
-    color: var(--muted);
-    cursor: pointer;
-  }
-  .gaya-tutup:hover {
-    background: var(--paper-2);
-  }
-  .gaya fieldset {
-    display: grid;
-    gap: 0.25rem;
-    margin: 0;
-    padding: 0;
-    border: 0;
-  }
-  .gaya-pilihan {
-    position: relative;
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    align-items: center;
-    gap: 0.75rem;
-    min-height: 44px;
-    padding: 0.4rem 0.5rem;
-    border: 1px solid transparent;
-    border-radius: var(--radius);
-    cursor: pointer;
-  }
-  .gaya-pilihan:hover {
-    background: var(--paper-2);
-  }
-  .gaya-pilihan:has(input:checked) {
-    border-color: var(--navy);
-    background: var(--paper-2);
-  }
-  .gaya-pilihan:has(input:focus-visible) {
-    outline: 3px solid var(--orange);
-    outline-offset: 1px;
-  }
-  .contoh {
-    display: grid;
-    place-items: center;
-    width: 2.5rem;
-    height: 2.5rem;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-  }
-  .contoh-standard {
-    background: var(--paper-2);
-    color: var(--muted);
-  }
-  .contoh-liberty {
-    background: var(--success-bg);
-    color: var(--success-ink);
-  }
-  .contoh-bright {
-    background: var(--warning-bg);
-    color: var(--orange-ink);
-  }
-  .contoh-dark {
-    background: var(--ink);
-    color: var(--on-dark);
-  }
-  .contoh-fiord {
-    background: var(--navy-2);
-    color: var(--on-dark);
-  }
-  .contoh-satelit {
-    background: #2f4a2c; /* hijau gelap imej satelit */
-    color: #fff;
-  }
-  .gaya-teks {
-    display: grid;
-    min-width: 0;
-  }
-  .gaya-teks strong {
-    color: var(--navy);
-  }
-  .gaya-teks small {
-    color: var(--muted);
-    font-size: 0.8rem;
-  }
-  .gaya-tanda {
-    visibility: hidden;
-    color: var(--navy);
-  }
-  .gaya-pilihan:has(input:checked) .gaya-tanda {
-    visibility: visible;
   }
 
   /* Nadi */
