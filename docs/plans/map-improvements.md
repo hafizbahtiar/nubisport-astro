@@ -75,11 +75,18 @@ track (tiada masa GPS) = butang tiada. Nadi / Cerun: belum - fungsi warna lain a
 
 ### 3. Profil ketinggian <-> peta (hover / sentuh) - kecil
 
+**Dibina (2026-10-24), satu arah: profil -> peta.** Tetikus / seret mendatar (`touch-action: pan-y`) /
+anak panah (2% jarak, Esc sembunyi) pada profil = garis penunjuk + bacaan "km · m" (`aria-live`) + titik
+oren di peta (`penunjukPeta`, hanya bila ada track). Peta -> profil: belum (nilai kecil).
+
 - Profil ketinggian sudah ada (SVG). Tambah: gerak penunjuk di profil = titik bergerak di laluan
   (`Marker` sedia ada), dan sebaliknya. Papan kekunci: anak panah gerak penunjuk.
 - Data: indeks jarak yang sama dengan `altitudeSeries`.
 
 ### 4. Hillshade lebih halus - sangat kecil
+
+**Dibina (2026-10-24):** exaggeration 0.35, cahaya 315°, bayang navy 35%, sorotan putih 30% (gaya Terrain
+sahaja; hillshade pada Standard tidak dibuat).
 
 - Gaya Terrain sekarang: hillshade standard. Laras `hillshade-exaggeration` (~0.3-0.4),
   `hillshade-shadow-color` lebih lembut dan `hillshade-illumination-direction` 315 supaya tidak

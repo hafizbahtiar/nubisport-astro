@@ -259,18 +259,27 @@ const GAYA: {
             viewBox="0 0 600 160"
             preserveAspectRatio="none"
             role="img"
+            tabindex="0"
           >
             <polygon id="tinggi-kawasan" class="kawasan"></polygon>
             <polyline
               id="tinggi-garis"
               class="garis"
               vector-effect="non-scaling-stroke"></polyline>
+            <line
+              id="tinggi-penunjuk"
+              class="penunjuk"
+              y1="0"
+              y2="160"
+              visibility="hidden"
+              vector-effect="non-scaling-stroke"></line>
           </svg>
         </div>
         <figcaption class="paksi-x" aria-hidden="true">
           <span>0 km</span><span id="tinggi-jarak"></span>
         </figcaption>
       </figure>
+      <p class="tinggi-baca" id="tinggi-baca" aria-live="polite"></p>
       <p class="muted kecil" id="tinggi-nota"></p>
     </section>
 
@@ -707,7 +716,11 @@ const GAYA: {
     $("nadi").hidden = false;
   }
 
-  /** Profil ketinggian (SVG sebaris). Tiada altitude = seksyen kekal tersembunyi. */
+  // Diisi oleh peta() bila laluan ada track: jarak (m) dari profil -> titik di peta; null = sembunyi.
+  let penunjukPeta: ((jarakM: number | null) => void) | null = null;
+
+  /** Profil ketinggian (SVG sebaris). Tiada altitude = seksyen kekal tersembunyi.
+   *  Tetikus / seret / anak panah pada profil = penunjuk jarak + titik sama di peta. */
   function tinggi(siri: [number, number][], naik: number | null) {
     if (siri.length < 2) return;
     let lo = Infinity,
@@ -737,6 +750,43 @@ const GAYA: {
       naik == null
         ? "Ketinggian dari fail FIT."
         : `Naik ${Math.round(naik)} m sepanjang laluan. Turun tidak dikira.`;
+
+    const svg = $("tinggi-carta");
+    const penunjuk = $("tinggi-penunjuk");
+    const baca = $("tinggi-baca");
+    let kini: number | null = null;
+    const tunjuk = (d: number | null) => {
+      kini = d === null ? null : Math.min(T, Math.max(0, d));
+      if (kini === null) {
+        penunjuk.setAttribute("visibility", "hidden");
+        baca.textContent = "";
+      } else {
+        const [x, alt] = siri.find(([m]) => m >= kini!) ?? siri.at(-1)!;
+        const px = ((x / T) * 600).toFixed(1);
+        penunjuk.setAttribute("x1", px);
+        penunjuk.setAttribute("x2", px);
+        penunjuk.setAttribute("visibility", "visible");
+        baca.textContent = `${formatKm(x)} · ${Math.round(alt)} m`;
+      }
+      penunjukPeta?.(kini);
+    };
+    const dariTetikus = (e: PointerEvent) => {
+      const r = svg.getBoundingClientRect();
+      tunjuk(((e.clientX - r.left) / r.width) * T);
+    };
+    svg.addEventListener("pointerdown", dariTetikus);
+    svg.addEventListener("pointermove", dariTetikus);
+    svg.addEventListener("pointerleave", () => tunjuk(null));
+    svg.addEventListener("blur", () => tunjuk(null));
+    svg.addEventListener("keydown", (e) => {
+      const arah = ({ ArrowRight: 1, ArrowLeft: -1 } as Record<string, number>)[
+        e.key
+      ];
+      if (arah) {
+        e.preventDefault();
+        tunjuk((kini ?? 0) + (arah * T) / 50);
+      } else if (e.key === "Escape") tunjuk(null);
+    });
     $("tinggi").hidden = false;
   }
 
@@ -1060,7 +1110,13 @@ const GAYA: {
               id: "bukit",
               type: "hillshade",
               source: "dem-bukit",
-              paint: { "hillshade-exaggeration": 0.4 },
+              // Lembut supaya laluan kekal paling menonjol; cahaya barat laut (lazim peta).
+              paint: {
+                "hillshade-exaggeration": 0.35,
+                "hillshade-illumination-direction": 315,
+                "hillshade-shadow-color": "rgba(10, 26, 51, 0.35)",
+                "hillshade-highlight-color": "rgba(255, 255, 255, 0.3)",
+              },
             },
             label,
           );
@@ -1169,6 +1225,18 @@ const GAYA: {
         el.setAttribute("aria-label", label);
         new ml.Marker({ element: el }).setLngLat(titikNya).addTo(map);
       }
+      if (track) {
+        const el = document.createElement("div");
+        el.className = "penanda penanda-profil";
+        el.setAttribute("aria-hidden", "true"); // jarak + ketinggian dibaca di bawah profil
+        const titikProfil = new ml.Marker({ element: el });
+        penunjukPeta = (d) => {
+          if (d === null) return void titikProfil.remove();
+          const p = track.find((t) => t.distanceM >= d) ?? track.at(-1)!;
+          titikProfil.setLngLat([p.lon, p.lat]);
+          if (!el.isConnected) titikProfil.addTo(map);
+        };
+      }
       if (track && duration && !introDone && !introOn && !introTimer) {
         // Buffer supaya peta sempat muncul; reduced motion terus tunjuk laluan penuh.
         const delay = matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -1215,6 +1283,7 @@ const GAYA: {
   .peta-split {
     display: grid;
     gap: 1rem;
+    margin-bottom: 1rem;
   }
   .peta-split .panel {
     margin-bottom: 0;
@@ -1571,6 +1640,28 @@ const GAYA: {
   }
   .carta.tinggi .garis {
     stroke: var(--navy);
+  }
+  .carta.tinggi svg {
+    cursor: crosshair;
+    touch-action: pan-y; /* seret mendatar = penunjuk, menegak = skrol halaman */
+  }
+  .carta.tinggi svg:focus-visible {
+    outline: 2px solid var(--orange);
+    outline-offset: 2px;
+  }
+  .carta.tinggi .penunjuk {
+    stroke: var(--orange);
+    stroke-width: 2;
+  }
+  .tinggi-baca {
+    min-height: 1.4em;
+    margin: 0;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .peta :global(.penanda-profil) {
+    background: var(--orange);
+    border-color: var(--navy);
   }
   .carta.tinggi .kawasan {
     fill: color-mix(in srgb, var(--navy) 10%, transparent);
