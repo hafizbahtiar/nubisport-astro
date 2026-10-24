@@ -1,6 +1,7 @@
 // bun scripts/check-plan-sync.ts - semak padankan() dalam src/lib/plan-sync.ts (docs/plans/active-plan-sync.md).
 import { matchActivities, planSessions, walkedNote, weeklyLoad, planFromParams, hrMax, VIGOROUS } from "../src/lib/plan-sync";
-import { racePlan, isoDate, RACE_WEEKS } from "../src/lib/plan-5k";
+import { racePlan, isoDate, isWalkDate, RACE_WEEKS } from "../src/lib/plan-5k";
+import { weekHtml } from "../src/lib/plan-render";
 import { DISTANCES } from "../src/lib/distance-plan";
 
 let gagal = 0;
@@ -112,6 +113,25 @@ ok(j && j.length > 0, "pelan 10K dibina");
   const s10 = planSessions("pelan-10k:9-30-p360-3", { jarak: "10k", minggu: "9", hari: "3", masa: "30", pace: "360", mula: "2026-10-26" });
   ok(s10?.length === 27 && s10.some((x) => x.jenis === "interval"), "10K pace = ada sasaran, 9 minggu");
   ok(planSessions("pelan-5k:3-jalan--3", { bulan: "3", tahap: "jalan", hari: "3", mula: "2026-11-02", lumba: "bukan-tarikh" })?.at(-1)!.tarikh === sesi.at(-1)!.tarikh, "lumba rosak diabaikan");
+}
+// Mod jalan sementara: sesi dalam tempoh jadi jalan, walk diterima, ujian kekal lari.
+{
+  const p = { jarak: "10k", minggu: "12", hari: "3", masa: "35", mula: "2026-11-02" };
+  const wPlan = planSessions("pelan-10k:12-35--3", p, "2026-11-05", "2026-11-02")!;
+  const walkSession = wPlan.find((s) => s.tarikh === "2026-11-02")!;
+  ok(walkSession.walk === true && walkSession.tajuk === `Jalan ${walkSession.minit} min`, "mod jalan: sesi jadi jalan");
+  ok(wPlan.filter((s) => s.jenis === "ujian").every((s) => !s.walk), "mod jalan: ujian/lumba tak ditukar");
+  ok(wPlan.find((s) => s.tarikh === "2026-11-09")?.walk !== true, "mod jalan: selepas until tak walk");
+  ok(isWalkDate("2026-11-02", "2026-11-05", "2026-11-02"), "isWalkDate termasuk hari ini");
+  ok(!isWalkDate("2026-11-06", "2026-11-05", "2026-11-02"), "isWalkDate tamat selepas until");
+  const walkActivity = a("2026-11-02T00:00:00Z", "walk", walkSession.minit * 60, 3000, 0.1);
+  ok(id(matchActivities(wPlan, [walkActivity], []), walkActivity) === walkSession.id, "walk padan sesi mod jalan");
+  const runActivity = a("2026-11-02T00:00:00Z", "run", walkSession.minit * 60, 3000, 0.1);
+  ok(id(matchActivities(wPlan, [runActivity], []), runActivity) === walkSession.id, "run masih padan sesi mod jalan");
+  ok(matchActivities(j, [walkActivity], []).padan.size === 0, "walk tak padan sesi lari biasa");
+  const week1 = planFromParams("pelan-10k:12-35--3", p)!.minggu[0];
+  const html = weekHtml(week1, new Date("2026-11-02T00:00:00"), "", "10k", null, "2026-11-05", "2026-11-02");
+  ok(html.includes("Mod jalan") && html.includes("Jalan"), "kad sesi papar mod jalan");
 }
 // Beban mingguan: minit dirancang vs minit run/walk sebenar setiap minggu pelan (Isnin-Ahad, waktu Malaysia).
 {

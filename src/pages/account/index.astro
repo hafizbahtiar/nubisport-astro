@@ -592,7 +592,11 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
       if (href) {
         ($("aktif-buka") as HTMLAnchorElement).href = href.href;
         $("aktif-buka").hidden = false;
-        $("aktif-nota").textContent = href.name;
+        $("aktif-nota").textContent =
+          href.name +
+          (p.walkUntil
+            ? ` · Mod jalan sehingga ${new Date(`${p.walkUntil}T00:00:00`).toLocaleDateString("ms-MY", { day: "numeric", month: "long" })}`
+            : "");
       }
       baris(
         "aktif-seterusnya",

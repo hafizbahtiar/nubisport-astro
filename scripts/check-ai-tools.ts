@@ -27,6 +27,7 @@ for (const name of WRITE_TOOLS) {
 }
 ok(typeof ralat(await runTool("tool-asing", "{}")) === "string", "tool asing ditolak");
 ok(typeof ralat(await runTool("get_plan", '{"key":"tiada"}')) === "string", "pelan asing ditolak");
+ok(typeof ralat(await runTool("set_walk_mode", '{"days":99}')) === "string", "mod jalan hari mesti 0-28");
 const races = await runTool("list_races", "{}");
 ok("result" in races && Array.isArray((races.result as any).races), "list_races pulang senarai");
 ok(typeof ralat(await runTool("get_run_conditions", '{}')) === "string", "run conditions tanpa negeri = ralat jelas");

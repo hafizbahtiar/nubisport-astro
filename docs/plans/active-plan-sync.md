@@ -80,6 +80,30 @@ jalan-lari 0.1/0.2, pelan tanpa tarikh).
 - **Detail aktiviti** (`/account/activities/view`): kalau padan dengan sesi, tunjuk "Sesi pelan: Minggu
   3, Tempo" (dikira semula dari tarikh, tiada storan baru).
 
+## Mod jalan sementara (2026-10-24)
+
+Ahli yang sakit/cedera boleh tukar sesi lari kepada jalan tanpa mengubah tarikh, struktur pelan atau
+tanda siap. Pelan aktif sahaja; satu tempoh pada satu masa.
+
+- Storan: `app_items` aktif (`nubi/active`, kunci `plan`) `data.jalan = YYYY-MM-DD` (tarikh akhir
+  inklusif). Tiada migration / jadual baru. `data.plan` kekal; kunci pelan, param dan progress tak berubah.
+- Tempoh: 7/14 hari dari butang page pelan; AI `set_walk_mode` boleh 1-28 hari, `0` = tamat. Mod tamat
+  sendiri bila `jalan < todayMY()` (data lama diabaikan, tidak perlu dibersihkan).
+- Paparan: sesi `mudah`/`panjang`/`interval`/`tempo`/`jalan-lari` dari hari ini hingga `jalan` jadi
+  "Jalan N min" (tiada pace, tiada pemasa). Sesi `ujian`/lumba **tidak** ditukar. Page pelan, Dashboard,
+  detail aktiviti, `.ics`/kalendar automatik dan `get_training_summary` ikut paparan yang sama.
+- Padanan: sesi `jalan` terima aktiviti `walk` atau `run` (tiada semakan `runRatio`/intensiti); beban
+  minimum 60% minit sesi kekal. Sesi lari biasa kekal seperti sebelum ini.
+- UI: kotak "Kaki sakit? Mod jalan" di page pelan yang ada di awan (`walkHtml` + `mountWalk`), butang
+  7/14 hari, "Lanjut 7 hari" dan "Tamatkan mod jalan". Kalau pelan belum aktif, butang akan jadikan ia
+  aktif dahulu. Page dimuat semula selepas perubahan supaya kad, `.ics` dan kalendar ikut.
+- AI: tool `set_walk_mode` (cadangan + Sahkan) di backend prompt/tool schemas; frontend `prepareWalk`.
+  Ia tidak mengubah pace/tarikh pelan.
+- Semak: `bun scripts/check-plan-sync.ts` (sesi jalan, `ujian` kekal, padanan walk/run, HTML kad).
+
+Tidak termasuk: kira semula baki minggu/tarikh lumba, sesi kekuatan, diagnosis perubatan; jika sakit
+berterusan, jumpa doktor/fisio dan buat pelan baharu.
+
 ## Bukan dalam v1
 
 - Menilai kualiti sesi (pace interval tepat, zon nadi) - hanya "dibuat atau tak".

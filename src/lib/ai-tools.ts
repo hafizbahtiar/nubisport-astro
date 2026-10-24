@@ -11,6 +11,7 @@ import {
   sessionFor,
   sessionLabel,
   setActivePlan,
+  setWalkUntil,
 } from "./plan-sync";
 import { readProfile, saveProfile, type TrainingProfile } from "./profile";
 import { DISTANCES } from "./distance-plan";
@@ -82,6 +83,7 @@ export const WRITE_TOOLS = new Set([
   "rsvp_event",
   "cancel_rsvp",
   "mark_session_done",
+  "set_walk_mode",
 ]);
 
 /** Argumen tool mesti JSON objek; nilai lain = ralat kepada model, bukan throw. */
@@ -380,11 +382,13 @@ async function trainingSummary(args: Record<string, unknown>): Promise<ToolResul
         tarikh: s.tarikh,
         jenis: s.jenis,
         minit: s.minit,
+        jalan: !!s.walk,
         siap: done.has(s.id),
       }));
     plan = {
       nama: info?.name ?? p.kunci,
       href: info?.href ?? "/account/plans",
+      jalan: p.walkUntil,
       siap: done.size,
       jumlah: p.sesi.length,
       sesiSeterusnya: next ? { id: next.id, label: sessionLabel(next), tarikh: next.tarikh } : null,
@@ -479,6 +483,46 @@ async function activityDetail(args: Record<string, unknown>): Promise<ToolOutcom
   }
 }
 
+async function prepareWalk(args: Record<string, unknown>): Promise<ToolOutcome> {
+  const days = Number(args.days);
+  if (!Number.isInteger(days) || days < 0 || days > 28)
+    return errorOutcome("Hari mod jalan mesti 0-28. 0 = tamatkan.");
+  const st = await activePlanState();
+  if (!st.ok)
+    return errorOutcome(
+      st.sebab === "tiada"
+        ? "Tiada pelan aktif. Jadikan pelan aktif dulu."
+        : st.sebab === "enjin"
+          ? "Pelan aktif guna enjin lama. Kemas kini pelan itu dulu."
+          : "Pelan aktif belum ada tarikh mula.",
+    );
+  const until = days ? addDays(todayMY(), days - 1) : null;
+  const info = describePlan(st.plan.kunci);
+  const dateText = until
+    ? new Date(`${until}T00:00:00`).toLocaleDateString("ms-MY", { day: "numeric", month: "long" })
+    : "";
+  return {
+    proposal: {
+      title: days ? `Mod jalan ${days} hari` : "Tamatkan mod jalan",
+      detail: days
+        ? `Sesi lari pelan aktif jadi jalan santai sehingga ${dateText}. Tarikh pelan dan sesi ujian/lumba tak berubah.`
+        : "Sesi lari pelan aktif kembali normal.",
+      ...(info ? { href: info.href, label: "Lihat pelan" } : {}),
+      jalankan: async () => {
+        const ok = await setWalkUntil(until);
+        return ok
+          ? {
+              disimpan: true,
+              jalan: until,
+              message: days ? `Mod jalan ${days} hari disimpan.` : "Mod jalan ditamatkan.",
+              ...(info ? { href: info.href, label: "Lihat pelan" } : {}),
+            }
+          : { ralat: "Mod jalan tak dapat disimpan. Cuba lagi." };
+      },
+    },
+  };
+}
+
 async function prepareMark(args: Record<string, unknown>): Promise<ToolOutcome> {
   const sessionId = textValue(args.sessionId, 20);
   if (!sessionId) return errorOutcome("Sesi yang nak ditanda tiada.");
@@ -524,6 +568,7 @@ export async function runTool(name: string, rawArgs: string): Promise<ToolOutcom
   if (args.ralat) return { result: args };
   try {
     if (name === "mark_session_done") return await prepareMark(args);
+    if (name === "set_walk_mode") return await prepareWalk(args);
     if (name === "update_profile") return await prepareProfile(args);
     if (name === "create_plan" || name === "update_plan") return await preparePlan(name, args);
     if (name === "set_active_plan") return await prepareActive(args);

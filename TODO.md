@@ -407,6 +407,10 @@ API sendiri (Claude, OpenAI, OpenRouter, Command Code) fasa 2.
 - [x] `lib/ai-tools.ts` + `scripts/check-ai-tools.ts`: tool **baca** berjalan dalam pelayar guna API `/me`
   sedia ada (profil, pelan, aktiviti, larian kumpulan); tool tulis masih ditolak.
 - [x] Fasa 1c: tool tulis + kad Sahkan / Batal (tiada tool padam).
+- [x] **Mod jalan sementara** (2026-10-24): ahli sakit/cedera boleh tukar sesi lari jadi jalan 7/14 hari
+  (`data.jalan` pada `nubi/active`, tiada migration; sesi `ujian`/lumba kekal). Kad page pelan, Dashboard,
+  `.ics` dan padanan aktiviti ikut; butang page jadikan pelan awan aktif dahulu; AI tool `set_walk_mode`.
+  Semak `bun scripts/check-plan-sync.ts`. Backend prompt/tool perlu deploy sebelum AI Nubi boleh guna tool ini.
 - [x] **Kad `open_plan` + prompt** (2026-10-24): `list_plans` pulangkan `href`; kad navigasi guna
   `title` (bukan "Selesai"), ditangguh sampai jawapan akhir siap supaya keluar serentak; prompt
   backend larang URL placeholder dan wajib `open_plan`; `get_training_summary` pulangkan `mingguIni`.

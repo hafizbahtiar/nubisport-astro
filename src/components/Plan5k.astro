@@ -103,9 +103,11 @@ const { full = false, mode = "public" } = Astro.props;
     saveToCloud,
   } from "../lib/cloud-sync";
   import {
+    activeWalkFor,
     autoActivateOnly,
     mountActivePlanBox,
     mountActuals,
+    mountWalk,
     planSessionDate,
   } from "../lib/plan-sync";
   import { confirmDialog } from "../lib/confirm";
@@ -125,6 +127,7 @@ const { full = false, mode = "public" } = Astro.props;
     mountResume,
     mountTestForm,
     shareLink,
+    walkHtml,
   } from "../lib/plan-render";
   import { CLOUD_NOTE } from "../data/site";
   import {
@@ -141,6 +144,7 @@ const { full = false, mode = "public" } = Astro.props;
     earliestRaceDate,
     weeksNeeded,
     isoDate,
+    isWalkDate,
     formatPace,
     RACE_WEEKS,
     MIN_WEEKS,
@@ -212,13 +216,13 @@ const { full = false, mode = "public" } = Astro.props;
 
   // "Kemas kini pelan" dari borang edit (view). Kunci datang dari dataset yang papar() set.
   let planGuard: UnsavedGuard | null = null;
-  function updatePlan() {
+  async function updatePlan() {
     const key = borang.dataset.planKey;
     if (!key) return;
     const next = planParamsFromForm(borang, q, key);
     for (const k of [...q.keys()]) q.delete(k);
     next.forEach((v, k) => q.set(k, v));
-    if (!papar()) {
+    if (!(await papar())) {
       hasil.hidden = false; // tunjuk ralat, bukan form kosong
       return;
     }
@@ -239,12 +243,12 @@ const { full = false, mode = "public" } = Astro.props;
       event.preventDefault();
       for (const k of [...q.keys()]) q.delete(k);
       new FormData(borang).forEach((v, k) => q.set(k, String(v)));
-      papar();
+      void papar();
     });
   if (mode === "view")
     borang.addEventListener("submit", (event) => {
       event.preventDefault();
-      updatePlan();
+      void updatePlan();
     });
 
   const masaLabel = masaMedan.querySelector(".field-label")!;
@@ -282,14 +286,18 @@ const { full = false, mode = "public" } = Astro.props;
   // View papar pelan tersimpan tanpa auto-scroll; awam papar bila URL bawa params (tanpa akaun saja -
   // log masuk sedang dilencong ke /new).
   if (viewParams) {
-    if (!papar() && formPanel) formPanel.hidden = false; // params rosak: buka borang
+    void papar().then((ok) => {
+      if (!ok && formPanel) formPanel.hidden = false; // params rosak: buka borang
+    });
   } else if (
     mode === "public" &&
     !logMasuk &&
-    (q.has("bulan") || q.has("lumba")) &&
-    papar()
-  )
-    (pelanEl.querySelector(".kad.kini") ?? hasil).scrollIntoView();
+    (q.has("bulan") || q.has("lumba"))
+  ) {
+    void papar().then((ok) => {
+      if (ok) (pelanEl.querySelector(".kad.kini") ?? hasil).scrollIntoView();
+    });
+  }
 
   if (full && mode !== "public") {
     planGuard = mountUnsavedGuard(borang, {
@@ -338,7 +346,7 @@ const { full = false, mode = "public" } = Astro.props;
     location.replace(href);
   }
 
-  function papar(): boolean {
+  async function papar(): Promise<boolean> {
     hasil.hidden = false;
     const tahap = q.get("tahap") as Level;
     const bulan = Number(q.get("bulan"));
@@ -451,6 +459,11 @@ const { full = false, mode = "public" } = Astro.props;
     }
     const kunci = saved.key;
     borang.dataset.planKey = kunci;
+    const walk = full
+      ? await activeWalkFor(kunci)
+      : { active: false, until: null };
+    const cloud = full ? await listCloud() : null;
+    const walkUntil = walk.active ? walk.until : null;
     // Halaman /new: pelan sudah disimpan - terus ke paparan (bukan kekal pada borang).
     if (mode === "new") {
       void openNewPlan(saved.href, kunci);
@@ -461,6 +474,10 @@ const { full = false, mode = "public" } = Astro.props;
     const isnin = /^\d{4}-\d{2}-\d{2}$/.test(q.get("mula") ?? "")
       ? startMonday(new Date(`${q.get("mula")}T00:00:00`))
       : null;
+    const walkBox =
+      full &&
+      !!isnin &&
+      (walk.active || !!cloud?.items.some((i) => i.key === kunci));
     const hariIni = new Date().toDateString();
     const jumlah = h.minggu.reduce((a, w) => a + w.sesi.length, 0);
     const paces = planPaces(input);
@@ -489,7 +506,8 @@ const { full = false, mode = "public" } = Astro.props;
       </div>
       ${
         full
-          ? `<p class="awan-baris no-print" data-awan></p><p class="awan-baris no-print" data-aktif></p><p class="muted no-print" data-profil hidden></p>`
+          ? `<p class="awan-baris no-print" data-awan></p><p class="awan-baris no-print" data-aktif></p><p class="muted no-print" data-profil hidden></p>
+             ${walkBox ? `<div class="no-print" data-walk>${walkHtml(walk.active ? walk.until : null, walk.active)}</div>` : ""}`
           : `<div class="alert alert-warning no-print"><p>Pelan dan tanda siap disimpan dalam pelayar ini saja (localStorage) - hilang kalau data pelayar dikosongkan atau anda tukar peranti. ${CLOUD_NOTE}</p></div>`
       }
       ${a ? htmlAnalisis(a) : ""}
@@ -523,8 +541,10 @@ const { full = false, mode = "public" } = Astro.props;
           : ""
       }
       <div class="no-print" data-sambung-slot></div>
-      <ol class="minggu">${h.minggu.map((w) => weekHtml(w, isnin, hariIni, "5k", lumba)).join("")}</ol>`;
+      <ol class="minggu">${h.minggu.map((w) => weekHtml(w, isnin, hariIni, "5k", lumba, walkUntil)).join("")}</ol>`;
     mountTimePickers(pelanEl);
+    const walkSlot = pelanEl.querySelector<HTMLElement>("[data-walk]");
+    if (walkSlot) mountWalk(walkSlot, walk.until, kunci);
 
     const kemajuan = document.getElementById("kemajuan")!;
     // Pelan lumba tak dianjak - tarikh lumba tetap (anjak = minggu hilang).
@@ -639,16 +659,22 @@ const { full = false, mode = "public" } = Astro.props;
         "06:30";
       return buildIcs(
         h.minggu.flatMap((w) =>
-          w.sesi.map((s, i) => ({
-            uid: `${kunci.replace(":", "-")}-m${w.no}s${i}`,
-            mula: malaysiaTime(
-              planSessionDate(isnin!, w.no, hari, i, s.jenis, lumbaIso),
-              jam,
-            ),
-            minit: s.minit,
-            tajuk: `Nubi 5K · Minggu ${w.no}: ${s.tajuk} (${s.minit} min)`,
-            keterangan: `${s.arahan}\n${s.usaha}`,
-          })),
+          w.sesi.map((s, i) => {
+            const d = planSessionDate(isnin!, w.no, hari, i, s.jenis, lumbaIso);
+            const walkSession =
+              s.jenis !== "ujian" && isWalkDate(isoDate(d), walkUntil);
+            return {
+              uid: `${kunci.replace(":", "-")}-m${w.no}s${i}`,
+              mula: malaysiaTime(d, jam),
+              minit: s.minit,
+              tajuk: walkSession
+                ? `Nubi 5K · Minggu ${w.no}: Jalan ${s.minit} min`
+                : `Nubi 5K · Minggu ${w.no}: ${s.tajuk} (${s.minit} min)`,
+              keterangan: walkSession
+                ? "Mod jalan: jalan santai; berhenti kalau sakit bertambah."
+                : `${s.arahan}\n${s.usaha}`,
+            };
+          }),
         ),
         { nama: `Nubi 5K · ${tempoh}` },
       );

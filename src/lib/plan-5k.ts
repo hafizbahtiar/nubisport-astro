@@ -1,9 +1,14 @@
 // Pelan "5K bawah 30 minit": fungsi tulen, dikira dalam browser.
 // Semak: bun scripts/check-plan-5k.ts
+import { todayMY } from "./date";
 
 export type Level = "sifar" | "jalan" | "5k";
 export type Phase = "Asas" | "Daya tahan" | "Kelajuan" | "Tirus" | "Ujian";
 export type SessionType = "jalan-lari" | "mudah" | "panjang" | "interval" | "tempo" | "ujian";
+
+/** Mod jalan: sesi hari ini hingga `until` (inklusif), waktu Malaysia. Sesi ujian/lumba tak ditukar. */
+export const isWalkDate = (date: string, until?: string | null, today = todayMY()) =>
+  !!until && date >= today && date <= until;
 
 export interface Session {
   jenis: SessionType;

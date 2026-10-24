@@ -7,7 +7,7 @@ import { todayMY, addDays } from "./date";
 import { DISTANCES, buildDistancePlan, type Distance } from "./distance-plan";
 import { formatDuration, formatKm, paceFromDistance } from "./activity-file";
 import { icon } from "./icon";
-import { buildPlan, startMonday, isoDate, sessionDate, formatPace, type SessionType, type Segment, type Week, type Level } from "./plan-5k";
+import { buildPlan, startMonday, isoDate, isWalkDate, sessionDate, formatPace, type SessionType, type Segment, type Week, type Level } from "./plan-5k";
 import { readList, writeList } from "./saved-plans";
 import { ENGINE_VERSION, syncProgress, listCloud, saveToCloud, pullCloud } from "./cloud-sync";
 import { readProfile, ageOn } from "./profile";
@@ -23,6 +23,7 @@ export interface PlanSession {
   jarakM: number; // jarak lumba/ujian pelan ini (dipakai bila jenis "ujian")
   segmen?: Segment[]; // langkah pemasa - untuk semakan interval/tempo dari fail FIT
   usaha: string; // teks usaha; pace sasaran interval/tempo ada di sini
+  walk?: boolean; // mod jalan sementara: aktiviti jalan diterima, tiada semakan nisbah lari
 }
 export interface MatchableActivity {
   startedAt: string; // UTC
@@ -78,7 +79,7 @@ export function planSessionDate(isnin: Date, w: number, hari: number, i: number,
 }
 
 /** Sesi bertarikh dari kunci + parameter pelan awan. null = tiada tarikh mula / pelan tidak sah. */
-export function planSessions(kunci: string, p: Record<string, string>): PlanSession[] | null {
+export function planSessions(kunci: string, p: Record<string, string>, walkUntil?: string | null, today = todayMY()): PlanSession[] | null {
   if (!ISO.test(p.mula ?? "")) return null;
   const h = planFromParams(kunci, p);
   if (!h) return null;
@@ -86,17 +87,22 @@ export function planSessions(kunci: string, p: Record<string, string>): PlanSess
   const jarakM = jenis === "5k" ? 5000 : DISTANCES[jenis].km * 1000;
   const isnin = startMonday(new Date(`${p.mula}T00:00:00`));
   return h.minggu.flatMap((w) =>
-    w.sesi.map((s, i) => ({
-      id: `${w.no}.${i}`,
-      minggu: w.no,
-      tarikh: isoDate(planSessionDate(isnin, w.no, hari, i, s.jenis, p.lumba)),
-      jenis: s.jenis,
-      minit: s.minit,
-      tajuk: s.tajuk,
-      jarakM,
-      segmen: s.segmen,
-      usaha: s.usaha,
-    })),
+    w.sesi.map((s, i) => {
+      const tarikh = isoDate(planSessionDate(isnin, w.no, hari, i, s.jenis, p.lumba));
+      const walk = s.jenis !== "ujian" && isWalkDate(tarikh, walkUntil, today);
+      return {
+        id: `${w.no}.${i}`,
+        minggu: w.no,
+        tarikh,
+        jenis: s.jenis,
+        minit: s.minit,
+        tajuk: walk ? `Jalan ${s.minit} min` : s.tajuk,
+        jarakM,
+        segmen: walk ? undefined : s.segmen,
+        usaha: walk ? "Jalan santai; berhenti kalau sakit bertambah." : s.usaha,
+        ...(walk ? { walk: true } : {}),
+      };
+    }),
   );
 }
 
@@ -105,9 +111,11 @@ const hariAntara = (a: string, b: string) => Math.abs(Date.parse(a) - Date.parse
 const weekOf = (sesi: PlanSession[], d: string) =>
   sesi.find((s) => s.id.endsWith(".0") && s.tarikh <= d && d < addDays(s.tarikh, 7))?.minggu;
 const sesuai = (s: PlanSession, a: MatchableActivity, nisbah: boolean, umur?: number | null) =>
-  (a.sport === "run" || (a.sport === "walk" && s.jenis === "jalan-lari")) &&
-  !easyForQuality(s, a, umur) &&
-  (!nisbah || a.runRatio == null || a.runRatio >= (s.jenis === "jalan-lari" ? 0.15 : 0.7)) &&
+  (s.walk
+    ? a.sport === "run" || a.sport === "walk"
+    : a.sport === "run" || (a.sport === "walk" && s.jenis === "jalan-lari")) &&
+  (s.walk || !easyForQuality(s, a, umur)) &&
+  (s.walk || !nisbah || a.runRatio == null || a.runRatio >= (s.jenis === "jalan-lari" ? 0.15 : 0.7)) &&
   (s.jenis === "ujian" ? a.distanceM >= 0.95 * s.jarakM : a.movingS >= 0.6 * s.minit * 60);
 
 // Hari sama dahulu untuk semua aktiviti, kemudian tarikh paling hampir dalam minggu pelan yang sama
@@ -170,26 +178,94 @@ export const isMember = (s: CurrentUser | null) => s?.role === "owner" || s?.app
 
 const AKTIF = "/me/apps/nubi/active";
 const AKTIVITI = "/me/apps/nubi/activities";
-let aktif: Promise<string | null> | null = null;
-/** Kunci pelan aktif (satu permintaan setiap page), atau null. */
-export const activePlanKey = () =>
+interface ActivePointer {
+  plan: string | null;
+  walkUntil: string | null;
+}
+let aktif: Promise<ActivePointer | null> | null = null;
+const pointer = () =>
 (aktif ??= api(AKTIF)
-  .then(async (r) => (r.ok ? (((await json(r)).data?.items?.[0]?.data?.plan as string) ?? null) : null))
+  .then(async (r) => {
+    if (!r.ok) return null;
+    const data = ((await json(r)).data?.items?.[0]?.data ?? {}) as Record<string, unknown>;
+    return {
+      plan: typeof data.plan === "string" ? data.plan : null,
+      walkUntil: typeof data.jalan === "string" && ISO.test(data.jalan) ? data.jalan : null,
+    };
+  })
   .catch(() => null));
+const validWalk = (v: string | null) => (v && v >= todayMY() ? v : null);
+/** Kunci pelan aktif (satu permintaan setiap page), atau null. */
+export const activePlanKey = async () => (await pointer())?.plan ?? null;
+/** Tarikh akhir mod jalan pelan aktif; null = tiada / dah tamat. */
+export const activeWalkUntil = async () => validWalk((await pointer())?.walkUntil ?? null);
 
-type ActivePlan = { kunci: string; sesi: PlanSession[]; umur: number | null };
+type ActivePlan = { kunci: string; sesi: PlanSession[]; umur: number | null; walkUntil: string | null };
 /** Kenapa pelan aktif tak boleh dipadankan: tiada / bukan di awan, enjin lama, tiada tarikh mula. */
 export type ActivePlanState = { ok: true; plan: ActivePlan } | { ok: false; sebab: "tiada" | "enjin" | "mula" };
 
 /** Pelan aktif + sebab kalau tak boleh dipadankan (dipapar di page pelan, bukan "Tak dapat sync"). */
 export async function activePlanState(): Promise<ActivePlanState> {
-  const [k, a, profil] = await Promise.all([activePlanKey(), pullCloud(), readProfile()]);
-  const p = k ? a?.items.find((i) => i.key === k) : undefined;
-  if (!p) return { ok: false, sebab: "tiada" };
-  if (p.engine !== ENGINE_VERSION) return { ok: false, sebab: "enjin" };
-  const sesi = planSessions(p.key, p.data);
+  const [p, a, profil] = await Promise.all([pointer(), pullCloud(), readProfile()]);
+  const plan = p?.plan ? a?.items.find((i) => i.key === p.plan) : undefined;
+  if (!plan) return { ok: false, sebab: "tiada" };
+  if (plan.engine !== ENGINE_VERSION) return { ok: false, sebab: "enjin" };
+  const walkUntil = validWalk(p?.walkUntil ?? null);
+  const sesi = planSessions(plan.key, plan.data, walkUntil);
   if (!sesi) return { ok: false, sebab: "mula" };
-  return { ok: true, plan: { kunci: p.key, sesi, umur: profil.lahir ? ageOn(profil.lahir) : null } };
+  return { ok: true, plan: { kunci: plan.key, sesi, umur: profil.lahir ? ageOn(profil.lahir) : null, walkUntil } };
+}
+
+/** Set/clear mod jalan pelan aktif. `until` = tarikh akhir inklusif (YYYY-MM-DD); null = tamat. */
+export async function setWalkUntil(until: string | null): Promise<boolean> {
+  const p = await pointer();
+  if (!p?.plan) return false;
+  const end = until && ISO.test(until) ? until : null;
+  const data: Record<string, string> = { plan: p.plan };
+  if (end) data.jalan = end;
+  const r = await api(`${AKTIF}/plan`, {
+    method: "PUT",
+    body: JSON.stringify({ engine: ENGINE_VERSION, data, progress: [] }),
+  }).catch(() => null);
+  if (!r?.ok) return false;
+  aktif = Promise.resolve({ plan: p.plan, walkUntil: end });
+  return true;
+}
+
+/** Mod jalan untuk satu pelan: jadikan aktif dahulu kalau perlu, kemudian set tarikh. */
+export async function setWalkForPlan(key: string, until: string | null): Promise<boolean> {
+  const p = await pointer();
+  if (p?.plan !== key && (await setActivePlan(key)) === null) return false;
+  return setWalkUntil(until);
+}
+
+/** Untuk page pelan: pelan ini aktif? kalau ya, tarikh akhir mod jalan. */
+export async function activeWalkFor(key: string): Promise<{ active: boolean; until: string | null }> {
+  const p = await pointer();
+  return p?.plan === key
+    ? { active: true, until: validWalk(p.walkUntil) }
+    : { active: false, until: null };
+}
+
+/** Butang mod jalan di page pelan: 7/14 hari, lanjut 7 hari, atau tamat. */
+export function mountWalk(slot: HTMLElement, until: string | null, key: string) {
+  slot.addEventListener("click", async (e) => {
+    const b = (e.target as Element).closest<HTMLButtonElement>("[data-jalan], [data-jalan-tamat], [data-jalan-lanjut]");
+    if (!b) return;
+    const days = b.dataset.jalan ? Number(b.dataset.jalan) : 0;
+    const next = b.hasAttribute("data-jalan-tamat")
+      ? null
+      : b.hasAttribute("data-jalan-lanjut") && until
+        ? addDays(until, 7)
+        : addDays(todayMY(), Math.max(1, days) - 1);
+    b.disabled = true;
+    if (!(await setWalkForPlan(key, next))) {
+      b.disabled = false;
+      b.textContent = "Gagal - cuba lagi";
+      return;
+    }
+    location.reload();
+  });
 }
 
 /** Pelan aktif yang boleh dipadankan: di awan, ada tarikh mula, enjin semasa. Selain itu null. */
@@ -316,7 +392,7 @@ export async function setActivePlan(kunci: string): Promise<number | null> {
     body: JSON.stringify({ engine: ENGINE_VERSION, data: { plan: kunci }, progress: [] }),
   }).catch(() => null);
   if (!r?.ok) return null;
-  aktif = Promise.resolve(kunci);
+  aktif = Promise.resolve({ plan: kunci, walkUntil: null });
   const p = await activePlan();
   if (!p) return 0;
   return (await tanda(p))?.baru ?? 0;
@@ -426,7 +502,7 @@ export async function mountActuals(akar: HTMLElement, kunci: string, loadBar: (w
       formatDuration(a.movingS),
       paceFromDistance(a.distanceM, a.movingS),
       a.avgHr ? `${Math.round(a.avgHr)} bpm` : null,
-      a.runRatio != null ? `${Math.round(a.runRatio * 100)}% lari` : null,
+      s.walk ? "sesi jalan" : a.runRatio != null ? `${Math.round(a.runRatio * 100)}% lari` : null,
     ].filter(Boolean);
     el.innerHTML = `${icon("aktiviti")}<span>Strava: ${bahagian.join(" · ")}</span> <a class="link" href="/account/activities/view?id=${Number(a.id)}">Lihat</a>`;
     el.hidden = false;

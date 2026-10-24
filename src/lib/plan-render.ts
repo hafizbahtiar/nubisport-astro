@@ -6,6 +6,7 @@ import { inRamadan } from "./ramadan";
 import {
   SESSION_DAYS,
   isoDate,
+  isWalkDate,
   resumePoint,
   DAY_NAMES,
   sessionDate,
@@ -43,7 +44,7 @@ export function analysisHtml(a: Analysis, ganti?: string) {
  * `lumba` = tarikh lumba sebenar: kad hari lumba ikut tarikh itu, sesi lain dianjak (raceShift).
  * Slot `data-beban` / `data-sebenar` diisi oleh mountActuals (lib/plan-sync.ts) untuk pelan aktif.
  */
-export function weekHtml(w: Week, isnin: Date | null, hariIni: string, ujian?: TestDistance, lumba?: Date | null) {
+export function weekHtml(w: Week, isnin: Date | null, hariIni: string, ujian?: TestDistance, lumba?: Date | null, walkUntil?: string | null, todayWalk?: string) {
   const hari = w.sesi.length;
   const tarikh = (i: number) => (lumba && w.sesi[i].jenis === "ujian" ? lumba : isnin && sessionDate(isnin, w.no, hari, i, lumba));
   const isninIni = tarikh(0)?.getTime(); // sesi pertama = awal minggu itu (Isnin, atau dianjak ikut hari lumba)
@@ -67,17 +68,19 @@ export function weekHtml(w: Week, isnin: Date | null, hariIni: string, ujian?: T
             ? ` ${d.toLocaleDateString("ms-MY", { day: "numeric", month: "short" })}`
             : "");
         const today = d?.toDateString() === hariIni;
-        const puasa = d ? inRamadan(isoDate(d)) : false;
-        return `<li class="sesi ${s.jenis}${today ? " hari-ini" : ""}">
+        const tarikhIso = d ? isoDate(d) : "";
+        const puasa = !!tarikhIso && inRamadan(tarikhIso);
+        const walk = s.jenis !== "ujian" && isWalkDate(tarikhIso, walkUntil, todayWalk);
+        return `<li class="sesi ${s.jenis}${walk ? " mod-jalan" : ""}${today ? " hari-ini" : ""}">
           <label>
             <input type="checkbox" data-sesi="${w.no}.${i}" aria-label="Minggu ${w.no}, ${label}, siap" />
             <span>
-              <strong>${today ? "Hari ini · " : ""}${label}: ${s.tajuk}</strong> <em>${s.minit} min</em>${puasa ? ' <span class="tag">Puasa</span>' : ""}
-              <span class="arahan">${s.arahan}</span>
-              <span class="usaha">${s.usaha.replace(/~\S+\/km/g, (m) => `<span class="nw">${m}</span>`)}${puasa ? " · Hari puasa: ringankan sesi ini, hidrasi lepas berbuka." : ""}</span>
+              <strong>${today ? "Hari ini · " : ""}${label}: ${walk ? `Jalan ${s.minit} min` : s.tajuk}</strong> <em>${s.minit} min</em>${walk ? ' <span class="tag">Mod jalan</span>' : ""}${puasa ? ' <span class="tag">Puasa</span>' : ""}
+              <span class="arahan">${walk ? `Jalan santai ${s.minit} min. Tak perlu kejar pace.` : s.arahan}</span>
+              <span class="usaha">${walk ? "Mod jalan: berhenti kalau sakit bertambah." : s.usaha.replace(/~\S+\/km/g, (m) => `<span class="nw">${m}</span>`)}${puasa ? " · Hari puasa: ringankan sesi ini, hidrasi lepas berbuka." : ""}</span>
             </span>
           </label>
-          <p class="sebenar" data-sebenar="${w.no}.${i}" hidden></p>${s.segmen
+          <p class="sebenar" data-sebenar="${w.no}.${i}" hidden></p>${s.segmen && !walk
             ? `<button class="btn-mula no-print" type="button" data-mula="${w.no}.${i}" data-tajuk="${s.tajuk}" data-usaha="${s.usaha.replace(/"/g, "&quot;")}" data-segmen='${JSON.stringify(s.segmen)}'>${icon("main")}Mula pemasa</button>`
             : ""
           }${s.jenis === "ujian" && ujian
@@ -93,6 +96,29 @@ export function weekHtml(w: Week, isnin: Date | null, hariIni: string, ujian?: T
       })
       .join("")}</ol>
   </li>`;
+}
+
+/** Kotak mod jalan sementara untuk pelan aktif; butang dikendalikan lib/plan-sync.ts mountWalk. */
+export function walkHtml(until: string | null, active = true) {
+  const dateText = until
+    ? new Date(`${until}T00:00:00`).toLocaleDateString("ms-MY", { day: "numeric", month: "long" })
+    : "";
+  return `<div class="alert alert-info no-print">
+    <p class="alert-title">${until ? `Mod jalan sehingga ${dateText}` : "Kaki sakit? Mod jalan"}</p>
+    <p>${until
+      ? "Sesi lari dalam tempoh ini dipaparkan sebagai jalan santai. Tarikh dan struktur pelan tak berubah; sesi ujian/lumba kekal."
+      : "Tukar sesi lari kepada jalan santai buat sementara. Tarikh dan struktur pelan tak berubah; sesi ujian/lumba kekal."
+    }</p>
+    ${active ? "" : '<p class="muted">Pelan ini akan dijadikan aktif bila anda pilih.</p>'}
+    <div class="actions">
+      ${until
+      ? `<button class="btn btn-outline btn-sm" type="button" data-jalan-lanjut>Lanjut 7 hari</button>
+           <button class="btn btn-outline btn-sm" type="button" data-jalan-tamat>Tamatkan mod jalan</button>`
+      : `<button class="btn btn-primary btn-sm" type="button" data-jalan="7">Mod jalan 7 hari</button>
+           <button class="btn btn-outline btn-sm" type="button" data-jalan="14">14 hari</button>`
+    }
+    </div>
+  </div>`;
 }
 
 type Paces = { mudah?: [number, number]; tempo?: [number, number]; interval?: [number, number]; lumba: number };
