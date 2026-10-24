@@ -277,10 +277,10 @@ Item yang dah siap dibuang (lihat git history).
   `bun scripts/check-activity-summary.ts`, `bun scripts/check-badges.ts`, backend
   `bun scripts/verify-nubi-badges.ts`.
 
-- [x] **Main semula laluan aktiviti** (2026-10-23): peta detail ada replay dari track FIT
-  (`trackOf`/`trackAt`), Main/Pause, 1×-8×, slider masa, marker bergerak dan progress line; tiada
-  endpoint/migration baru. Intro auto ~3 s dari mula ke akhir bila peta pertama dibuka (batal bila
-  pengguna tekan Main/slider; reduced motion = terus penuh). Semak `bun scripts/check-activity-file.ts`.
+- [x] **Animasi laluan aktiviti** (2026-10-23, dipermudah 2026-10-24): peta detail ada animasi dari track FIT
+  (`trackOf`/`trackAt`) - intro auto ~3 s dan butang Main mengulanginya. Tiada replay masa sebenar,
+  slider atau kelajuan. Marker bergerak + progress line; reduced motion = terus penuh.
+  Semak `bun scripts/check-activity-file.ts`.
 - [x] **Detail aktiviti lambat** (`/account/activities/view`, didiagnosis 2026-10-23, dibaiki): `mula()`
   berjalan satu demi satu - `/me` -> baris aktiviti -> fail `.fit` (R2) -> parser FIT 430 KB baru dimuat ->
   tunggu pelan -> **baru** maplibre 1.1 MB + gaya + tiles. Baiki: (1) mula `import("maplibre-gl")` + parser FIT

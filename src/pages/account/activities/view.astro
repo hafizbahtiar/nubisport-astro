@@ -134,59 +134,16 @@ const GAYA: {
             </fieldset>
           </div>
         </dialog>
-        <div
-          class="main-semula"
-          id="main-semula"
-          role="group"
-          aria-label="Main semula laluan"
-          hidden
-        >
+        <div class="main-semula" id="main-semula" hidden>
           <button
             class="main-main"
             id="main-main"
             type="button"
-            aria-label="Main laluan"
-            aria-pressed="false"
+            aria-label="Main semula animasi laluan"
           >
-            <span id="main-main-ikon" aria-hidden="true"
-              ><Icon name="main" /></span
-            >
-            <span id="main-main-teks">Main</span>
+            <span aria-hidden="true"><Icon name="main" /></span>
+            <span>Main</span>
           </button>
-          <button
-            class="main-reset"
-            id="main-reset"
-            type="button"
-            aria-label="Mula semula"
-            title="Mula semula"
-          >
-            <Icon name="kiri" />
-          </button>
-          <span class="main-masa" id="main-masa" aria-live="polite"
-            >0:00 / 0:00</span
-          >
-          <label class="sr-only" for="main-slider">Kedudukan masa</label>
-          <input
-            class="main-slider"
-            id="main-slider"
-            type="range"
-            min="0"
-            max="1000"
-            value="0"
-            step="1"
-            aria-label="Kedudukan masa"
-          />
-          <label class="sr-only" for="main-laju">Kelajuan main semula</label>
-          <select
-            class="main-laju"
-            id="main-laju"
-            aria-label="Kelajuan main semula"
-          >
-            <option value="1">1×</option>
-            <option value="2">2×</option>
-            <option value="4">4×</option>
-            <option value="8">8×</option>
-          </select>
         </div>
       </div>
       <p class="muted" id="peta-status">Memuatkan laluan…</p>
@@ -215,13 +172,14 @@ const GAYA: {
 
     <section class="panel" id="split" aria-labelledby="split-tajuk" hidden>
       <h3 class="display" id="split-tajuk">Split setiap km</h3>
-      <ul class="split" id="split-senarai"></ul>
+      <ul class="split split-pace" id="split-senarai"></ul>
       <div id="best" hidden>
         <h4 class="sub">Best effort</h4>
         <ul class="split" id="best-senarai"></ul>
       </div>
       <p class="muted kecil">
-        Masa bergerak dari rekod FIT. Split terakhir mungkin separa km.
+        Masa bergerak dari rekod FIT. Bar lebih panjang = split lebih laju.
+        Split terakhir mungkin separa km.
       </p>
     </section>
 
@@ -547,6 +505,12 @@ const GAYA: {
   /** Split setiap km + best effort dari rekod FIT. */
   function pecahan(splits: Split[], best: BestEffort[]) {
     if (!splits.length) return;
+    const paces = splits
+      .map((s) => s.pace)
+      .filter((p): p is number => p !== null);
+    const lajuMin = paces.length ? Math.min(...paces) : 0;
+    const lajuMax = paces.length ? Math.max(...paces) : 0;
+    const julat = lajuMax - lajuMin;
     $("split-senarai").replaceChildren(
       ...splits.map((s) => {
         const li = document.createElement("li");
@@ -556,11 +520,23 @@ const GAYA: {
           s.distanceM >= 999 ? `KM ${s.km}` : formatKm(s.distanceM);
         const pace = document.createElement("strong");
         pace.textContent = s.pace !== null ? `${formatPace(s.pace)}/km` : "-";
+        const bar = document.createElement("span");
+        bar.className = "split-bar";
+        bar.setAttribute("aria-hidden", "true");
+        const isi = document.createElement("i");
+        const pct =
+          s.pace === null || !paces.length
+            ? 0
+            : julat === 0
+              ? 100
+              : Math.round(40 + (60 * (lajuMax - s.pace)) / julat);
+        isi.style.width = `${pct}%`;
+        bar.append(isi);
         const naik = document.createElement("span");
-        naik.className = "muted";
+        naik.className = "muted split-naik";
         naik.textContent =
           s.elevationGainM >= 1 ? `+${Math.round(s.elevationGainM)} m` : "";
-        li.append(label, pace, naik);
+        li.append(label, pace, bar, naik);
         return li;
       }),
     );
@@ -729,42 +705,15 @@ const GAYA: {
         },
       });
 
-      // Replay peta: track hanya ada bila FIT mempunyai GPS + timestamp. Tanpa track, route biasa
-      // masih dipaparkan dan kawalan replay kekal tersembunyi.
+      // Animasi laluan: track hanya ada bila FIT mempunyai GPS + timestamp. Tanpa track,
+      // route biasa masih dipaparkan dan butang Main kekal tersembunyi.
       const mainBox = $("main-semula");
       const mainButton = $("main-main") as HTMLButtonElement;
-      const mainIcon = $("main-main-ikon");
-      const mainText = $("main-main-teks");
-      const mainReset = $("main-reset") as HTMLButtonElement;
-      const mainTime = $("main-masa");
-      const mainSlider = $("main-slider") as HTMLInputElement;
-      const mainSpeed = $("main-laju") as HTMLSelectElement;
       const duration = track?.at(-1)?.t ?? 0;
-      let replayTime = 0;
-      let replayPlaying = false;
-      let replaySpeed = 1;
-      let replayRaf = 0;
-      let replayLast = 0;
+      let animTime = 0;
       let playMarker: Marker | null = null;
+      let playDir: HTMLElement | null = null;
 
-      const clock = (seconds: number) => {
-        const total = Math.max(0, Math.round(seconds));
-        const h = Math.floor(total / 3600);
-        const m = Math.floor((total % 3600) / 60);
-        const s = total % 60;
-        return h
-          ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
-          : `${m}:${String(s).padStart(2, "0")}`;
-      };
-      const updateMain = () => {
-        mainButton.setAttribute("aria-pressed", String(replayPlaying));
-        mainButton.setAttribute(
-          "aria-label",
-          replayPlaying ? "Jeda" : "Main laluan",
-        );
-        mainIcon.innerHTML = icon(replayPlaying ? "jeda" : "main");
-        mainText.textContent = replayPlaying ? "Jeda" : "Main";
-      };
       function drawTrack(seconds: number) {
         if (!track || !duration || !map.getSource("main-kemajuan")) return;
         const pos = trackAt(track, seconds);
@@ -786,16 +735,23 @@ const GAYA: {
           geometry: { type: "LineString", coordinates },
         });
         playMarker?.setLngLat([pos.lon, pos.lat]);
-        mainSlider.value = String(Math.round((seconds / duration) * 1000));
-        mainTime.textContent = `${clock(seconds)} / ${clock(duration)}`;
-        mainSlider.setAttribute(
-          "aria-valuetext",
-          `${clock(seconds)} / ${clock(duration)}`,
-        );
+        const a = track[Math.max(0, pos.index - 1)];
+        const b = track[Math.min(track.length - 1, pos.index + 1)];
+        if (playDir && a && b && (a.lat !== b.lat || a.lon !== b.lon)) {
+          const rad = Math.PI / 180;
+          const y = Math.sin((b.lon - a.lon) * rad) * Math.cos(b.lat * rad);
+          const x =
+            Math.cos(a.lat * rad) * Math.sin(b.lat * rad) -
+            Math.sin(a.lat * rad) *
+              Math.cos(b.lat * rad) *
+              Math.cos((b.lon - a.lon) * rad);
+          const deg = (Math.atan2(y, x) * 180) / Math.PI - map.getBearing();
+          playDir.style.transform = `rotate(${deg}deg)`;
+        }
       }
 
-      // Intro: sapuan dari mula ke akhir ~3 s, bukan masa sebenar. Batal bila pengguna
-      // tekan Main/slider/reset. Reduced motion = terus tunjuk laluan penuh.
+      // Intro: sapuan dari mula ke akhir ~3 s, bukan masa sebenar. Butang Main
+      // mengulang animasi ini. Reduced motion = terus tunjuk laluan penuh.
       const setRoute = (visible: boolean, color: string) => {
         if (map.getLayer("laluan"))
           map.setLayoutProperty(
@@ -814,33 +770,39 @@ const GAYA: {
       };
       const showFull = () => {
         setRoute(true, "#fff");
-        replayTime = duration;
+        animTime = duration;
         drawTrack(duration);
       };
       let introRaf = 0;
       let introOn = false;
       let introStarted = false;
-      const stopIntro = () => {
-        if (!introOn) return;
+      const cancelIntro = () => {
         introOn = false;
         cancelAnimationFrame(introRaf);
         introRaf = 0;
+      };
+      const stopIntro = () => {
+        if (!introOn) return;
+        cancelIntro();
         showFull();
       };
       const intro = () => {
         if (!track || !duration) return;
+        cancelIntro();
         if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
           showFull();
           return;
         }
         setRoute(false, oren);
+        animTime = 0;
+        drawTrack(0);
         const mula = performance.now();
         introOn = true;
         const langkah = (now: number) => {
           if (!introOn) return;
           const f = Math.min(1, (now - mula) / 3000);
-          replayTime = f * duration;
-          drawTrack(replayTime);
+          animTime = f * duration;
+          drawTrack(animTime);
           if (f < 1) introRaf = requestAnimationFrame(langkah);
           else {
             introOn = false;
@@ -849,61 +811,12 @@ const GAYA: {
         };
         introRaf = requestAnimationFrame(langkah);
       };
-      const stopReplay = () => {
-        replayPlaying = false;
-        cancelAnimationFrame(replayRaf);
-        replayLast = 0;
-        updateMain();
-      };
-      const tick = (now: number) => {
-        if (!replayPlaying) return;
-        if (!replayLast) replayLast = now;
-        const delta = Math.min(0.25, (now - replayLast) / 1000);
-        replayLast = now;
-        replayTime = Math.min(duration, replayTime + delta * replaySpeed);
-        drawTrack(replayTime);
-        if (replayTime >= duration) {
-          replayPlaying = false;
-          updateMain();
-          return;
-        }
-        replayRaf = requestAnimationFrame(tick);
-      };
-      const startReplay = () => {
-        stopIntro();
-        if (!track || !duration) return;
-        if (replayTime >= duration) replayTime = 0;
-        replayPlaying = true;
-        replayLast = 0;
-        updateMain();
-        replayRaf = requestAnimationFrame(tick);
-      };
 
-      mainButton.addEventListener("click", () =>
-        replayPlaying ? stopReplay() : startReplay(),
-      );
-      mainReset.addEventListener("click", () => {
-        stopIntro();
-        stopReplay();
-        replayTime = 0;
-        drawTrack(0);
-      });
-      mainSlider.addEventListener("input", () => {
-        const v = Number(mainSlider.value);
-        stopIntro();
-        stopReplay();
-        replayTime = (v / 1000) * duration;
-        drawTrack(replayTime);
-      });
-      mainSpeed.addEventListener("change", () => {
-        replaySpeed = Number(mainSpeed.value) || 1;
-        replayLast = 0;
-      });
+      mainButton.addEventListener("click", intro);
       document.addEventListener("visibilitychange", () => {
-        if (!document.hidden) return;
-        stopIntro();
-        if (replayPlaying) stopReplay();
+        if (document.hidden) stopIntro();
       });
+      map.on("rotate", () => drawTrack(animTime));
 
       // Kawalan sendiri = butang biasa dalam kumpulan kawalan MapLibre -> gaya sama dengan zum/skrin penuh.
       const butang = (label: string, isi: string, klik: () => void) => {
@@ -1021,14 +934,14 @@ const GAYA: {
           type: "line",
           source: "laluan",
           layout: garis,
-          paint: { "line-color": "#fff", "line-width": 7 },
+          paint: { "line-color": "#fff", "line-width": 9 },
         });
         map.addLayer({
           id: "laluan",
           type: "line",
           source: "laluan",
           layout: garis,
-          paint: { "line-color": oren, "line-width": 4 },
+          paint: { "line-color": oren, "line-width": 5 },
         });
         if (track && track.length >= 2) {
           map.addSource("main-kemajuan", {
@@ -1044,7 +957,7 @@ const GAYA: {
             type: "line",
             source: "main-kemajuan",
             layout: garis,
-            paint: { "line-color": "#fff", "line-width": 6 },
+            paint: { "line-color": "#fff", "line-width": 8 },
           });
           if (!playMarker) {
             const el = document.createElement("div");
@@ -1052,12 +965,20 @@ const GAYA: {
             el.title = "Kedudukan semasa";
             el.setAttribute("role", "img");
             el.setAttribute("aria-label", "Kedudukan semasa");
+            const arah = document.createElement("span");
+            arah.className = "main-arah";
+            arah.setAttribute("aria-hidden", "true");
+            const kepala = document.createElement("span");
+            kepala.className = "main-anak-panah";
+            arah.append(kepala);
+            el.append(arah);
+            playDir = arah;
             playMarker = new ml.Marker({ element: el, anchor: "center" })
               .setLngLat(lonLat[0])
               .addTo(map);
           }
           mainBox.hidden = false;
-          drawTrack(replayTime);
+          drawTrack(animTime);
           if (introOn) setRoute(false, oren);
           if (!introStarted) {
             introStarted = true;
@@ -1157,13 +1078,31 @@ const GAYA: {
     box-shadow: 0 0 0 1px rgb(0 0 0 / 0.25);
   }
   .peta :global(.main-titik) {
-    width: 16px;
-    height: 16px;
+    position: relative;
+    width: 22px;
+    height: 22px;
     border: 3px solid #fff;
     border-radius: 50%;
     background: var(--orange);
     box-shadow: 0 0 0 2px rgb(10 26 51 / 0.35);
     animation: main-titik-nadi 1.4s ease-out infinite;
+  }
+  .peta :global(.main-arah) {
+    position: absolute;
+    inset: -3px;
+    transform-origin: 50% 50%;
+  }
+  .peta :global(.main-anak-panah) {
+    position: absolute;
+    top: -7px;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-right: 5px solid transparent;
+    border-bottom: 9px solid var(--orange);
+    border-left: 5px solid transparent;
+    transform: translateX(-50%);
+    filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff);
   }
   @keyframes main-titik-nadi {
     0%,
@@ -1184,86 +1123,43 @@ const GAYA: {
     }
   }
 
-  /* Replay: overlay bawah-kiri peta; kekal dalam skrin penuh. */
+  /* Main: overlay bawah-kiri peta; kekal dalam skrin penuh. */
   .main-semula {
     position: absolute;
     left: 0.75rem;
     bottom: 0.75rem;
     z-index: 2;
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.4rem 0.55rem;
-    max-width: min(38rem, calc(100% - 6rem));
-    padding: 0.45rem 0.55rem;
+    padding: 0.35rem;
     border: 1px solid var(--line);
-    border-radius: var(--radius);
+    border-radius: 999px;
     background: var(--paper);
     box-shadow: 0 0.5rem 1.25rem rgb(10 26 51 / 0.18);
   }
-  .main-main,
-  .main-reset {
+  .main-main {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    min-height: 2.5rem;
+    gap: 0.35rem;
+    min-height: 2.75rem;
+    padding: 0 0.9rem;
     border: 0;
     border-radius: 999px;
-    cursor: pointer;
-  }
-  .main-main {
-    gap: 0.35rem;
-    padding: 0 0.7rem;
     background: var(--navy);
     color: var(--on-dark);
     font: 700 0.8rem / 1 var(--body);
+    cursor: pointer;
   }
-  .main-main[aria-pressed="true"] {
+  .main-main:hover {
     background: var(--orange);
   }
-  .main-main:focus-visible,
-  .main-reset:focus-visible,
-  .main-laju:focus-visible,
-  .main-slider:focus-visible {
+  .main-main:focus-visible {
     outline: 3px solid var(--orange);
     outline-offset: 2px;
   }
-  .main-reset {
-    width: 2.5rem;
-    padding: 0;
-    background: var(--paper-2);
-    color: var(--ink);
-  }
-  .main-masa {
-    color: var(--muted);
-    font-size: 0.78rem;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-  }
-  .main-slider {
-    flex: 1 1 7rem;
-    min-width: 4.5rem;
-    accent-color: var(--orange);
-  }
-  .main-laju {
-    min-height: 2.5rem;
-    padding: 0 0.4rem;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    background: var(--paper);
-    color: var(--ink);
-    font: 600 0.8rem / 1 var(--body);
-  }
   @media (max-width: 40rem) {
     .main-semula {
-      right: 0.65rem;
       bottom: 3.5rem;
       left: 0.65rem;
-      max-width: none;
-    }
-    .main-slider {
-      order: 5;
-      flex-basis: 100%;
     }
   }
   /* Semua butang kawalan 44px (sasaran sentuh), satu gaya. */
@@ -1536,6 +1432,38 @@ const GAYA: {
   }
   .split :global(strong) {
     color: var(--navy);
+  }
+  .split-pace :global(li) {
+    grid-template-columns: 4.5rem 7rem 1fr 4rem;
+  }
+  .split :global(.split-bar) {
+    height: 0.6rem;
+    border-radius: 999px;
+    background: var(--line);
+    overflow: hidden;
+  }
+  .split :global(.split-bar i) {
+    display: block;
+    height: 100%;
+    background: var(--orange);
+  }
+  .split :global(.split-naik) {
+    font-size: 0.8rem;
+    text-align: right;
+  }
+  @media (max-width: 36rem) {
+    .split-pace :global(li) {
+      grid-template-columns: 1fr auto;
+      gap: 0.25rem 0.75rem;
+    }
+    .split-pace :global(.split-bar) {
+      grid-column: 1 / -1;
+      order: 3;
+    }
+    .split-pace :global(.split-naik) {
+      grid-column: 1 / -1;
+      order: 4;
+    }
   }
   #best {
     margin-top: 1rem;
