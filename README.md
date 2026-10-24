@@ -33,7 +33,7 @@ oleh owner, **sebelum** Nubi bila Nubi bergantung pada endpoint baru.
 | `/account` | akaun | Dashboard: pelan aktif (sesi seterusnya, minggu ini X/Y, minit dirancang vs sebenar, bar beban 6 minggu, "Sambung dari Minggu N"), ringkasan aktiviti 8 minggu + lencana/misi untuk ahli, pelan saya (lencana **Awan** / **Peranti ini**, meter slot, Ganti), profil, MAF |
 | `/account/deficit` | akaun | Kalkulator defisit: kalori sehari untuk turun berat (Mifflin-St Jeor, PAL FAO, larian ACSM, had selamat) + contoh makro; diisi dari profil latihan, keputusan tak disimpan |
 | `/account/activities` | ahli | Import aktiviti Strava (`.fit` wajib + `.gpx` pilihan, seret & lepas), jadual cari / tapis sukan / halaman, padanan ke pelan aktif |
-| `/account/activities/view?id=` | ahli | Detail aktiviti: peta laluan 2D / 3D / Terrain, ringkasan, % lari, sesi pelan yang dipadankan |
+| `/account/activities/view?id=` | ahli | Detail aktiviti: peta laluan 2D / 3D / Terrain, main semula laluan (Main/Pause, 1×-8×, slider), ringkasan, % lari, sesi pelan yang dipadankan |
 | `/account/badges` | ahli | Lencana (5K/10K pertama, 4 minggu konsisten, 10 kehadiran, 50 km sebulan, pelan siap) + misi mingguan/bulanan |
 | `/account/plans` | akaun | Senarai semua pelan (5K, 10K, 21K, 42K) - jadual, storan, status, padam |
 | `/account/plans/5k/new`, `/account/plans/5k/view?kunci=` | akaun | Pelan 5K penuh: borang panel, view/edit, pecahan analisis, ikut nadi, kalendar `.ics`, simpan ke awan, jadikan pelan aktif |

@@ -125,6 +125,73 @@ export function routeOf(rekod: any[]): [number, number][] {
 }
 export const fitRoute = async (bait: ArrayBuffer) => routeOf(await fitRecords(bait));
 
+export interface TrackPoint {
+  lat: number;
+  lon: number;
+  t: number; // saat dari titik GPS pertama
+  distanceM: number;
+  elevation: number | null;
+  heartRate: number | null;
+  speed: number | null;
+}
+
+/** Titik GPS + masa/distance/nadi untuk replay peta. [] = tiada GPS/timestamp. */
+export function trackOf(rekod: any[]): TrackPoint[] {
+  const darjah = 180 / 2 ** 31;
+  const titik: TrackPoint[] = [];
+  let mula: number | null = null;
+  let jarak = 0;
+  for (const r of rekod) {
+    if (typeof r.positionLat !== "number" || typeof r.positionLong !== "number") continue;
+    const masa = +r.timestamp;
+    if (!Number.isFinite(masa)) continue;
+    if (mula === null) mula = masa;
+    if (typeof r.distance === "number") jarak = r.distance;
+    const tinggi = r.enhancedAltitude ?? r.altitude;
+    const nadi = r.heartRate;
+    const laju = r.enhancedSpeed ?? r.speed;
+    titik.push({
+      lat: r.positionLat * darjah,
+      lon: r.positionLong * darjah,
+      t: (masa - mula) / 1000,
+      distanceM: jarak,
+      elevation: typeof tinggi === "number" ? tinggi : null,
+      heartRate: typeof nadi === "number" ? nadi : null,
+      speed: typeof laju === "number" ? laju : null,
+    });
+  }
+  return titik.length >= 2 ? titik : [];
+}
+
+export interface TrackPosition {
+  lat: number;
+  lon: number;
+  distanceM: number;
+  elevation: number | null;
+  heartRate: number | null;
+  index: number;
+}
+
+/** Interpolasi titik pada `saat` (untuk marker replay). null = track kosong. */
+export function trackAt(track: TrackPoint[], saat: number): TrackPosition | null {
+  if (!track.length) return null;
+  const t = Math.min(Math.max(saat, 0), track.at(-1)!.t);
+  let i = 0;
+  while (i < track.length - 1 && track[i + 1].t <= t) i++;
+  const a = track[i];
+  const b = track[Math.min(i + 1, track.length - 1)];
+  const f = b.t > a.t ? (t - a.t) / (b.t - a.t) : 0;
+  const mix = (x: number, y: number) => x + (y - x) * f;
+  return {
+    lat: mix(a.lat, b.lat),
+    lon: mix(a.lon, b.lon),
+    distanceM: mix(a.distanceM, b.distanceM),
+    elevation: a.elevation === null || b.elevation === null ? a.elevation ?? b.elevation : mix(a.elevation, b.elevation),
+    heartRate: a.heartRate === null || b.heartRate === null ? a.heartRate ?? b.heartRate : mix(a.heartRate, b.heartRate),
+    index: i,
+  };
+}
+
 /** Nadi ikut masa: [saat dari record pertama, bpm]. [] = fail tiada nadi. */
 export function heartSeries(rekod: any[]): [number, number][] {
   const t0 = rekod.length ? +rekod[0].timestamp : 0;

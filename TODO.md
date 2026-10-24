@@ -132,6 +132,11 @@ Item yang dah siap dibuang (lihat git history).
   Liberty (OpenFreeMap) / Terrain (DEM Mapterhorn), zoom Ctrl/⌘+skrol atau dua jari, skrin penuh;
   `docs/plans/map-3d.md`). Nama aktiviti = `textContent` saja. Backend + R2:
   `hono-workers/docs/plans/nubi-activities.md`. Pelan: `docs/plans/strava-activities.md`.
+- **Rekod & ramalan** (2026-10-24): detail aktiviti ada split setiap km + best effort 1K/5K/10K/21K/42K
+  dari rekod FIT (`lib/activity-analysis.ts`, `activitySplits`/`bestEfforts`); `/account/activities` ada
+  panel "Rekod & ramalan" - PR 5K/10K/21K/42K dari ringkasan D1 + Riegel (`lib/activity-records.ts`),
+  label anggaran. PR tepat (best effort dalam larian, bukan pace purata) perlu simpan masa upload +
+  migration backend; belum. Semak: `check-session-analysis`, `check-activity-records`.
 - **Pelan aktif** (2026-10-22, ahli): satu pelan awan bertarikh mula = `app_items` `nubi/active/plan`
   (`data.plan` = kunci). `lib/plan-sync.ts`: `matchActivities` (tulen, `bun scripts/check-plan-sync.ts`) tanda sesi
   siap dari aktiviti Strava (hanya menambah, enjin mesti `ENGINE_VERSION`); butang "Jadikan pelan aktif" di page
@@ -231,8 +236,8 @@ Item yang dah siap dibuang (lihat git history).
   dirender dengan `innerHTML`. Tanda siap = localStorage `pelan-5k:<bulan>-<tahap>-<masa>-<hari>[-pPace]`.
   Hari sesi tetap (`SESSION_DAYS`: 3 hari = Isn/Rab/Sab, 4 hari = Isn/Rab/Jum/Ahd - sesi akhir hujung
   minggu); `mula` dianjak ke Isnin (`startMonday`) dan minggu semasa + sesi hari ini diserlahkan.
-- Semak: `bun run build` + semua `bun scripts/check-*.ts` (27 skrip, termasuk `check-deficit`,
-  `check-session-analysis`, `check-plan-list`, `check-login-next`) + `npx -y -p @astrojs/check -p typescript@5 astro-check`. CI: `.github/workflows/verify.yml` (push/PR: astro-check, semua `check-*.ts`, build). Belum ada lint.
+- Semak: `bun run build` + semua `bun scripts/check-*.ts` (28 skrip, termasuk `check-deficit`,
+  `check-session-analysis`, `check-activity-records`, `check-plan-list`, `check-login-next`) + `npx -y -p @astrojs/check -p typescript@5 astro-check`. CI: `.github/workflows/verify.yml` (push/PR: astro-check, semua `check-*.ts`, build). Belum ada lint.
   `bunx tsc --noEmit -p .` saja tak membaca skrip dalam `.astro` - guna astro-check
   (`@astrojs/check` belum sokong TS 7, jadi tak dipasang).
 
@@ -271,6 +276,9 @@ Item yang dah siap dibuang (lihat git history).
   `bun scripts/check-activity-summary.ts`, `bun scripts/check-badges.ts`, backend
   `bun scripts/verify-nubi-badges.ts`.
 
+- [x] **Main semula laluan aktiviti** (2026-10-23): peta detail ada replay dari track FIT
+  (`trackOf`/`trackAt`), Main/Pause, 1×-8×, slider masa, marker bergerak dan progress line; tiada
+  endpoint/migration baru. Semak `bun scripts/check-activity-file.ts`.
 - [x] **Detail aktiviti lambat** (`/account/activities/view`, didiagnosis 2026-10-23, dibaiki): `mula()`
   berjalan satu demi satu - `/me` -> baris aktiviti -> fail `.fit` (R2) -> parser FIT 430 KB baru dimuat ->
   tunggu pelan -> **baru** maplibre 1.1 MB + gaya + tiles. Baiki: (1) mula `import("maplibre-gl")` + parser FIT
@@ -294,6 +302,24 @@ Item yang dah siap dibuang (lihat git history).
 - [ ] Mod gelap? Laman kini sengaja terang + navy; buat hanya kalau diminta.
 - [ ] Uji pemasa pada telefon sebenar: bunyi iOS (suis senyap mematikan Web Audio), getaran (iOS tiada
   `navigator.vibrate`), Wake Lock Safari 16.4+.
+
+## 📈 Rekod & ramalan dari aktiviti (2026-10-24)
+
+- [x] **Split + best effort** di detail aktiviti: `activitySplits` (km, pace, ketinggian naik) dan
+  `bestEfforts` (1K/5K/10K/21K/42K) dalam `lib/activity-analysis.ts`; dirender dari FIT yang sudah
+  dimuat turun (tiada request/storan baru). Semak `bun scripts/check-session-analysis.ts`.
+- [x] **PR + ramalan** di `/account/activities`: `lib/activity-records.ts` ambil larian terpantas yang
+  meliputi 5K/10K/21K/42K (PR konservatif = pace purata), kemudian Riegel untuk jarak yang belum ada.
+  Panel hanya muncul bila ada larian >= 3 km; walk/ride tidak dikira. Semak
+  `bun scripts/check-activity-records.ts`.
+- [ ] **PR tepat**: kira best effort masa upload (bukan pace purata) dan simpan kolum D1 di backend
+  `hono-workers` + backfill aktiviti lama. Buat bila angka anggaran tak cukup; jangan mula dengan ini.
+- [ ] GAP (pace laraskan bukit), kadens purata/maks, HR drift - data FIT ada, UI belum.
+- [ ] Training load / fitness-fatigue - tangguh (perlu snapshot harian, nilai tak jelas untuk pelari baru).
+- [ ] Uji dengan aktiviti sebenar: split mesti berjumlah jarak aktiviti (termasuk split akhir separa),
+  best 5K/10K hanya muncul bila rekod cukup panjang, PR dikemas kini selepas aktiviti dipadam.
+- **Jangan buat**: segmen/leaderboard, kudos, feed, kelab, foto, gear, Beacon - bukan gap Nubi,
+  keputusan owner kekal tiada ciri sosial.
 
 ## 🗂 Struktur pelan - index / view / new (2026-10-22)
 

@@ -1,6 +1,7 @@
-// bun scripts/check-session-analysis.ts - semakan blok interval/tempo (src/lib/activity-analysis.ts).
-// Rekod FIT sintetik: 5 s setiap titik; blok laju ikut pace yang ditetapkan, selebihnya 6:00/km.
-import { checkSession } from "../src/lib/activity-analysis";
+// bun scripts/check-session-analysis.ts - semakan blok interval/tempo, split dan best effort
+// (src/lib/activity-analysis.ts). Rekod FIT sintetik: 5 s setiap titik; blok laju ikut pace
+// yang ditetapkan, selebihnya 6:00/km.
+import { activitySplits, bestEfforts, checkSession } from "../src/lib/activity-analysis";
 import { segment } from "../src/lib/plan-5k";
 
 let gagal = 0;
@@ -73,6 +74,79 @@ ok(checkSession([], SEGMEN, "~5:00/km") === null, "tiada rekod = null");
   const h = checkSession(rekod([300, 300]), SEGMEN, "sasaran akhir ~5:30/km");
   ok(h?.targetFinal === true, "sasaran akhir ditanda");
 }
+
+/** Rekod 1 s pada pace tetap; `naikPerKm` = ketinggian naik setiap km. */
+function lurus(pace: number, jarakM: number, naikPerKm = 0) {
+  const out: {
+    timestamp: Date;
+    distance: number;
+    enhancedAltitude: number;
+    enhancedSpeed: number;
+  }[] = [];
+  const laju = 1000 / pace;
+  for (let t = 0; ; t++) {
+    const d = Math.min(jarakM, laju * t);
+    out.push({
+      timestamp: new Date(MULA + t * 1000),
+      distance: d,
+      enhancedAltitude: (d / 1000) * naikPerKm,
+      enhancedSpeed: laju,
+    });
+    if (d >= jarakM) break;
+  }
+  return out;
+}
+
+// Split: 2.5 km pada 6:00/km = 1 km, 1 km, 0.5 km; naik 10 m setiap km.
+{
+  const s = activitySplits(lurus(360, 2500, 10));
+  ok(s.length === 3, `tiga split (${s.length})`);
+  ok(
+    hampir(s[0]?.distanceM, 1000, 0.01) && hampir(s[1]?.distanceM, 1000, 0.01),
+    "dua split penuh 1 km",
+  );
+  ok(hampir(s[2]?.distanceM, 500, 0.01), `split akhir 500 m (${s[2]?.distanceM})`);
+  ok(s.every((x) => hampir(x.pace, 360)), `pace split 6:00/km (${s.map((x) => x.pace)})`);
+  ok(
+    hampir(s[0]?.elevationGainM, 10, 0.01) && hampir(s[2]?.elevationGainM, 5, 0.01),
+    "ketinggian ikut split",
+  );
+}
+
+// Best effort: jarak standard sahaja, masa bergerak.
+{
+  const b = bestEfforts(lurus(360, 2500));
+  ok(b.length === 1 && b[0].label === "1K", "2.5 km = hanya best 1K");
+  ok(hampir(b[0]?.seconds, 360, 0.001), `best 1K 360 s (${b[0]?.seconds})`);
+}
+{
+  const b = bestEfforts(lurus(300, 6000));
+  ok(b.length === 2 && b.some((x) => x.label === "5K"), "6 km = best 1K + 5K");
+  ok(hampir(b.find((x) => x.label === "5K")?.seconds, 1500, 0.001), "best 5K 25:00");
+}
+
+// Jeda 60 s pada jarak sama tidak masuk best effort.
+{
+  const laju = 1000 / 300;
+  const r: { timestamp: Date; distance: number; enhancedSpeed: number }[] = [];
+  for (let t = 0; t <= 300; t++)
+    r.push({
+      timestamp: new Date(MULA + t * 1000),
+      distance: Math.min(1000, laju * t),
+      enhancedSpeed: laju,
+    });
+  r.push({ timestamp: new Date(MULA + 360000), distance: 1000, enhancedSpeed: 0 });
+  for (let t = 361; t <= 661; t++)
+    r.push({
+      timestamp: new Date(MULA + t * 1000),
+      distance: 1000 + Math.min(1000, laju * (t - 360)),
+      enhancedSpeed: laju,
+    });
+  const b = bestEfforts(r);
+  ok(hampir(b.find((x) => x.label === "1K")?.seconds, 300, 0.001), "jeda tidak dikira");
+}
+
+ok(activitySplits([]).length === 0 && bestEfforts([]).length === 0, "rekod kosong = tiada split/best");
 
 if (gagal) {
   console.error(`\n${gagal} semakan gagal.`);

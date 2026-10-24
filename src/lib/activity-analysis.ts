@@ -1,6 +1,5 @@
-// Semakan sesi interval/tempo dari fail FIT: banding blok laju sebenar dengan sasaran pace
-// dalam teks sesi pelan. Anggaran sahaja - segmen ikut masa pelan, bukan penilaian jurulatih.
-// Semak: bun scripts/check-session-analysis.ts
+// Analisis rekod FIT: semakan blok interval/tempo, split setiap km, dan best effort.
+// Anggaran sahaja - bukan penilaian jurulatih. Semak: bun scripts/check-session-analysis.ts
 import type { Segment } from "./plan-5k";
 
 export interface BlockCheck {
@@ -99,4 +98,124 @@ export function checkSession(
       ? diukur.reduce((n, b) => n + (b.pace ?? 0), 0) / diukur.length
       : null,
   };
+}
+
+export interface Split {
+  km: number; // 1 = km pertama
+  distanceM: number; // split terakhir boleh separa km
+  movingS: number;
+  pace: number | null; // s/km
+  elevationGainM: number;
+}
+
+export interface BestEffort {
+  label: string;
+  distanceM: number;
+  seconds: number;
+}
+
+export const BEST_DISTANCES = [
+  { label: "1K", m: 1000 },
+  { label: "5K", m: 5000 },
+  { label: "10K", m: 10000 },
+  { label: "21K", m: 21097.5 },
+  { label: "42K", m: 42195 },
+] as const;
+
+type FitRecord = {
+  timestamp?: Date | string | number;
+  distance?: number;
+  enhancedAltitude?: number;
+  altitude?: number;
+};
+
+interface SeriesPoint {
+  d: number; // jarak dari titik pertama
+  t: number; // masa bergerak
+  alt: number | null;
+}
+
+/**
+ * Titik jarak/masa bergerak dari record FIT. Masa hanya ditambah apabila jarak bertambah,
+ * dan jeda dihadkan 10 s (sama seperti checkSession dan runShare).
+ */
+function movingSeries(rekod: FitRecord[]): SeriesPoint[] {
+  const titik: SeriesPoint[] = [];
+  let masa = 0;
+  let mula: number | null = null;
+  let lepas: { d: number; ts: number } | null = null;
+  for (const r of rekod) {
+    if (typeof r.distance !== "number") continue;
+    const ts = +new Date(r.timestamp ?? 0);
+    if (!Number.isFinite(ts)) continue;
+    if (mula === null) mula = r.distance;
+    const d = Math.max(lepas?.d ?? 0, r.distance - mula);
+    if (lepas && d > lepas.d) {
+      const dt = (ts - lepas.ts) / 1000;
+      if (dt > 0) masa += Math.min(10, dt);
+    }
+    const alt = r.enhancedAltitude ?? r.altitude;
+    titik.push({ d, t: masa, alt: typeof alt === "number" ? alt : null });
+    lepas = { d, ts };
+  }
+  return titik;
+}
+
+/** Split setiap km dari record FIT. [] = tiada jarak dalam rekod. */
+export function activitySplits(rekod: FitRecord[]): Split[] {
+  const titik = movingSeries(rekod);
+  if (titik.length < 2) return [];
+  const bakul: { distanceM: number; movingS: number; elevationGainM: number }[] = [];
+  const bakulAt = (i: number) =>
+    (bakul[i] ??= { distanceM: 0, movingS: 0, elevationGainM: 0 });
+
+  for (let i = 1; i < titik.length; i++) {
+    const a = titik[i - 1];
+    const b = titik[i];
+    const dd = b.d - a.d;
+    const dt = b.t - a.t;
+    if (dd <= 0) continue;
+    let dari = a.d;
+    while (dari < b.d - 1e-9) {
+      const km = Math.floor(dari / 1000);
+      const hujung = Math.min(b.d, (km + 1) * 1000);
+      const bahagian = (hujung - dari) / dd;
+      const k = bakulAt(km);
+      k.distanceM += hujung - dari;
+      k.movingS += dt * bahagian;
+      dari = hujung;
+    }
+    if (a.alt !== null && b.alt !== null && b.alt > a.alt)
+      bakulAt(Math.floor(a.d / 1000)).elevationGainM += b.alt - a.alt;
+  }
+
+  return bakul.map((b, i) => ({
+    km: i + 1,
+    distanceM: b.distanceM,
+    movingS: b.movingS,
+    pace: b.distanceM > 50 && b.movingS > 0 ? (b.movingS / b.distanceM) * 1000 : null,
+    elevationGainM: b.elevationGainM,
+  }));
+}
+
+/** Blok terpantas untuk setiap jarak standard. [] = rekod terlalu pendek / tiada jarak. */
+export function bestEfforts(rekod: FitRecord[]): BestEffort[] {
+  const titik = movingSeries(rekod);
+  if (titik.length < 2) return [];
+  const jumlah = titik.at(-1)!.d;
+  const hasil: BestEffort[] = [];
+  for (const { label, m } of BEST_DISTANCES) {
+    if (jumlah < m) continue;
+    let best = Infinity;
+    let j = 0;
+    for (let i = 0; i < titik.length; i++) {
+      if (j < i) j = i;
+      while (j < titik.length && titik[j].d - titik[i].d < m) j++;
+      if (j >= titik.length) break;
+      const saat = titik[j].t - titik[i].t;
+      if (saat > 0 && saat < best) best = saat;
+    }
+    if (best < Infinity) hasil.push({ label, distanceM: m, seconds: best });
+  }
+  return hasil;
 }

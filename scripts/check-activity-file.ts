@@ -2,7 +2,7 @@
 // FIT dijana di sini dengan Encoder SDK Garmin (koordinat rekaan di tengah laut, 0°N 0°E) - tiada
 // fail larian sebenar dalam repo. Nilai meniru larian contoh owner: 2,663 m, 1,876 s, nadi purata 140 / maks 164.
 import { Encoder, Profile } from "@garmin/fitsdk";
-import { readGpx, buildUploadForm, fitRoute, fitRecords, heartSeries, altitudeSeries, hrZones, nameFromFile, paceFromDistance, pairFiles, isoSeconds, toSport, formatDuration } from "../src/lib/activity-file";
+import { readGpx, buildUploadForm, fitRoute, fitRecords, trackOf, trackAt, heartSeries, altitudeSeries, hrZones, nameFromFile, paceFromDistance, pairFiles, isoSeconds, toSport, formatDuration } from "../src/lib/activity-file";
 
 let gagal = 0;
 const ok = (c: unknown, msg: string) => {
@@ -56,6 +56,13 @@ const fail = (bait: BlobPart, nama: string) => new File([bait], nama);
   ok(r?.name === "Night Run", "nama dari nama fail");
   ok(aktiviti[0].gpx === null, "tiada GPX");
   ok(r?.runRatio === null, "tiada kadens = runRatio null");
+  const track = trackOf(await fitRecords(fit().buffer));
+  ok(track.length === 82, `track ${track.length} titik GPS`);
+  ok(track[0]?.t === 0 && track.at(-1)?.t === 81, `masa track ${track[0]?.t}-${track.at(-1)?.t}`);
+  ok(track[0]?.distanceM === 32 && track.at(-1)?.distanceM === 2624, "jarak track");
+  const tengah = trackAt(track, 40.5);
+  ok(tengah?.index === 40 && Math.abs((tengah?.lat ?? 0) - 0.0415) < 1e-6, `interpolasi track ${tengah?.lat}`);
+  ok(trackOf([]).length === 0 && trackAt([], 1) === null, "track kosong");
 }
 
 // runRatio: 85 rpm (~170 langkah/min) = lari, 55 rpm (~110) = jalan; rekod berhenti (laju 0) tak dikira.

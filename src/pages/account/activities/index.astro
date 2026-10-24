@@ -30,6 +30,18 @@ import Table from "../../../components/ui/Table.astro";
       <li><span>Masa</span><strong id="masa-minggu">0m</strong></li>
     </ul>
 
+    <section class="panel" id="rekod" hidden aria-labelledby="t-rekod">
+      <div class="panel-kepala">
+        <h3 class="display" id="t-rekod">Rekod &amp; ramalan</h3>
+      </div>
+      <ul class="rekod" id="rekod-senarai"></ul>
+      <p class="muted">
+        PR = anggaran konservatif dari pace purata larian, bukan best effort
+        dalam larian. Ramalan guna formula Riegel - anggaran kasar, bukan
+        jaminan.
+      </p>
+    </section>
+
     <section class="panel" aria-labelledby="tajuk-saya">
       <div class="panel-kepala">
         <h3 class="display" id="tajuk-saya">Aktiviti saya</h3>
@@ -103,6 +115,9 @@ import Table from "../../../components/ui/Table.astro";
     type Sport,
   } from "../../../lib/activity-file";
   import { ticksFrom, offerUntick } from "../../../lib/plan-sync";
+  import { personalRecords } from "../../../lib/activity-records";
+  import { formatTime } from "../../../lib/distance-plan";
+  import { formatPace } from "../../../lib/plan-5k";
 
   const $ = <T extends HTMLElement = HTMLElement>(id: string) =>
     document.getElementById(id) as T;
@@ -129,6 +144,12 @@ import Table from "../../../components/ui/Table.astro";
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+    });
+  const hari = (iso: string) =>
+    new Date(iso).toLocaleDateString("ms-MY", {
+      day: "numeric",
+      month: "short",
+      timeZone: "Asia/Kuala_Lumpur",
     });
   const el = (tag: string, cls = "", teks = "") => {
     const e = document.createElement(tag);
@@ -169,6 +190,11 @@ import Table from "../../../components/ui/Table.astro";
   $("bukan-ahli").hidden = ahli;
   $("ahli").hidden = !ahli;
   if (s && !ahli) void dataLama();
+  // PR perlukan semua aktiviti, bukan 90 hari. ponytail: semua baris; agregat backend
+  // bila 5,000 aktiviti jadi berat.
+  let rekodAwal: Promise<Response | null> | null = ahli
+    ? api(`${BASE}?from=2000-01-01`).catch(() => null)
+    : null;
 
   async function dataLama() {
     const r = await api(`${BASE}?from=2000-01-01`).catch(() => null);
@@ -204,6 +230,38 @@ import Table from "../../../components/ui/Table.astro";
     $("bil-minggu").textContent = String(t.count);
     $("jarak-minggu").textContent = formatKm(t.distanceM);
     $("masa-minggu").textContent = formatDuration(t.movingS);
+  }
+
+  // PR + ramalan dari semua aktiviti (ringkasan D1; tiada fail FIT dimuat turun).
+  async function rekod(baru = false) {
+    if (baru) {
+      $("rekod").hidden = true;
+      rekodAwal = api(`${BASE}?from=2000-01-01`).catch(() => null);
+    }
+    const r = await rekodAwal;
+    if (!r?.ok) return;
+    const rows = (await json(r)).data.activities as Baris[];
+    const records = personalRecords(rows);
+    if (!records.length) return;
+    $("rekod-senarai").replaceChildren(
+      ...records.map((x) => {
+        const li = el("li");
+        li.append(
+          el("span", "rekod-jarak", x.label),
+          el("strong", "", formatTime(x.seconds / 60)),
+          el("span", "muted", `${formatPace(x.pace)}/km`),
+          el(
+            "small",
+            "muted",
+            x.kind === "activity" && x.startedAt
+              ? `Dari larian ${x.from} · ${hari(x.startedAt)}`
+              : `Ramalan dari ${x.from}`,
+          ),
+        );
+        return li;
+      }),
+    );
+    $("rekod").hidden = false;
   }
 
   async function senarai(): Promise<number> {
@@ -275,7 +333,7 @@ import Table from "../../../components/ui/Table.astro";
       papar("Aktiviti tak dapat dipadam. Semak sambungan dan cuba lagi.");
       return;
     }
-    await Promise.all([senarai(), minggu()]);
+    await Promise.all([senarai(), minggu(), rekod(true)]);
     await offerUntick(tanda);
   }
 
@@ -294,7 +352,7 @@ import Table from "../../../components/ui/Table.astro";
       papar("Data tak dapat dipadam. Semak sambungan dan cuba lagi.");
       return;
     }
-    await Promise.all([senarai(), minggu()]);
+    await Promise.all([senarai(), minggu(), rekod(true)]);
     papar(
       "Data aktiviti dipadam dan persetujuan ditarik. Muat naik seterusnya akan minta persetujuan semula.",
       "success",
@@ -312,7 +370,7 @@ import Table from "../../../components/ui/Table.astro";
   });
   $("padam-semua").addEventListener("click", padamSemua);
 
-  if (ahli) await Promise.all([senarai(), minggu()]);
+  if (ahli) await Promise.all([senarai(), minggu(), rekod()]);
 </script>
 
 <style>
@@ -341,5 +399,40 @@ import Table from "../../../components/ui/Table.astro";
     color: var(--navy);
     font-weight: 700;
     overflow-wrap: anywhere;
+  }
+  .rekod {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.35rem;
+  }
+  .rekod :global(li) {
+    display: grid;
+    grid-template-columns: 4rem 5.5rem 5.5rem 1fr;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    padding: 0.5rem 0.65rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    font-size: 0.9rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .rekod :global(.rekod-jarak) {
+    color: var(--muted);
+  }
+  .rekod :global(strong) {
+    color: var(--navy);
+  }
+  .rekod :global(small) {
+    font-size: 0.8rem;
+  }
+  @media (max-width: 36rem) {
+    .rekod :global(li) {
+      grid-template-columns: 3.5rem 1fr auto;
+    }
+    .rekod :global(small) {
+      grid-column: 1 / -1;
+    }
   }
 </style>
