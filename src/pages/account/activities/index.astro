@@ -93,12 +93,6 @@ import Table from "../../../components/ui/Table.astro";
           />
         </div>
       </Table>
-      <button
-        class="btn btn-bahaya btn-sm"
-        type="button"
-        id="padam-semua"
-        hidden>Padam semua data aktiviti saya</button
-      >
     </section>
   </div>
 </AccountLayout>
@@ -287,7 +281,6 @@ import Table from "../../../components/ui/Table.astro";
       ? `${totals.count} aktiviti, ${formatKm(totals.distanceM)}, ${formatDuration(totals.movingS)} bergerak.`
       : "";
     jadualAkt.data(activities);
-    $("padam-semua").hidden = activities.length === 0;
     return activities.length;
   }
 
@@ -337,29 +330,6 @@ import Table from "../../../components/ui/Table.astro";
     await offerUntick(tanda);
   }
 
-  async function padamSemua() {
-    const ya = await confirmDialog({
-      title: "Padam semua data aktiviti?",
-      message:
-        "Semua aktiviti, fail asal dan rekod persetujuan anda akan dibuang daripada Nubi Sport. Muat naik seterusnya akan minta persetujuan semula. Tindakan ini tak boleh dibatalkan.",
-      confirmLabel: "Padam semua",
-      danger: true,
-    });
-    if (!ya) return;
-    const tanda = await ticksFrom("semua").catch(() => null);
-    const r = await api(BASE, { method: "DELETE" });
-    if (!r.ok) {
-      papar("Data tak dapat dipadam. Semak sambungan dan cuba lagi.");
-      return;
-    }
-    await Promise.all([senarai(), minggu(), rekod(true)]);
-    papar(
-      "Data aktiviti dipadam dan persetujuan ditarik. Muat naik seterusnya akan minta persetujuan semula.",
-      "success",
-    );
-    await offerUntick(tanda);
-  }
-
   $<HTMLSelectElement>("tempoh").addEventListener(
     "change",
     () => void senarai(),
@@ -368,7 +338,6 @@ import Table from "../../../components/ui/Table.astro";
     const v = (e.target as HTMLSelectElement).value;
     jadualAkt.filter(v === "semua" ? null : (r) => r.sport === v);
   });
-  $("padam-semua").addEventListener("click", padamSemua);
 
   if (ahli) await Promise.all([senarai(), minggu(), rekod()]);
 </script>

@@ -197,11 +197,19 @@ const GAYA: {
       <li><span>Jarak</span><strong id="s-jarak"></strong></li>
       <li><span>Masa</span><strong id="s-masa"></strong></li>
       <li><span>Pace</span><strong id="s-pace"></strong></li>
+      <li id="s-gap-baris" hidden>
+        <span title="Pace setara larian rata (GAP)">GAP</span><strong id="s-gap"
+        ></strong>
+      </li>
       <li><span>Ketinggian naik</span><strong id="s-tinggi"></strong></li>
       <li><span>Nadi purata</span><strong id="s-nadi"></strong></li>
       <li><span>Nadi maks</span><strong id="s-nadi-maks"></strong></li>
+      <li id="s-kadens-baris" hidden>
+        <span title="Langkah seminit (spm)">Kadens</span><strong id="s-kadens"
+        ></strong>
+      </li>
       <li id="s-lari-baris" hidden>
-        <span>Kadens lari</span><strong id="s-lari"></strong>
+        <span>Masa lari</span><strong id="s-lari"></strong>
       </li>
     </ul>
 
@@ -244,6 +252,7 @@ const GAYA: {
       <h4 class="sub">Masa dalam zon</h4>
       <ul class="zon" id="nadi-zon"></ul>
       <p class="muted kecil" id="nadi-asas"></p>
+      <p class="muted kecil" id="nadi-drift" hidden></p>
     </section>
 
     <section class="panel" id="tinggi" aria-labelledby="tinggi-tajuk" hidden>
@@ -314,7 +323,10 @@ const GAYA: {
   import {
     activitySplits,
     bestEfforts,
+    cadenceStats,
     checkSession,
+    gradeAdjustedPace,
+    heartRateDrift,
     type BestEffort,
     type Split,
   } from "../../../lib/activity-analysis";
@@ -431,7 +443,7 @@ const GAYA: {
     $("s-nadi-maks").textContent = a.maxHr ? `${Math.round(a.maxHr)} bpm` : "-";
     if (a.runRatio != null) {
       $("s-lari").textContent =
-        `Lari ${Math.round(a.runRatio * 100)}% masa bergerak`;
+        `${Math.round(a.runRatio * 100)}% masa bergerak`;
       $("s-lari-baris").hidden = false;
     }
 
@@ -469,7 +481,26 @@ const GAYA: {
     }
     nadi(heartSeries(rekod), a.maxHr);
     tinggi(altitudeSeries(rekod), a.elevationGainM);
-    pecahan(activitySplits(rekod), a.sport === "run" ? bestEfforts(rekod) : []);
+    const splits = activitySplits(rekod);
+    const gap = a.sport === "run" ? gradeAdjustedPace(splits) : null;
+    if (gap !== null) {
+      $("s-gap").textContent = `${formatPace(gap)}/km`;
+      $("s-gap-baris").hidden = false;
+    }
+    const kadens = cadenceStats(rekod);
+    if ((a.sport === "run" || a.sport === "walk") && kadens.avg !== null) {
+      $("s-kadens").textContent = `${kadens.avg} spm${
+        kadens.max !== null ? ` · maks ${kadens.max}` : ""
+      }`;
+      $("s-kadens-baris").hidden = false;
+    }
+    const drift = heartRateDrift(rekod);
+    if (drift !== null) {
+      $("nadi-drift").textContent =
+        `Drift nadi separuh kedua: ${drift >= 0 ? "+" : ""}${drift.toFixed(1)}% berbanding separuh pertama. Pace berubah menjejaskan bacaan.`;
+      $("nadi-drift").hidden = false;
+    }
+    pecahan(splits, a.sport === "run" ? bestEfforts(rekod) : []);
     // Padanan pelan tak perlu menyekat peta.
     void sesiPelan
       .then((m) => {
@@ -553,7 +584,7 @@ const GAYA: {
     $("best").hidden = false;
   }
 
-  const ZON = ["Ringan", "Aerobik asas", "Tempo", "Ambang", "Maksimum"];
+  const ZON = ["Ringan", "Aerobik asas", "Tempo", "Ambang laktat", "Maksimum"];
 
   /** Carta nadi (SVG sebaris) + masa dalam 5 zon. Tiada nadi = seksyen kekal tersembunyi. */
   function nadi(siri: [number, number][], maksSesi: number | null) {
@@ -600,7 +631,7 @@ const GAYA: {
       })
       .join("");
     $("nadi-asas").textContent =
-      `Zon ikut % nadi maks aktiviti ini (${maks} bpm): Z1 bawah 60%, Z2 60-70%, Z3 70-80%, Z4 80-90%, Z5 90% ke atas. Nadi maks sebenar anda mungkin lebih tinggi - anggap ini panduan kasar.`;
+      `Zon ikut % nadi maks aktiviti ini (${maks} bpm): Z1 bawah 60%, Z2 60-70%, Z3 70-80%, Z4 80-90%, Z5 90% ke atas. Z4 ambang laktat = rentak paling laju yang masih boleh ditahan lebih lama; Z5 maksimum = sekejap saja. Nadi maks sebenar anda mungkin lebih tinggi - anggap ini panduan kasar.`;
     $("nadi").hidden = false;
   }
 
@@ -738,10 +769,16 @@ const GAYA: {
         if (!track || !duration || !map.getSource("main-kemajuan")) return;
         const pos = trackAt(track, seconds);
         if (!pos) return;
-        const coordinates = track
-          .slice(0, pos.index + 1)
-          .map((p) => [p.lon, p.lat] as [number, number]);
-        coordinates.push([pos.lon, pos.lat]);
+        const coordinates: [number, number][] =
+          seconds >= duration
+            ? [
+                [pos.lon, pos.lat],
+                [pos.lon, pos.lat],
+              ]
+            : track
+                .slice(0, pos.index + 1)
+                .map((p): [number, number] => [p.lon, p.lat]);
+        if (seconds < duration) coordinates.push([pos.lon, pos.lat]);
         const sumber = map.getSource("main-kemajuan") as GeoJSONSource;
         sumber.setData({
           type: "Feature",
@@ -756,6 +793,62 @@ const GAYA: {
           `${clock(seconds)} / ${clock(duration)}`,
         );
       }
+
+      // Intro: sapuan dari mula ke akhir ~3 s, bukan masa sebenar. Batal bila pengguna
+      // tekan Main/slider/reset. Reduced motion = terus tunjuk laluan penuh.
+      const setRoute = (visible: boolean, color: string) => {
+        if (map.getLayer("laluan"))
+          map.setLayoutProperty(
+            "laluan",
+            "visibility",
+            visible ? "visible" : "none",
+          );
+        if (map.getLayer("laluan-tepi"))
+          map.setLayoutProperty(
+            "laluan-tepi",
+            "visibility",
+            visible ? "visible" : "none",
+          );
+        if (map.getLayer("main-kemajuan"))
+          map.setPaintProperty("main-kemajuan", "line-color", color);
+      };
+      const showFull = () => {
+        setRoute(true, "#fff");
+        replayTime = duration;
+        drawTrack(duration);
+      };
+      let introRaf = 0;
+      let introOn = false;
+      let introStarted = false;
+      const stopIntro = () => {
+        if (!introOn) return;
+        introOn = false;
+        cancelAnimationFrame(introRaf);
+        introRaf = 0;
+        showFull();
+      };
+      const intro = () => {
+        if (!track || !duration) return;
+        if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          showFull();
+          return;
+        }
+        setRoute(false, oren);
+        const mula = performance.now();
+        introOn = true;
+        const langkah = (now: number) => {
+          if (!introOn) return;
+          const f = Math.min(1, (now - mula) / 3000);
+          replayTime = f * duration;
+          drawTrack(replayTime);
+          if (f < 1) introRaf = requestAnimationFrame(langkah);
+          else {
+            introOn = false;
+            showFull();
+          }
+        };
+        introRaf = requestAnimationFrame(langkah);
+      };
       const stopReplay = () => {
         replayPlaying = false;
         cancelAnimationFrame(replayRaf);
@@ -777,6 +870,7 @@ const GAYA: {
         replayRaf = requestAnimationFrame(tick);
       };
       const startReplay = () => {
+        stopIntro();
         if (!track || !duration) return;
         if (replayTime >= duration) replayTime = 0;
         replayPlaying = true;
@@ -789,13 +883,16 @@ const GAYA: {
         replayPlaying ? stopReplay() : startReplay(),
       );
       mainReset.addEventListener("click", () => {
+        stopIntro();
         stopReplay();
         replayTime = 0;
         drawTrack(0);
       });
       mainSlider.addEventListener("input", () => {
+        const v = Number(mainSlider.value);
+        stopIntro();
         stopReplay();
-        replayTime = (Number(mainSlider.value) / 1000) * duration;
+        replayTime = (v / 1000) * duration;
         drawTrack(replayTime);
       });
       mainSpeed.addEventListener("change", () => {
@@ -803,7 +900,9 @@ const GAYA: {
         replayLast = 0;
       });
       document.addEventListener("visibilitychange", () => {
-        if (document.hidden && replayPlaying) stopReplay();
+        if (!document.hidden) return;
+        stopIntro();
+        if (replayPlaying) stopReplay();
       });
 
       // Kawalan sendiri = butang biasa dalam kumpulan kawalan MapLibre -> gaya sama dengan zum/skrin penuh.
@@ -959,6 +1058,11 @@ const GAYA: {
           }
           mainBox.hidden = false;
           drawTrack(replayTime);
+          if (introOn) setRoute(false, oren);
+          if (!introStarted) {
+            introStarted = true;
+            intro();
+          }
         }
       });
       let jatuh = false; // dah kembali ke Standard sebab gaya/DEM gagal -> mesej kekal kelihatan

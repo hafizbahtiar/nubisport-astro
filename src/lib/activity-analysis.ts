@@ -106,6 +106,7 @@ export interface Split {
   movingS: number;
   pace: number | null; // s/km
   elevationGainM: number;
+  elevationChangeM: number | null; // naik - turun; null = tiada altitude
 }
 
 export interface BestEffort {
@@ -127,12 +128,18 @@ type FitRecord = {
   distance?: number;
   enhancedAltitude?: number;
   altitude?: number;
+  heartRate?: number;
+  cadence?: number;
+  fractionalCadence?: number;
+  enhancedSpeed?: number;
+  speed?: number;
 };
 
 interface SeriesPoint {
   d: number; // jarak dari titik pertama
   t: number; // masa bergerak
   alt: number | null;
+  hr: number | null;
 }
 
 /**
@@ -155,7 +162,13 @@ function movingSeries(rekod: FitRecord[]): SeriesPoint[] {
       if (dt > 0) masa += Math.min(10, dt);
     }
     const alt = r.enhancedAltitude ?? r.altitude;
-    titik.push({ d, t: masa, alt: typeof alt === "number" ? alt : null });
+    const hr = r.heartRate;
+    titik.push({
+      d,
+      t: masa,
+      alt: typeof alt === "number" ? alt : null,
+      hr: typeof hr === "number" && hr > 0 ? hr : null,
+    });
     lepas = { d, ts };
   }
   return titik;
@@ -165,9 +178,19 @@ function movingSeries(rekod: FitRecord[]): SeriesPoint[] {
 export function activitySplits(rekod: FitRecord[]): Split[] {
   const titik = movingSeries(rekod);
   if (titik.length < 2) return [];
-  const bakul: { distanceM: number; movingS: number; elevationGainM: number }[] = [];
+  const bakul: {
+    distanceM: number;
+    movingS: number;
+    elevationGainM: number;
+    elevationChangeM: number | null;
+  }[] = [];
   const bakulAt = (i: number) =>
-    (bakul[i] ??= { distanceM: 0, movingS: 0, elevationGainM: 0 });
+  (bakul[i] ??= {
+    distanceM: 0,
+    movingS: 0,
+    elevationGainM: 0,
+    elevationChangeM: null,
+  });
 
   for (let i = 1; i < titik.length; i++) {
     const a = titik[i - 1];
@@ -175,6 +198,8 @@ export function activitySplits(rekod: FitRecord[]): Split[] {
     const dd = b.d - a.d;
     const dt = b.t - a.t;
     if (dd <= 0) continue;
+    const deltaTinggi =
+      a.alt !== null && b.alt !== null ? b.alt - a.alt : null;
     let dari = a.d;
     while (dari < b.d - 1e-9) {
       const km = Math.floor(dari / 1000);
@@ -183,10 +208,13 @@ export function activitySplits(rekod: FitRecord[]): Split[] {
       const k = bakulAt(km);
       k.distanceM += hujung - dari;
       k.movingS += dt * bahagian;
+      if (deltaTinggi !== null) {
+        const perubahan = deltaTinggi * bahagian;
+        k.elevationChangeM = (k.elevationChangeM ?? 0) + perubahan;
+        if (perubahan > 0) k.elevationGainM += perubahan;
+      }
       dari = hujung;
     }
-    if (a.alt !== null && b.alt !== null && b.alt > a.alt)
-      bakulAt(Math.floor(a.d / 1000)).elevationGainM += b.alt - a.alt;
   }
 
   return bakul.map((b, i) => ({
@@ -195,6 +223,7 @@ export function activitySplits(rekod: FitRecord[]): Split[] {
     movingS: b.movingS,
     pace: b.distanceM > 50 && b.movingS > 0 ? (b.movingS / b.distanceM) * 1000 : null,
     elevationGainM: b.elevationGainM,
+    elevationChangeM: b.elevationChangeM,
   }));
 }
 
@@ -218,4 +247,111 @@ export function bestEfforts(rekod: FitRecord[]): BestEffort[] {
     if (best < Infinity) hasil.push({ label, distanceM: m, seconds: best });
   }
   return hasil;
+}
+
+// Minetti et al. 2002 (J Appl Physiol 93:1039-1046): kos tenaga larian (J/kg/m) pada gred i.
+const MINETTI_FLAT = 3.6;
+const runningCost = (g: number) =>
+  155.4 * g ** 5 -
+  30.4 * g ** 4 -
+  43.3 * g ** 3 +
+  46.3 * g ** 2 +
+  19.5 * g +
+  MINETTI_FLAT;
+
+/**
+ * GAP (grade adjusted pace) s/km: masa setara larian rata dari split. Gred dihadkan
+ * ±30% (had selamat; formula asal ±45%), dan null bila split tiada altitude.
+ */
+export function gradeAdjustedPace(splits: Split[]): number | null {
+  if (!splits.length) return null;
+  let setara = 0;
+  let jarak = 0;
+  for (const s of splits) {
+    if (
+      s.elevationChangeM === null ||
+      s.pace === null ||
+      s.distanceM <= 0 ||
+      s.movingS <= 0
+    )
+      return null;
+    const gred = Math.max(-0.3, Math.min(0.3, s.elevationChangeM / s.distanceM));
+    const kos = runningCost(gred);
+    if (!(kos > 0)) return null;
+    setara += s.movingS * (MINETTI_FLAT / kos);
+    jarak += s.distanceM;
+  }
+  return jarak > 100 && setara > 0 ? (setara / jarak) * 1000 : null;
+}
+
+export interface CadenceStats {
+  avg: number | null;
+  max: number | null;
+}
+
+/** Kadens langkah/min (FIT cadence satu kaki x2), purata ikut masa bergerak. */
+export function cadenceStats(rekod: FitRecord[]): CadenceStats {
+  let jumlah = 0;
+  let masa = 0;
+  let maks = 0;
+  for (let i = 0; i + 1 < rekod.length; i++) {
+    const r = rekod[i];
+    if (typeof r.cadence !== "number") continue;
+    const ts = +new Date(r.timestamp ?? 0);
+    const next = +new Date(rekod[i + 1].timestamp ?? 0);
+    if (!Number.isFinite(ts) || !Number.isFinite(next)) continue;
+    const dt = Math.min(10, (next - ts) / 1000);
+    const laju = r.enhancedSpeed ?? r.speed;
+    if (!(dt > 0) || (typeof laju === "number" && laju <= 0.5)) continue;
+    const spm = (r.cadence + (r.fractionalCadence ?? 0)) * 2;
+    jumlah += spm * dt;
+    masa += dt;
+    maks = Math.max(maks, spm);
+  }
+  return masa > 0
+    ? { avg: Math.round(jumlah / masa), max: Math.round(maks) }
+    : { avg: null, max: null };
+}
+
+/**
+ * Drift nadi (%): nadi purata separuh kedua berbanding separuh pertama, ikut masa bergerak.
+ * Pace yang berubah menjejaskan bacaan; null = nadi tak cukup atau aktiviti terlalu pendek.
+ */
+export function heartRateDrift(rekod: FitRecord[]): number | null {
+  const titik = movingSeries(rekod);
+  if (titik.length < 2) return null;
+  const jumlah = titik.at(-1)!.t;
+  if (!(jumlah >= 300)) return null;
+  const separuh = jumlah / 2;
+  let nadi1 = 0;
+  let masa1 = 0;
+  let nadi2 = 0;
+  let masa2 = 0;
+  let semua1 = 0;
+  let semua2 = 0;
+  for (let i = 1; i < titik.length; i++) {
+    const a = titik[i - 1];
+    const b = titik[i];
+    const dt = b.t - a.t;
+    if (!(dt > 0)) continue;
+    const d1 = Math.max(0, Math.min(b.t, separuh) - a.t);
+    const d2 = Math.max(0, b.t - Math.max(a.t, separuh));
+    semua1 += d1;
+    semua2 += d2;
+    if (a.hr === null) continue;
+    nadi1 += a.hr * d1;
+    masa1 += d1;
+    nadi2 += a.hr * d2;
+    masa2 += d2;
+  }
+  if (
+    !(masa1 > 0) ||
+    !(masa2 > 0) ||
+    masa1 < semua1 * 0.5 ||
+    masa2 < semua2 * 0.5
+  )
+    return null;
+  const purata1 = nadi1 / masa1;
+  const purata2 = nadi2 / masa2;
+  return ((purata2 - purata1) / purata1) * 100;
 }

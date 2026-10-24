@@ -45,6 +45,16 @@ for (const hari of [3, 4]) {
 }
 const s30 = nextPlan("5k", 29.9, 3);
 ok(s30.pautan.length === 1 && s30.pautan[0].href.includes("jarak=10k") && s30.pautan[0].href.includes("masa=30"), "5K 29:54 -> 10K, masa bundar ke atas 30");
+const tepat30 = nextPlan("5k", 30, 3);
+ok(
+  tepat30.pautan.length === 1 &&
+  tepat30.pautan[0].href.includes("jarak=10k") &&
+  tepat30.teks.includes("tepat 30 minit") &&
+  !tepat30.teks.includes("bawah 30 minit"),
+  "tepat 30:00 = tepat, bukan bawah 30",
+);
+const bawah30 = nextPlan("5k", 29.99, 3);
+ok(bawah30.pautan.length === 1 && bawah30.teks.includes("bawah 30 minit"), "29:59 bawah 30");
 const s33 = nextPlan("5k", 32.2, 4, "/plan-5k");
 ok(s33.pautan[0].href.startsWith("/plan-5k?") && s33.pautan[0].href.includes("masa=33") && s33.pautan[0].href.includes("hari=4"), "5K 32:12 -> 5K baru 33 min, hari kekal");
 ok(nextPlan("5k", 70, 3).pautan.length === 0 && nextPlan("21k", 60, 3).pautan.length === 0 && nextPlan("42k", 300, 3).pautan.length === 0, "luar julat / 42K = tiada pautan");

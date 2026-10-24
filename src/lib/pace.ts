@@ -65,11 +65,13 @@ export function nextPlan(dari: TestDistance, minitSebenar: number, hari: number,
 
   if (dari === "5k") {
     if (m < TIME_MIN || m > TIME_MAX) return { teks: `Masa 5K ${formatTime(minitSebenar)}? Semak semula - pelan perlukan ${TIME_MIN}-${TIME_MAX} minit.`, pautan: [] };
-    if (m <= TARGET_MINUTES)
+    if (minitSebenar <= TARGET_MINUTES) {
+      const label = minitSebenar < TARGET_MINUTES ? "bawah 30 minit" : "tepat 30 minit";
       return {
-        teks: `5K dalam ${formatTime(minitSebenar)} - bawah 30 minit. Tahniah! Langkah seterusnya: 10K (anggaran sekarang ~${formatTime(riegel(minitSebenar, 5, 10))}).`,
+        teks: `5K dalam ${formatTime(minitSebenar)} - ${label}. Tahniah! Langkah seterusnya: 10K (anggaran sekarang ~${formatTime(riegel(minitSebenar, 5, 10))}).`,
         pautan: [ke10k("Buat pelan 10K")],
       };
+    }
     const perlu = weeksNeeded("5k", m);
     const bulan = PLAN_MONTHS.find((b) => b * 4 >= perlu) ?? PLAN_MONTHS[PLAN_MONTHS.length - 1];
     return {

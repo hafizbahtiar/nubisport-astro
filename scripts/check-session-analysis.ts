@@ -1,7 +1,14 @@
-// bun scripts/check-session-analysis.ts - semakan blok interval/tempo, split dan best effort
-// (src/lib/activity-analysis.ts). Rekod FIT sintetik: 5 s setiap titik; blok laju ikut pace
-// yang ditetapkan, selebihnya 6:00/km.
-import { activitySplits, bestEfforts, checkSession } from "../src/lib/activity-analysis";
+// bun scripts/check-session-analysis.ts - semakan blok interval/tempo, split, best effort,
+// GAP, kadens dan drift nadi (src/lib/activity-analysis.ts). Rekod FIT sintetik: 5 s setiap
+// titik; blok laju ikut pace yang ditetapkan, selebihnya 6:00/km.
+import {
+  activitySplits,
+  bestEfforts,
+  cadenceStats,
+  checkSession,
+  gradeAdjustedPace,
+  heartRateDrift,
+} from "../src/lib/activity-analysis";
 import { segment } from "../src/lib/plan-5k";
 
 let gagal = 0;
@@ -76,12 +83,14 @@ ok(checkSession([], SEGMEN, "~5:00/km") === null, "tiada rekod = null");
 }
 
 /** Rekod 1 s pada pace tetap; `naikPerKm` = ketinggian naik setiap km. */
-function lurus(pace: number, jarakM: number, naikPerKm = 0) {
+function lurus(pace: number, jarakM: number, naikPerKm = 0, nadi = 0, kadens = 0) {
   const out: {
     timestamp: Date;
     distance: number;
     enhancedAltitude: number;
     enhancedSpeed: number;
+    heartRate?: number;
+    cadence?: number;
   }[] = [];
   const laju = 1000 / pace;
   for (let t = 0; ; t++) {
@@ -91,6 +100,8 @@ function lurus(pace: number, jarakM: number, naikPerKm = 0) {
       distance: d,
       enhancedAltitude: (d / 1000) * naikPerKm,
       enhancedSpeed: laju,
+      ...(nadi ? { heartRate: nadi } : {}),
+      ...(kadens ? { cadence: kadens } : {}),
     });
     if (d >= jarakM) break;
   }
@@ -147,6 +158,57 @@ function lurus(pace: number, jarakM: number, naikPerKm = 0) {
 }
 
 ok(activitySplits([]).length === 0 && bestEfforts([]).length === 0, "rekod kosong = tiada split/best");
+
+// GAP: mendaki lebih laju setara, menurun lebih perlahan; tiada altitude = null.
+{
+  const rata = activitySplits(lurus(360, 1000));
+  ok(hampir(gradeAdjustedPace(rata), 360, 0.1), "GAP rata = pace");
+  const naik = activitySplits(lurus(360, 1000, 50));
+  ok(hampir(naik[0]?.elevationChangeM, 50, 0.01), `perubahan tinggi +50 (${naik[0]?.elevationChangeM})`);
+  ok((gradeAdjustedPace(naik) ?? Infinity) < 360, "GAP mendaki lebih laju");
+  const turun = activitySplits(lurus(360, 1000, -50));
+  ok(hampir(turun[0]?.elevationChangeM, -50, 0.01), `perubahan tinggi -50 (${turun[0]?.elevationChangeM})`);
+  ok((gradeAdjustedPace(turun) ?? 0) > 360, "GAP menurun lebih perlahan");
+  const tanpaAlt = activitySplits(
+    lurus(360, 1000).map(({ enhancedAltitude, ...r }) => r),
+  );
+  ok(
+    tanpaAlt[0]?.elevationChangeM === null && gradeAdjustedPace(tanpaAlt) === null,
+    "tiada altitude = tiada GAP",
+  );
+}
+
+// Kadens FIT satu kaki x2 = langkah/min.
+{
+  const k = cadenceStats(lurus(300, 2000, 0, 0, 90));
+  ok(k.avg === 180 && k.max === 180, `kadens 90 x2 = 180 spm (${k.avg}/${k.max})`);
+  ok(cadenceStats(lurus(300, 2000)).avg === null, "tiada kadens = null");
+}
+
+// Drift nadi: separuh kedua 150 vs separuh pertama 140 = +7.1%.
+{
+  const laju = 1000 / 360;
+  const nadi: {
+    timestamp: Date;
+    distance: number;
+    enhancedSpeed: number;
+    heartRate: number;
+  }[] = [];
+  for (let t = 0; ; t++) {
+    const d = Math.min(3000, laju * t);
+    nadi.push({
+      timestamp: new Date(MULA + t * 1000),
+      distance: d,
+      enhancedSpeed: laju,
+      heartRate: d < 1500 ? 140 : 150,
+    });
+    if (d >= 3000) break;
+  }
+  const drift = heartRateDrift(nadi);
+  ok(drift !== null && Math.abs(drift - 7.14) < 0.2, `drift nadi +7.1% (${drift})`);
+  ok(heartRateDrift(lurus(360, 500, 0, 140)) === null, "aktiviti pendek = tiada drift");
+  ok(heartRateDrift(lurus(360, 1000)) === null, "tiada nadi = tiada drift");
+}
 
 if (gagal) {
   console.error(`\n${gagal} semakan gagal.`);

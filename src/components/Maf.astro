@@ -240,7 +240,7 @@ const pelan = full ? "/account/plans/5k/new" : "/plan-5k";
         ${h.nota.map((n) => `<div class="alert alert-info maf-nota"><p>${n}</p></div>`).join("")}
         ${full ? `<a class="btn btn-primary maf-nota" href="/account/plans/5k/new?${new URLSearchParams({ maf: "1", umur: String(Number(q.get("umur"))), keadaan: kategori })}#borang">Buat Pelan 5K ikut nadi ini</a>` : ""}`
       : `<div class="alert alert-warning"><p>${h.sebab}</p></div>`;
-    hasil.scrollIntoView({ behavior: "smooth" });
+    hasil.scrollIntoView();
   }
 </script>
 

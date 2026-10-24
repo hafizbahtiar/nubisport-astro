@@ -130,7 +130,8 @@ Item yang dah siap dibuang (lihat git history).
   dipadankan ikut masa mula, satu POST multipart setiap aktiviti ke `/me/apps/nubi/activities`.
   Persetujuan sebaris dengan Simpan (`nubi/consent/aktiviti`). Detail + peta: `/account/activities/view?id=` (MapLibre malas, laluan dari `.fit` asal; 2D Positron / 3D
   Liberty (OpenFreeMap) / Terrain (DEM Mapterhorn), zoom Ctrl/⌘+skrol atau dua jari, skrin penuh;
-  `docs/plans/map-3d.md`). Nama aktiviti = `textContent` saja. Backend + R2:
+  `docs/plans/map-3d.md`). Nama aktiviti = `textContent` saja. "Padam semua data aktiviti" ada di
+  Profil > Keselamatan (Zon bahaya), bukan halaman Aktiviti. Backend + R2:
   `hono-workers/docs/plans/nubi-activities.md`. Pelan: `docs/plans/strava-activities.md`.
 - **Rekod & ramalan** (2026-10-24): detail aktiviti ada split setiap km + best effort 1K/5K/10K/21K/42K
   dari rekod FIT (`lib/activity-analysis.ts`, `activitySplits`/`bestEfforts`); `/account/activities` ada
@@ -278,7 +279,8 @@ Item yang dah siap dibuang (lihat git history).
 
 - [x] **Main semula laluan aktiviti** (2026-10-23): peta detail ada replay dari track FIT
   (`trackOf`/`trackAt`), Main/Pause, 1×-8×, slider masa, marker bergerak dan progress line; tiada
-  endpoint/migration baru. Semak `bun scripts/check-activity-file.ts`.
+  endpoint/migration baru. Intro auto ~3 s dari mula ke akhir bila peta pertama dibuka (batal bila
+  pengguna tekan Main/slider; reduced motion = terus penuh). Semak `bun scripts/check-activity-file.ts`.
 - [x] **Detail aktiviti lambat** (`/account/activities/view`, didiagnosis 2026-10-23, dibaiki): `mula()`
   berjalan satu demi satu - `/me` -> baris aktiviti -> fail `.fit` (R2) -> parser FIT 430 KB baru dimuat ->
   tunggu pelan -> **baru** maplibre 1.1 MB + gaya + tiles. Baiki: (1) mula `import("maplibre-gl")` + parser FIT
@@ -314,7 +316,10 @@ Item yang dah siap dibuang (lihat git history).
   `bun scripts/check-activity-records.ts`.
 - [ ] **PR tepat**: kira best effort masa upload (bukan pace purata) dan simpan kolum D1 di backend
   `hono-workers` + backfill aktiviti lama. Buat bila angka anggaran tak cukup; jangan mula dengan ini.
-- [ ] GAP (pace laraskan bukit), kadens purata/maks, HR drift - data FIT ada, UI belum.
+- [x] **GAP, kadens, drift nadi** (2026-10-24): `gradeAdjustedPace` (Minetti 2002, gred split dihadkan
+  ±30%), `cadenceStats` (FIT satu kaki x2) dan `heartRateDrift` (separuh kedua vs pertama, ikut masa
+  bergerak) dalam `lib/activity-analysis.ts`. GAP/kadens untuk run/walk di ringkasan detail, drift dalam
+  panel Nadi. Semak `bun scripts/check-session-analysis.ts`.
 - [ ] Training load / fitness-fatigue - tangguh (perlu snapshot harian, nilai tak jelas untuk pelari baru).
 - [ ] Uji dengan aktiviti sebenar: split mesti berjumlah jarak aktiviti (termasuk split akhir separa),
   best 5K/10K hanya muncul bila rekod cukup panjang, PR dikemas kini selepas aktiviti dipadam.
@@ -345,9 +350,10 @@ Item yang dah siap dibuang (lihat git history).
 - [ ] **Keputusan owner**: param URL mengatasi params tersimpan di view (borang pace/ujian bergantung padanya)
   - link dengan kunci anda boleh ubah pelan + pangkas tanda siap di pelayar (awan kekal). Biar, atau params
   tersimpan menang?
-- [ ] `nextPlan` (`lib/pace.ts`): masa tepat 30:00 dilabel "bawah 30 minit" (`m <= TARGET_MINUTES`).
-- [ ] `Maf.astro:243`, `pace.astro:179`: `behavior: "smooth"` abaikan reduced motion - buang opsyen
-  (CSS `html` dah urus), sama macam pelan.
+- [x] **`nextPlan` tepat 30:00** (2026-10-24): tepat 30:00 = "tepat 30 minit" + pautan 10K; 29:59 =
+  "bawah 30 minit". Guna masa sebenar, bukan minit bundar. Semak `bun scripts/check-pace.ts`.
+- [x] **`Maf.astro`, `pace.astro`** (2026-10-24): buang `behavior: "smooth"` - CSS `html` dan reduced
+  motion dah uruskan.
 - [ ] Uji "Sambung dari Minggu N" Dashboard dengan akaun ahli + pelan aktif sebenar; uji flow pelan di
   Safari/telefon.
 

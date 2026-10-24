@@ -43,8 +43,8 @@ backend (403). Sekatan di frontend hanyalah untuk UX.
    > Saya faham fail asal (termasuk laluan GPS) disimpan dan digunakan untuk analitik Nubi secara
    > agregat. Saya boleh padam bila-bila masa.
 
-   Disimpan di backend (`nubi.consent`), bukan localStorage. "Padam semua data aktiviti" membuang
-   rekod itu juga (tarik balik), jadi muat naik seterusnya bertanya semula.
+   Disimpan di backend (`nubi.consent`), bukan localStorage. "Padam data aktiviti" di
+   Profil > Keselamatan membuang rekod itu juga (tarik balik), jadi muat naik seterusnya bertanya semula.
 4. Pilih fail. **Pelayar yang menghurai FIT** untuk ringkasan (`lib/activity-file.ts`). Pratonton untuk
    setiap aktiviti: tarikh, jenis, jarak, masa, pace, dan lencana "+ GPX" kalau ada GPX. Fail yang
    gagal atau GPX yang tiada pasangan disenaraikan dengan sebabnya.
@@ -52,8 +52,8 @@ backend (403). Sekatan di frontend hanyalah untuk UX.
    `summary`) ke `POST /api/v1/me/apps/nubi/activities`, dengan bar kemajuan. Keputusan: baru /
    dikemas kini.
 6. **Senarai**: tapis 30 / 90 hari / semua melalui Dropdown (sama seperti penapis sukan), jumlah jarak dan masa minggu ini, dan jenis sukan.
-   Padam satu aktiviti, atau "Padam semua data aktiviti saya", melalui `confirmDialog({ danger: true })`.
-   Padam membuang ringkasan **dan fail** serta-merta.
+   Padam satu aktiviti melalui `confirmDialog({ danger: true })`; padam semua data aktiviti di
+   Profil > Keselamatan (Zon bahaya). Padam membuang ringkasan **dan fail** serta-merta.
 
 ## Penghurai (`lib/activity-file.ts`)
 
