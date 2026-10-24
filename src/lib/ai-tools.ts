@@ -361,12 +361,28 @@ async function trainingSummary(args: Record<string, unknown>): Promise<ToolResul
     const done = new Set(readList(p.kunci));
     const next = p.sesi.find((s) => !done.has(s.id));
     const info = describePlan(p.kunci);
+    const today = todayMY();
+    const monday = addDays(today, -((new Date(`${today}T00:00:00Z`).getUTCDay() + 6) % 7));
+    const sunday = addDays(monday, 6);
+    const mingguIni = p.sesi
+      .filter((s) => s.tarikh >= monday && s.tarikh <= sunday)
+      .map((s) => ({
+        id: s.id,
+        label: sessionLabel(s),
+        tarikh: s.tarikh,
+        jenis: s.jenis,
+        minit: s.minit,
+        siap: done.has(s.id),
+      }));
     plan = {
       nama: info?.name ?? p.kunci,
       href: info?.href ?? "/account/plans",
       siap: done.size,
       jumlah: p.sesi.length,
       sesiSeterusnya: next ? { id: next.id, label: sessionLabel(next), tarikh: next.tarikh } : null,
+      mingguIni,
+      mingguIniDari: monday,
+      mingguIniHingga: sunday,
     };
   }
   return {

@@ -497,6 +497,13 @@ import Icon from "../../components/ui/Icon.astro";
     setBusy(true);
     showThinking("Memikir…");
 
+    // Kad navigasi (contoh open_plan) ditangguh sampai jawapan akhir siap, supaya
+    // card dan ayat keluar serentak - bukan card dulu, kemudian "menyusun jawapan".
+    const deferred: ToolResult[] = [];
+    const flushDeferred = () => {
+      for (const r of deferred.splice(0)) renderResult(r);
+    };
+
     try {
       let reply = "";
       let wrote = false;
@@ -509,6 +516,7 @@ import Icon from "../../components/ui/Icon.astro";
         const body = await json(res);
         if (!res.ok) {
           hideThinking();
+          flushDeferred();
           showError(errorMessage(res.status, body));
           return;
         }
@@ -525,8 +533,12 @@ import Icon from "../../components/ui/Icon.astro";
           : [];
         if (!calls.length) {
           hideThinking();
-          if (!reply) showError("AI tak beri jawapan. Cuba lagi.");
-          else messages.push({ role: "assistant", content: reply });
+          if (!reply && !deferred.length) {
+            showError("AI tak beri jawapan. Cuba lagi.");
+            return;
+          }
+          if (reply) messages.push({ role: "assistant", content: reply });
+          flushDeferred();
           return;
         }
         // Satu bubble per turn: teks perantara tidak disimpan dalam history.
@@ -552,7 +564,7 @@ import Icon from "../../components/ui/Icon.astro";
               typeof result.href === "string" &&
               typeof result.label === "string"
             )
-              renderResult(result);
+              deferred.push(result);
           }
           messages.push({
             role: "tool",
@@ -563,15 +575,18 @@ import Icon from "../../components/ui/Icon.astro";
         // Selepas tulis, UI jadi sumber kebenaran: jangan minta model mengesahkan lagi.
         if (wrote) {
           hideThinking();
+          flushDeferred();
           return;
         }
       }
       hideThinking();
+      flushDeferred();
       showError(
         "AI ambil terlalu banyak langkah. Cuba soalan yang lebih ringkas.",
       );
     } catch {
       hideThinking();
+      flushDeferred();
       showError("Tiada sambungan. Semak internet dan cuba lagi.");
     } finally {
       setBusy(false);
