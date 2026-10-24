@@ -181,20 +181,16 @@ Item yang dah siap dibuang (lihat git history).
 - **MAF** (`/maf`): formula 180 Maffetone dalam `src/lib/maf.ts` (16 ke bawah = 165; +10 untuk >65 hanya
   nota, bukan automatik), disemak `bun scripts/check-maf.ts` terhadap philmaffetone.com/180-formula.
   Julat "MAF-10 hingga MAF" dilabel amalan biasa - sumber hanya kata had atas.
-- **Sesuai lari + Ramadan** (2026-10-18): kad "Sesuai lari hari ini?" pada kedua-dua halaman pelan -
-  IPU (JAS) + ramalan (MET Malaysia) melalui endpoint awam backend kongsi:
-  `GET /api/v1/public/air-quality?state=` dan `GET /api/v1/public/weather/:id`
-  (`hono-workers/src/services/{air-quality,weather}.ts` + `routes/v1/public/` - repo itu semua Inggeris;
-  memo cache 15/60 min). Nubi: `src/lib/run-check.ts` (16 negeri, id MET `St###`; negeri pilihan =
-  localStorage `nubi:lokasi`) - nama negeri mesti sama dengan `STATE_NAME` JAS. Teks nasihat Melayu hidup
-  dalam `lib/run-check.ts`, bukan backend. Sesi dalam Hijri 9 dapat tag "Puasa" + banner (`lib/ramadan.ts`,
-  anggaran Umm al-Qura ±1 hari; JAKIM = kemudian). Kad senyap bila endpoint gagal - pelan tetap berfungsi.
-- **Waktu lari terbaik + kalkulator peluh** (2026-10-18): kad "Sesuai lari hari ini?" juga tunjuk Pagi (Subuh -> 11:00)
-  dan Petang (16:00 atau Asar kalau lewat -> Maghrib) - 11 pagi-4 petang dari Kenyataan Media Cuaca Panas KKM
-  25 Mac 2026; waktu solat zon JAKIM ibu negeri (`STATES[].zon`) dari `GET /api/v1/public/prayer-times/:zone`
-  (backend `services/prayer-times.ts`, memo 6 j); tetingkap tamat dibuang, ribut petir MET disusun ke belakang
-  (`runWindows` dalam `lib/run-check.ts`). Kalkulator peluh `/guide#peluh` (`lib/sweat.ts`, ACSM 2007: timbang
-  sebelum/lepas, had 2%) - dalam pelayar, tiada simpanan.
+- **Sesuai lari + Ramadan** (2026-10-18, kad pelan dibuang 2026-10-24): kad "Sesuai lari hari ini?"
+  (IPU/cuaca/waktu) tidak lagi dipaparkan pada halaman pelan. `src/lib/run-check.ts` kekal untuk tool
+  AI - IPU (JAS) + ramalan (MET Malaysia) + waktu solat (JAKIM) melalui endpoint awam backend kongsi:
+  `GET /api/v1/public/air-quality?state=`, `GET /api/v1/public/weather/:id` dan
+  `GET /api/v1/public/prayer-times/:zone` (`hono-workers/src/services/{air-quality,weather,prayer-times}.ts`;
+  memo cache 15/60 min/6 j). 16 negeri, id MET `St###`; nama negeri mesti sama dengan `STATE_NAME` JAS.
+  Sesi dalam Hijri 9 dapat tag "Puasa" + banner (`lib/ramadan.ts`, anggaran Umm al-Qura ±1 hari; JAKIM = kemudian).
+- **Kalkulator peluh** (2026-10-18): `/guide#peluh` (`lib/sweat.ts`, ACSM 2007: timbang sebelum/lepas, had 2%) -
+  dalam pelayar, tiada simpanan. `runWindows` masih dalam `lib/run-check.ts` untuk AI; tiada lagi kad
+  "waktu lari terbaik" pada halaman pelan.
 - **Maklumat latihan** (2026-10-18): `/account/profile/training` (tab "Latihan" dalam `ProfileShell`) simpan tarikh lahir, keadaan MAF, hari seminggu, masa 5K/10K
   sebagai `app_items` kind `profil` (satu rekod `saya`, kuota 1 di `hono-workers services/app-items.ts`) - tiada
   jadual/migration baru. `prefillForm` (`lib/profile.ts`) isi borang MAF / Pelan 5K (akaun) / Pelan Jarak; medan dalam

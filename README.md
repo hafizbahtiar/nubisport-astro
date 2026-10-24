@@ -23,7 +23,7 @@ oleh owner, **sebelum** Nubi bila Nubi bergantung pada endpoint baru.
 | Laluan | Siapa | Isi |
 |---|---|---|
 | `/` | awam | Halaman utama: tentang, cara sertai, soalan lazim |
-| `/plan-5k` | awam | Pelan "5K bawah 30 minit" + label "Realistik tak?" + pemasa jalan-lari + kad "Sesuai lari hari ini?" (IPU + cuaca + waktu lari terbaik); had lembut 3 pelan dalam pelayar; kongsi pelan |
+| `/plan-5k` | awam | Pelan "5K bawah 30 minit" + label "Realistik tak?" + pemasa jalan-lari + nota penafian ringkas; had lembut 3 pelan dalam pelayar; kongsi pelan |
 | `/maf` | awam | Kira had nadi MAF (formula 180 Maffetone) |
 | `/pace` | awam | Kalkulator pace: masa ↔ pace, km/j, anggaran 5K-maraton (Riegel) |
 | `/guide` | awam | Panduan pemula (NHS, KKM) + kalkulator peluh (ACSM) + senarai semak hari lumba boleh cetak |
@@ -112,7 +112,7 @@ bun run build
 
 - `src/layouts/` - `Layout` (awam: Header + Footer), `AccountLayout` (sidebar akaun, satu-satunya pengawal
   sesi; nama/e-mel dilukis dari salinan `/me` sebelum lukisan pertama).
-- `src/components/` - `Plan5k`, `DistancePlan`, `Timer` (pemasa jalan-lari skrin penuh), `RunCheck` (kad "Sesuai lari hari ini?" - IPU + cuaca), `Maf`, `ProfileShell`; `ui/` = atom (`PageHero`, `Section`,
+- `src/components/` - `Plan5k`, `DistancePlan`, `Timer` (pemasa jalan-lari skrin penuh), `Maf`, `ProfileShell`; `ui/` = atom (`PageHero`, `Section`,
   `ChipGroup`, `Field`, `Checkbox`, `DatePicker`, `Table` (varian `compact` / `standard` / `full` + `lib/table.ts`), `UserMenu`, `Dropdown` (pilihan tunggal; `<select>` asli tersembunyi pegang nilai), `Alert`, `ConfirmDialog` + `lib/confirm.ts`, `ConnectionNotice` =
   notis luar talian, `Icon` = ikon Lucide).
 - `src/lib/` - `icon.ts` (semua ikon UI = Lucide, `lucide-static`; tiada path SVG tulisan tangan), logik tulen (pelan, MAF, tarikh, ics, IPU/cuaca/waktu lari, Ramadan, peluh), `api.ts` (fetch `/api/v1`, satu refresh dikongsi,

@@ -1,4 +1,5 @@
-// "Sesuai lari hari ini?" - IPU (JAS) + ramalan cuaca (MET Malaysia) + waktu lari terbaik (JAKIM) untuk negeri pilihan.
+// Data IPU (JAS) + ramalan cuaca (MET Malaysia) + waktu lari terbaik (JAKIM) untuk tool AI.
+// Kad "Sesuai lari hari ini?" pada halaman pelan dibuang 2026-10-24.
 // Data mentah datang dari backend kongsi hono-workers: /api/v1/public/air-quality?state=,
 // /api/v1/public/weather/:id dan /api/v1/public/prayer-times/:zone (kod di sana dalam Inggeris; teks nasihat di sini).
 // Sumber rasmi sahaja (eqms.doe.gov.my, api.data.gov.my, e-solat.gov.my; KKM untuk 11 pagi - 4 petang) - panduan umum, bukan nasihat perubatan.

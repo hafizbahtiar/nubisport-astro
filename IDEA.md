@@ -15,9 +15,8 @@ vigorous ACSM; padam aktiviti tanya dulu sebelum buang tanda) · **bot Telegram*
 `/nubiplan` lihat pelan, `/unbind`; nyahpaut juga dari profil) · **larian kumpulan + RSVP**
 (`/account/events`: admin Nubi cipta, ahli "Saya datang", admin tanda **hadir sebenar** - RSVP ≠ hadir,
 lencana kira hadir; had peserta pilihan; Google Maps, `.ics`)
-· notis luar talian · **kad "Sesuai lari hari ini?"** (IPU JAS + ramalan MET ikut negeri) · **mod Ramadan**
-(sesi dalam Hijri 9 ditag "Puasa" + banner nasihat) · **waktu lari terbaik hari ini** (JAKIM + MET, elak
-11 pagi - 4 petang ikut KKM) · **kalkulator peluh** (`/guide#peluh`, ACSM) · **kalendar lumba** (`/races`, susun tangan
+· notis luar talian · **mod Ramadan**
+(sesi dalam Hijri 9 ditag "Puasa" + banner nasihat) · **kalkulator peluh** (`/guide#peluh`, ACSM) · **kalendar lumba** (`/races`, susun tangan
 `src/data/races.ts`, `.ics` per acara).
 
 ## Peraturan untuk setiap idea

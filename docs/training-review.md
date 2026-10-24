@@ -30,7 +30,7 @@ yang itu sumbernya kajian atau jurulatih, dan dilabel begitu.
 | Sesi interval/tempo = vigorous (`plan-sync.ts` `VIGOROUS`, `easyForQuality`) | ACSM Position Stand (Garber 2011): vigorous 77-95% HRmax | Nadi puncak < 77% HRmax = larian mudah, sesi laju tak ditanda. Tiada nadi/umur = tak dihalang | Ikut ACSM |
 | Kadar peluh, had 2% (`sweat.ts`) | ACSM Position Stand, Exercise and Fluid Replacement (Sawka 2007) | Berat sebelum/selepas, matlamat < 2% | Ikut ACSM |
 | Waktu panas 11 pagi - 4 petang (`run-check.ts`) | KKM (Kementerian Kesihatan Malaysia) | Nasihat waktu lari | Ikut KKM |
-| Saringan sebelum latihan (nota "Sebelum mula") | ACSM preparticipation screening (Riebe 2015): penyakit jantung/metabolik/buah pinggang atau simptom = kebenaran doktor sebelum latihan berat | "Rujuk doktor kalau ada masalah jantung, tekanan darah, sendi..." | Selaras |
+| Saringan sebelum latihan (nota penafian pelan) | ACSM preparticipation screening (Riebe 2015): penyakit jantung/metabolik/buah pinggang atau simptom = kebenaran doktor sebelum latihan berat | "Panduan umum, bukan nasihat perubatan. Ada masalah jantung, tekanan darah atau sendi? Rujuk doktor dulu. Pelan belum disemak jurulatih bertauliah." | Selaras |
 | Jumlah aktiviti mingguan | WHO 2020: 150-300 min sederhana atau 75-150 min berat seminggu (dewasa) | Semua pelan lari ≥ 3 hari seminggu - melepasi minimum WHO | Selaras (tiada formula) |
 | MAF 180 − umur (`maf.ts`) | **Bukan** standard organisasi (Maffetone). AHA: sederhana 50-70%, berat 70-85% daripada 220 − umur | Kekal (ciri "Kira MAF"), dilabel sumber Maffetone | Bukan standard - kekal, dilabel |
 | Ramalan masa (Riegel) | Tiada standard organisasi | Dilabel "anggaran kasar" | Kajian (Riegel 1981) |

@@ -1,5 +1,15 @@
 /* Pelan latihan (5K, 10K, 21K, 42K): dirender melalui innerHTML, jadi gaya scoped Astro tak sampai.
    Diimport oleh Plan5k.astro dan DistancePlan.astro sahaja. */
+/* Nota penafian ringkas di bawah pelan (menggantikan section "Sebelum mula"). */
+.nota-pelan {
+  padding-block: 0 2rem;
+}
+
+.nota-pelan p {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
 .hasil {
   padding-block: clamp(3rem, 7vw, 5rem);
 }

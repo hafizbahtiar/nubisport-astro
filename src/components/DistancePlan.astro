@@ -3,9 +3,7 @@
 // Satu jarak setiap page; borang panel untuk new, view/edit. Bertangga: 10K dari masa 5K,
 // 21K dari masa 10K, 42K dari masa 21K. Sasaran lalai = habis; masa sasaran pilihan.
 // Enjin: src/lib/distance-plan.ts. Render kad minggu dikongsi dengan Pelan 5K (lib/plan-render.ts).
-import Section from "./ui/Section.astro";
 import Timer from "./Timer.astro";
-import RunCheck from "./RunCheck.astro";
 import DistancePlanForm from "./DistancePlanForm.astro";
 import { DISTANCES, type Distance } from "../lib/distance-plan";
 import "../styles/plan.css";
@@ -15,7 +13,6 @@ interface Props {
   mode: "new" | "view";
 }
 const { jarak, mode } = Astro.props;
-const maraton = jarak === "42k";
 ---
 
 <p class="back-link-row">
@@ -48,64 +45,15 @@ const maraton = jarak === "42k";
   <div id="pelan"></div>
 </section>
 
-{mode !== "new" && <RunCheck full />}
-
 {
   mode !== "new" && (
-    <Section band narrow={false} fullWidth title="Sebelum mula" class="nota">
-      <ul>
-        <li>
-          Pelan ini panduan umum, <strong>bukan nasihat perubatan</strong>.
-          Rujuk doktor kalau ada masalah jantung, tekanan darah, sendi atau baru
-          sembuh daripada kecederaan. Berhenti kalau sakit (bukan sekadar
-          penat). Pelan dibina ikut prinsip latihan umum (contoh pelan pemula
-          Hal Higdon) dan <strong>belum disemak jurulatih bertauliah</strong>.
-        </li>
-        <li>
-          Pelan disimpan dalam pelayar ini. Tekan "Simpan ke awan" (akaun
-          percuma 1 pelan, ahli 5) supaya ia dan tanda siap ikut akaun anda ke
-          peranti lain.
-        </li>
-        {maraton ? (
-          <li>
-            Bertangga: maraton perlukan masa 21K (boleh habis separuh maraton).
-            Belum sampai? Mula dengan{" "}
-            <a class="link" href="/account/plans/21k/new">
-              pelan 21K
-            </a>{" "}
-            dulu. Larian panjang 3-4 jam: latih minum dan makan (gel/kurma) sama
-            seperti hari lumba.
-          </li>
-        ) : (
-          <li>
-            Bertangga: 10K perlukan masa 5K (boleh lari 5 km tanpa henti), 21K
-            perlukan masa 10K. Belum sampai? Mula dengan{" "}
-            <a class="link" href="/account/plans/5k/new">
-              Pelan 5K
-            </a>{" "}
-            atau pelan 10K dulu.
-          </li>
-        )}
-        <li>
-          Anggaran masa guna formula Riegel berdasarkan masa anda sekarang -{" "}
-          <strong>anggaran kasar</strong>. Jarak jauh biasanya lebih perlahan
-          daripada ramalan bagi pelari yang belum biasa.
-        </li>
-        <li>
-          Larian panjang naik sedikit demi sedikit, setiap minggu ke-4 lebih
-          ringan, dan minggu terakhir sebelum lumba diturunkan (tirus) supaya
-          kaki segar. Cuaca Malaysia panas - lari awal pagi, bawa air.
-        </li>
-        <li>
-          Baru bermula? Baca{" "}
-          <a class="link" href="/guide">
-            panduan pemula
-          </a>{" "}
-          - kasut, panas badan, cuaca panas, keselamatan dan senarai semak hari
-          lumba.
-        </li>
-      </ul>
-    </Section>
+    <div class="nota-pelan">
+      <p class="muted">
+        Panduan umum, <strong>bukan nasihat perubatan</strong>. Ada masalah
+        jantung, tekanan darah atau sendi? Rujuk doktor dulu. Pelan{" "}
+        <strong>belum disemak jurulatih bertauliah</strong>.
+      </p>
+    </div>
   )
 }
 

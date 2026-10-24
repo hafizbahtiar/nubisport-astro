@@ -851,6 +851,7 @@ const GAYA: {
         pitch: sudut(),
         // Page tetap boleh skrol: zum dalam peta = Ctrl/⌘ + skrol (desktop), dua jari (telefon).
         cooperativeGestures: true,
+        attributionControl: { compact: true }, // butang "i"; ditutup selepas load (di bawah)
         locale: {
           "CooperativeGesturesHandler.WindowsHelpText":
             "Tekan Ctrl + skrol untuk zum peta",
@@ -1213,6 +1214,12 @@ const GAYA: {
           } else if (!map.loaded() && !sid) gagal(e.error);
         });
       });
+      // Kredit mula tertutup: MapLibre buka compact sekali sahaja, jadi tutup sekali selepas load memadai.
+      const kredit = map
+        .getContainer()
+        .querySelector(".maplibregl-ctrl-attrib");
+      kredit?.classList.remove("maplibregl-compact-show");
+      kredit?.removeAttribute("open");
       for (const [label, isi, titikNya] of [
         ["Mula", navy, lonLat[0]],
         ["Tamat", oren, lonLat.at(-1)!],

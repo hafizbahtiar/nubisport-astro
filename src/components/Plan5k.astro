@@ -1,10 +1,7 @@
 ---
 import PageHero from "./ui/PageHero.astro";
-import Section from "./ui/Section.astro";
 import Timer from "./Timer.astro";
-import RunCheck from "./RunCheck.astro";
 import Plan5kForm from "./Plan5kForm.astro";
-import { MIN_WEEKS, WEEKS_PER_MINUTE } from "../lib/plan-5k";
 import "../styles/plan.css";
 
 // Kandungan sahaja - page memilih layout. Borang awam /plan-5k; akaun:
@@ -18,7 +15,6 @@ interface Props {
   mode?: "public" | "new" | "view";
 }
 const { full = false, mode = "public" } = Astro.props;
-const maf = full ? "/account/maf" : "/maf";
 ---
 
 {
@@ -71,55 +67,15 @@ const maf = full ? "/account/maf" : "/maf";
   <div class:list={[full ? "" : "container"]} id="pelan"></div>
 </section>
 
-{mode !== "new" && <RunCheck full={full} />}
-
 {
   mode !== "new" && (
-    <Section
-      band
-      narrow={!full}
-      fullWidth={full}
-      title="Sebelum mula"
-      class="nota"
-    >
-      <ul>
-        <li>
-          Pelan ini panduan umum, <strong>bukan nasihat perubatan</strong>.
-          Kalau ada masalah jantung, tekanan darah, sendi atau baru sembuh
-          daripada kecederaan, rujuk doktor dulu. Berhenti kalau sakit (bukan
-          sekadar penat). Pelan dibina ikut prinsip latihan umum (contoh NHS
-          Couch to 5K) dan <strong>belum disemak jurulatih bertauliah</strong>.
-        </li>
-        <li>
-          Ambang "munasabah" ialah <strong>anggaran kasar</strong>: dari sifar ~
-          {MIN_WEEKS.sifar} minggu, dari jalan-lari ~{MIN_WEEKS.jalan} minggu,
-          dan dari 5K sekarang ~{WEEKS_PER_MINUTE} minggu bagi setiap minit yang
-          nak dipotong. Setiap orang berbeza.
-        </li>
-        <li>
-          Beban naik paling banyak 10% seminggu dan setiap minggu ke-4 lebih
-          ringan - badan jadi kuat masa berehat. Terlepas sesi? Teruskan dengan
-          minggu itu, jangan ganti dua kali ganda.
-        </li>
-        <li>
-          Cuaca Malaysia panas dan lembap: lari awal pagi atau lewat petang,
-          bawa air, perlahankan pace bila panas - ikut rasa usaha, bukan jam.
-          Nak ukuran yang lebih tepat? Cuba{" "}
-          <a class="link" href={maf}>
-            lari ikut nadi (MAF)
-          </a>{" "}
-          untuk sesi mudah.
-        </li>
-        <li>
-          Baru bermula? Baca{" "}
-          <a class="link" href="/guide">
-            panduan pemula
-          </a>{" "}
-          - kasut, panas badan, cuaca panas, keselamatan dan senarai semak hari
-          lumba.
-        </li>
-      </ul>
-    </Section>
+    <div class:list={["nota-pelan", full ? "" : "container"]}>
+      <p class="muted">
+        Panduan umum, <strong>bukan nasihat perubatan</strong>. Ada masalah
+        jantung, tekanan darah atau sendi? Rujuk doktor dulu. Pelan{" "}
+        <strong>belum disemak jurulatih bertauliah</strong>.
+      </p>
+    </div>
   )
 }
 
