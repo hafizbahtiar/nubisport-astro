@@ -278,9 +278,9 @@ Item yang dah siap dibuang (lihat git history).
   `bun scripts/verify-nubi-badges.ts`.
 
 - [x] **Animasi laluan aktiviti** (2026-10-23, dipermudah 2026-10-24): peta detail ada animasi dari track FIT
-  (`trackOf`/`trackAt`) - intro auto ~3 s dan butang Main mengulanginya. Tiada replay masa sebenar,
-  slider atau kelajuan. Marker bergerak + progress line; reduced motion = terus penuh.
-  Semak `bun scripts/check-activity-file.ts`.
+  (`trackOf`/`trackAt`) - intro auto ~3 s selepas peta load + buffer 600 ms, dan butang Main
+  mengulanginya. Tiada replay masa sebenar, slider atau kelajuan. Marker bergerak + arrowhead ikut
+  bearing + progress line; reduced motion = terus penuh. Semak `bun scripts/check-activity-file.ts`.
 - [x] **Detail aktiviti lambat** (`/account/activities/view`, didiagnosis 2026-10-23, dibaiki): `mula()`
   berjalan satu demi satu - `/me` -> baris aktiviti -> fail `.fit` (R2) -> parser FIT 430 KB baru dimuat ->
   tunggu pelan -> **baru** maplibre 1.1 MB + gaya + tiles. Baiki: (1) mula `import("maplibre-gl")` + parser FIT

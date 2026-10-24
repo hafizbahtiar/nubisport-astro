@@ -347,7 +347,7 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
           "span",
           `${dayLabel(a.startedAt)} · ${formatKm(a.distanceM)}`,
         );
-        li.append(link, meta);
+        li.append(link, " ", meta);
         return li;
       }),
     );

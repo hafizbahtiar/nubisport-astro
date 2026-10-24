@@ -768,27 +768,32 @@ const GAYA: {
         if (map.getLayer("main-kemajuan"))
           map.setPaintProperty("main-kemajuan", "line-color", color);
       };
+      let introRaf = 0;
+      let introTimer = 0;
+      let introOn = false;
+      let introDone = false;
       const showFull = () => {
         setRoute(true, "#fff");
         animTime = duration;
         drawTrack(duration);
+        introDone = true;
       };
-      let introRaf = 0;
-      let introOn = false;
-      let introStarted = false;
       const cancelIntro = () => {
         introOn = false;
         cancelAnimationFrame(introRaf);
+        if (introTimer) clearTimeout(introTimer);
         introRaf = 0;
+        introTimer = 0;
       };
       const stopIntro = () => {
-        if (!introOn) return;
+        if (!introOn && !introTimer) return;
         cancelIntro();
         showFull();
       };
       const intro = () => {
         if (!track || !duration) return;
         cancelIntro();
+        introDone = false;
         if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
           showFull();
           return;
@@ -979,11 +984,7 @@ const GAYA: {
           }
           mainBox.hidden = false;
           drawTrack(animTime);
-          if (introOn) setRoute(false, oren);
-          if (!introStarted) {
-            introStarted = true;
-            intro();
-          }
+          if (!introDone && duration) setRoute(false, oren);
         }
       });
       let jatuh = false; // dah kembali ke Standard sebab gaya/DEM gagal -> mesej kekal kelihatan
@@ -1024,6 +1025,13 @@ const GAYA: {
         el.setAttribute("role", "img");
         el.setAttribute("aria-label", label);
         new ml.Marker({ element: el }).setLngLat(titikNya).addTo(map);
+      }
+      if (track && duration && !introDone && !introOn && !introTimer) {
+        // Buffer supaya peta sempat muncul; reduced motion terus tunjuk laluan penuh.
+        const delay = matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? 0
+          : 600;
+        introTimer = window.setTimeout(intro, delay);
       }
       status.hidden = !jatuh;
     } catch {
