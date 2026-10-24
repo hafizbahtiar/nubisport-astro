@@ -2,7 +2,7 @@
 // FIT dijana di sini dengan Encoder SDK Garmin (koordinat rekaan di tengah laut, 0°N 0°E) - tiada
 // fail larian sebenar dalam repo. Nilai meniru larian contoh owner: 2,663 m, 1,876 s, nadi purata 140 / maks 164.
 import { Encoder, Profile } from "@garmin/fitsdk";
-import { readGpx, buildUploadForm, fitRoute, fitRecords, trackOf, trackAt, heartSeries, altitudeSeries, hrZones, nameFromFile, paceFromDistance, pairFiles, isoSeconds, toSport, formatDuration } from "../src/lib/activity-file";
+import { readGpx, buildUploadForm, fitData, fitRoute, fitRecords, trackOf, trackAt, heartSeries, altitudeSeries, hrZones, nameFromFile, paceFromDistance, pairFiles, isoSeconds, toSport, formatDuration } from "../src/lib/activity-file";
 
 let gagal = 0;
 const ok = (c: unknown, msg: string) => {
@@ -35,6 +35,14 @@ function fit(kadens: (i: number) => number | undefined = () => undefined, laju: 
     timestamp: new Date(MULA.getTime() + 1896_000), startTime: MULA, sport: "running",
     totalDistance: 2663.11, totalTimerTime: 1876.213, totalElapsedTime: 1895.781,
   } as any);
+  e.onMesg(N.WEATHER_CONDITIONS, {
+    timestamp: MULA,
+    temperature: 31,
+    temperatureFeelsLike: 35,
+    relativeHumidity: 78,
+    windSpeed: 2.5,
+    windDirection: 90,
+  } as any);
   return e.close() as Uint8Array<ArrayBuffer>;
 }
 const gpx = (masa: string, nama = "Night Run") =>
@@ -63,6 +71,14 @@ const fail = (bait: BlobPart, nama: string) => new File([bait], nama);
   const tengah = trackAt(track, 40.5);
   ok(tengah?.index === 40 && Math.abs((tengah?.lat ?? 0) - 0.0415) < 1e-6, `interpolasi track ${tengah?.lat}`);
   ok(trackOf([]).length === 0 && trackAt([], 1) === null, "track kosong");
+
+  const data = await fitData(fit().buffer);
+  ok(data.records.length === 83, `fitData records ${data.records.length}`);
+  ok(data.weather?.temperatureC === 31, `suhu ${data.weather?.temperatureC}`);
+  ok(data.weather?.feelsLikeC === 35, `rasa ${data.weather?.feelsLikeC}`);
+  ok(data.weather?.humidityPct === 78, `kelembapan ${data.weather?.humidityPct}`);
+  ok(data.weather?.windSpeedMs === 2.5, `angin ${data.weather?.windSpeedMs}`);
+  ok(data.weather?.windDirectionDeg === 90, `arah ${data.weather?.windDirectionDeg}`);
 }
 
 // runRatio: 85 rpm (~170 langkah/min) = lari, 55 rpm (~110) = jalan; rekod berhenti (laju 0) tak dikira.

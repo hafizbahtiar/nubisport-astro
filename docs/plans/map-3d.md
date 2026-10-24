@@ -40,7 +40,7 @@ Apa yang dibina (v2, 2026-10-22 - kawalan dalam kanvas, ganti ChipGroup "Jenis p
   Dari record FIT yang sama dengan laluan - fail diambil dan diurai sekali (`fitRecords`, `routeOf`,
   `heartSeries`, `hrZones` dalam `src/lib/activity-file.ts`; semak `bun scripts/check-activity-file.ts`).
   MAF tidak digunakan: MAF = satu had atas, bukan 5 zon.
-- Profil ketinggian belum dibuat.
+- Profil ketinggian: dibina (SVG, `altitudeSeries`). Penambahbaikan seterusnya: [map-improvements.md](./map-improvements.md).
 
 ## Boleh terus (kecil)
 

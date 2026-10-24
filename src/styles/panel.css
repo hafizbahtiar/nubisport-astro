@@ -403,6 +403,22 @@
   white-space: pre-line;
 }
 
+.ai-peta {
+  height: 11rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--paper-2);
+}
+
+.ai-peta-penanda {
+  width: 10px;
+  height: 10px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.25);
+}
+
 .ai-kad-tindakan {
   display: flex;
   flex-wrap: wrap;

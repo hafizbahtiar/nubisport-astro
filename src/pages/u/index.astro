@@ -1,0 +1,242 @@
+---
+// Profil awam Nubi: /u/<username>. Halaman statik; Worker frontend rewrite /u/* ke shell ini,
+// script baca username dari pathname dan fetch JSON awam. Tiada AkaunLayout - orang luar boleh buka.
+// Privasi: JSON backend hanya pulangkan nama/username/bio/lokasi/ahli sejak/lencana/agregat;
+// tiada laluan, pelan, umur/berat/MAF atau pace. Semua teks pengguna guna textContent.
+import Layout from "../../layouts/Layout.astro";
+import Section from "../../components/ui/Section.astro";
+import "../../styles/panel.css";
+---
+
+<Layout
+  title="Profil pelari - Nubi Sport"
+  description="Profil awam ahli Nubi Sport."
+  noindex={true}
+>
+  <Section>
+    <div class="profil-awam">
+      <p class="muted" id="status" aria-live="polite">Memuatkan profil…</p>
+
+      <div id="isi" hidden>
+        <div class="kepala">
+          <span class="avatar" id="awal" aria-hidden="true">…</span>
+          <div class="teks">
+            <p class="eyebrow">Profil pelari</p>
+            <h1 class="display" id="nama">…</h1>
+            <p class="muted" id="username">…</p>
+            <p class="muted" id="ahli" hidden></p>
+          </div>
+          <span class="lencana" id="status-profil">Profil awam</span>
+        </div>
+
+        <p id="bio" hidden></p>
+        <p class="muted" id="lokasi" hidden></p>
+
+        <ul class="stat" aria-label="Statistik larian">
+          <li><span>Aktiviti</span><strong id="bilangan">0</strong></li>
+          <li><span>Jarak</span><strong id="jarak">0 km</strong></li>
+          <li><span>Masa bergerak</span><strong id="masa">0m</strong></li>
+        </ul>
+        <p class="muted">Jumlah larian dan jalan sepanjang akaun.</p>
+
+        <section class="panel" id="lencana" hidden aria-labelledby="t-lencana">
+          <h2 class="display" id="t-lencana">Lencana</h2>
+          <ul class="lencana-baris" id="senarai-lencana"></ul>
+        </section>
+
+        <div class="actions">
+          <a class="btn btn-primary" href="/register">Sertai Nubi Sport</a>
+          <a class="btn btn-outline" href="/plan-5k">Buat pelan 5K</a>
+        </div>
+      </div>
+    </div>
+  </Section>
+</Layout>
+
+<script>
+  import { BADGES } from "../../data/badges";
+  import { formatDuration, formatKm } from "../../lib/activity-file";
+  import { icon } from "../../lib/icon";
+
+  interface ProfilAwam {
+    username: string;
+    displayName: string;
+    bio: string | null;
+    location: string | null;
+    memberSince: string | null;
+    badges: { id: string; earnedAt: string }[];
+    activities: { count: number; distanceM: number; movingS: number };
+  }
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const status = $("status");
+  const isi = $("isi");
+
+  const gagal = (mesej: string) => {
+    status.textContent = mesej;
+    status.hidden = false;
+    isi.hidden = true;
+  };
+
+  const bulanAhli = (yrmonth: string) =>
+    new Date(`${yrmonth}-01T00:00:00Z`).toLocaleDateString("ms-MY", {
+      month: "short",
+      year: "numeric",
+      timeZone: "UTC",
+    });
+
+  const papar = (p: ProfilAwam) => {
+    $("awal").textContent = p.displayName.charAt(0).toUpperCase() || "?";
+    $("nama").textContent = p.displayName;
+    $("username").textContent = `@${p.username}`;
+    if (p.memberSince) {
+      $("ahli").textContent = `Ahli sejak ${bulanAhli(p.memberSince)}`;
+      $("ahli").hidden = false;
+    }
+    if (p.bio) {
+      $("bio").textContent = p.bio;
+      $("bio").hidden = false;
+    }
+    if (p.location) {
+      $("lokasi").textContent = `Lokasi: ${p.location}`;
+      $("lokasi").hidden = false;
+    }
+    $("bilangan").textContent = p.activities.count.toLocaleString("ms-MY");
+    $("jarak").textContent = formatKm(p.activities.distanceM);
+    $("masa").textContent = formatDuration(p.activities.movingS);
+
+    const earned = p.badges
+      .map((b) => BADGES.find((d) => String(d.id) === b.id))
+      .filter((b): b is (typeof BADGES)[number] => !!b);
+    if (earned.length) {
+      $("senarai-lencana").replaceChildren(
+        ...earned.map((b) => {
+          const li = document.createElement("li");
+          li.className = "lencana";
+          li.insertAdjacentHTML("afterbegin", icon(b.icon)); // ikon tetap dari katalog
+          li.append(document.createTextNode(b.label));
+          return li;
+        }),
+      );
+      $("lencana").hidden = false;
+    }
+
+    document.title = `${p.displayName} (@${p.username}) - Nubi Sport`;
+    status.hidden = true;
+    isi.hidden = false;
+  };
+
+  const mula = async () => {
+    const parts = location.pathname.split("/").filter(Boolean);
+    if (parts.length !== 2 || parts[0] !== "u") {
+      gagal("Pautan profil perlu ada username.");
+      return;
+    }
+    let username = "";
+    try {
+      username = decodeURIComponent(parts[1]);
+    } catch {
+      gagal("Pautan profil tak sah.");
+      return;
+    }
+    if (!username) {
+      gagal("Pautan profil perlu ada username.");
+      return;
+    }
+
+    const res = await fetch(
+      `/api/v1/public/profiles/${encodeURIComponent(username)}/nubi`,
+    ).catch(() => null);
+    if (!res) {
+      gagal("Tak dapat muatkan profil. Semak internet dan cuba lagi.");
+      return;
+    }
+    if (res.status === 404) {
+      gagal("Profil ini tiada atau tidak awam.");
+      return;
+    }
+    if (!res.ok) {
+      gagal("Tak dapat muatkan profil. Cuba lagi sekejap.");
+      return;
+    }
+    const body = (await res.json().catch(() => null)) as {
+      success?: boolean;
+      data?: ProfilAwam;
+    } | null;
+    if (!body?.success || !body.data) {
+      gagal("Profil ini tiada atau tidak awam.");
+      return;
+    }
+    papar(body.data);
+  };
+
+  await mula();
+</script>
+
+<style>
+  .profil-awam {
+    display: grid;
+    gap: 1.5rem;
+  }
+  #isi {
+    display: grid;
+    gap: 1.5rem;
+  }
+  .kepala {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 1rem;
+  }
+  .avatar {
+    display: grid;
+    place-items: center;
+    width: 4rem;
+    height: 4rem;
+    border-radius: 50%;
+    background: var(--navy);
+    color: var(--paper);
+    font: 700 1.6rem / 1 var(--display, var(--body));
+  }
+  .teks {
+    display: grid;
+    min-width: 0;
+  }
+  .teks h1 {
+    margin: 0.1rem 0;
+    font-size: clamp(2rem, 6vw, 3rem);
+    overflow-wrap: anywhere;
+  }
+  .teks p {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+  #bio {
+    max-width: 42rem;
+    margin: 0;
+    font-size: 1.05rem;
+    white-space: pre-line;
+  }
+  #lokasi {
+    margin: 0;
+  }
+  .lencana-baris {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  @media (max-width: 40rem) {
+    .kepala {
+      grid-template-columns: auto minmax(0, 1fr);
+    }
+    #status-profil {
+      grid-column: 2;
+      justify-self: start;
+    }
+  }
+</style>

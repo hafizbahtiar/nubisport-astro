@@ -29,7 +29,7 @@ import {
   runWindows,
   weatherAdvice,
 } from "./run-check";
-import { altitudeSeries, fitRecords, heartSeries, hrZones } from "./activity-file";
+import { altitudeSeries, fitData, heartSeries, hrZones, routeOf } from "./activity-file";
 import { checkSession } from "./activity-analysis";
 import {
   EVENTS,
@@ -62,8 +62,12 @@ export interface ToolProposal {
   label?: string;
   jalankan: () => Promise<ToolResult>;
 }
+export interface ActivityMapView {
+  activityId: number;
+  route: [number, number][];
+}
 export type ToolOutcome =
-  | { result: ToolResult }
+  | { result: ToolResult; view?: ActivityMapView }
   | { proposal: ToolProposal };
 
 export const WRITE_TOOLS = new Set([
@@ -414,17 +418,18 @@ function listRaces(args: Record<string, unknown>): ToolResult {
   return { hariIni: today, races };
 }
 
-async function activityDetail(args: Record<string, unknown>): Promise<ToolResult> {
+async function activityDetail(args: Record<string, unknown>): Promise<ToolOutcome> {
   const id = Number(args.id);
-  if (!Number.isInteger(id) || id <= 0) return { ralat: "Aktiviti tak sah." };
+  if (!Number.isInteger(id) || id <= 0) return { result: { ralat: "Aktiviti tak sah." } };
   const res = await api(`/me/apps/nubi/activities/${id}`).catch(() => null);
-  if (!res?.ok) return { ralat: "Aktiviti itu tiada dalam akaun ini." };
+  if (!res?.ok) return { result: { ralat: "Aktiviti itu tiada dalam akaun ini." } };
   const a = (await json(res)).data as Record<string, unknown>;
   const out: ToolResult = { activity: activitySummary(a) };
   const file = await api(`/me/apps/nubi/activities/${id}/file`).catch(() => null);
-  if (!file?.ok) return { ...out, nota: "Fail FIT tak dapat dimuatkan; ringkasan sahaja." };
+  if (!file?.ok) return { result: { ...out, nota: "Fail FIT tak dapat dimuatkan; ringkasan sahaja." } };
   try {
-    const rekod = await fitRecords(await file.arrayBuffer());
+    const { records: rekod, weather } = await fitData(await file.arrayBuffer());
+    if (weather) out.cuaca = weather;
     const hr = heartSeries(rekod);
     if (typeof a.maxHr === "number" && a.maxHr > 0 && hr.length) out.hrZones = hrZones(hr, a.maxHr);
     const alt = altitudeSeries(rekod);
@@ -444,10 +449,15 @@ async function activityDetail(args: Record<string, unknown>): Promise<ToolResult
           purataSPerKm: c.purata,
         };
     }
+    const route = routeOf(rekod);
+    return {
+      result: out,
+      ...(route.length >= 2 ? { view: { activityId: id, route } } : {}),
+    };
   } catch {
     out.nota = "Fail FIT tak dapat dibaca; ringkasan sahaja.";
+    return { result: out };
   }
-  return out;
 }
 
 async function prepareMark(args: Record<string, unknown>): Promise<ToolOutcome> {
@@ -538,7 +548,7 @@ export async function runTool(name: string, rawArgs: string): Promise<ToolOutcom
       case "list_races":
         return { result: listRaces(args) };
       case "get_activity_detail":
-        return { result: await activityDetail(args) };
+        return activityDetail(args);
       default:
         return { result: { ralat: "Tool tak dikenali." } };
     }

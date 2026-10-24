@@ -99,10 +99,49 @@ export async function summarizeFit(bait: ArrayBuffer, nama: string): Promise<Act
   };
 }
 
+/** Cuaca dari mesej weather_conditions FIT. null = peranti tiada data cuaca. */
+export interface ActivityWeather {
+  temperatureC: number | null;
+  feelsLikeC: number | null;
+  humidityPct: number | null;
+  windSpeedMs: number | null;
+  windDirectionDeg: number | null;
+}
+
+export interface FitData {
+  records: any[];
+  weather: ActivityWeather | null;
+}
+
+const angka = (v: unknown): number | null =>
+  typeof v === "number" && Number.isFinite(v) ? v : null;
+
+/** Record FIT + cuaca (jika ada) - satu parse untuk page detail dan tool AI. */
+export async function fitData(bait: ArrayBuffer): Promise<FitData> {
+  const { Decoder, Stream } = await import("@garmin/fitsdk");
+  const messages = new Decoder(Stream.fromArrayBuffer(bait)).read().messages;
+  const w = messages.weatherConditionsMesgs?.[0];
+  const weather: ActivityWeather | null = w
+    ? {
+      temperatureC: angka(w.temperature),
+      feelsLikeC: angka(w.temperatureFeelsLike),
+      humidityPct: angka(w.relativeHumidity),
+      windSpeedMs: angka(w.windSpeed),
+      windDirectionDeg: angka(w.windDirection),
+    }
+    : null;
+  return {
+    records: messages.recordMesgs ?? [],
+    weather:
+      weather && Object.values(weather).some((v) => v !== null)
+        ? weather
+        : null,
+  };
+}
+
 /** Record FIT (diurai sekali - laluan dan nadi diambil dari hasil yang sama). */
 export async function fitRecords(bait: ArrayBuffer): Promise<any[]> {
-  const { Decoder, Stream } = await import("@garmin/fitsdk");
-  return new Decoder(Stream.fromArrayBuffer(bait)).read().messages.recordMesgs ?? [];
+  return (await fitData(bait)).records;
 }
 
 /** Ketinggian ikut jarak: [meter, meter]. [] = fail tiada altitude/jarak. */

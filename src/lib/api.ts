@@ -10,6 +10,17 @@ export interface CurrentUser {
   role: string;
   apps: Record<string, string>; // { nubi: "admin" } - diurus owner di portfolio /admin/app-access
   telegram?: { linkedAt: string | null }; // null = belum paut / sudah nyahpaut
+  username?: string | null;
+  profilePublic?: boolean;
+  profile?: {
+    displayName: string | null;
+    bio: string | null;
+    location: string | null;
+    website: string | null;
+    linkedinUrl: string | null;
+    githubUrl: string | null;
+    twitterUrl: string | null;
+  };
 }
 
 let refreshing: Promise<boolean> | null = null;

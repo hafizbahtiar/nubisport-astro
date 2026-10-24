@@ -145,6 +145,7 @@ import Icon from "../../components/ui/Icon.astro";
     runTool,
     toolContent,
     WRITE_TOOLS,
+    type ActivityMapView,
     type AiChatMessage,
     type AiToolCall,
     type ToolProposal,
@@ -416,6 +417,106 @@ import Icon from "../../components/ui/Icon.astro";
     scrollBottom();
   };
 
+  // Peta snapshot dalam chat: route tak masuk mesej model, hanya UI. Tiada animation/kawalan.
+  let petaModul: Promise<
+    [typeof import("maplibre-gl"), { default: string }]
+  > | null = null;
+  const peta = () =>
+    (petaModul ??= Promise.all([
+      import("maplibre-gl"),
+      import("maplibre-gl/dist/maplibre-gl-worker.mjs?url"),
+      import("maplibre-gl/dist/maplibre-gl.css"),
+    ]).then(([ml, pekerja]) => {
+      ml.setWorkerUrl(pekerja.default);
+      return [ml, pekerja] as [
+        typeof import("maplibre-gl"),
+        { default: string },
+      ];
+    }));
+
+  const lukisPeta = async (el: HTMLElement, route: [number, number][]) => {
+    try {
+      const [ml] = await peta();
+      const lonLat = route.map(([lat, lon]) => [lon, lat] as [number, number]);
+      const lon = lonLat.map((p) => p[0]);
+      const lat = lonLat.map((p) => p[1]);
+      const bounds: [[number, number], [number, number]] = [
+        [Math.min(...lon), Math.min(...lat)],
+        [Math.max(...lon), Math.max(...lat)],
+      ];
+      el.replaceChildren();
+      const map = new ml.Map({
+        container: el,
+        style: "https://tiles.openfreemap.org/styles/positron",
+        bounds,
+        fitBoundsOptions: { padding: 20 },
+        interactive: false,
+      });
+      map.on("load", () => {
+        const warna = getComputedStyle(document.documentElement);
+        const oren = warna.getPropertyValue("--orange").trim() || "#ff5a1f";
+        const navy = warna.getPropertyValue("--navy").trim() || "#0a1a33";
+        map.addSource("laluan", {
+          type: "geojson",
+          data: {
+            type: "Feature",
+            properties: {},
+            geometry: { type: "LineString", coordinates: lonLat },
+          },
+        });
+        map.addLayer({
+          id: "laluan-tepi",
+          type: "line",
+          source: "laluan",
+          layout: { "line-join": "round", "line-cap": "round" },
+          paint: { "line-color": "#fff", "line-width": 6 },
+        });
+        map.addLayer({
+          id: "laluan",
+          type: "line",
+          source: "laluan",
+          layout: { "line-join": "round", "line-cap": "round" },
+          paint: { "line-color": oren, "line-width": 3 },
+        });
+        for (const [label, isi, titik] of [
+          ["Mula", navy, lonLat[0]],
+          ["Tamat", oren, lonLat.at(-1)!],
+        ] as const) {
+          const penanda = document.createElement("div");
+          penanda.className = "ai-peta-penanda";
+          penanda.style.background = isi;
+          penanda.title = label;
+          penanda.setAttribute("role", "img");
+          penanda.setAttribute("aria-label", label);
+          new ml.Marker({ element: penanda }).setLngLat(titik).addTo(map);
+        }
+      });
+    } catch {
+      el.textContent = "Peta tak dapat dimuatkan.";
+    }
+  };
+
+  const renderActivityMap = (view: ActivityMapView) => {
+    const { row, bubble } = createRow("assistant", false);
+    row.classList.add("ai-row-proposal");
+    bubble.classList.add("ai-kad");
+    const tajuk = document.createElement("strong");
+    tajuk.className = "ai-kad-tajuk";
+    tajuk.textContent = "Peta aktiviti";
+    const petaEl = document.createElement("div");
+    petaEl.className = "ai-peta";
+    petaEl.textContent = "Memuatkan peta…";
+    bubble.append(tajuk, petaEl);
+    const a = document.createElement("a");
+    a.className = "btn btn-outline btn-sm";
+    a.href = `/account/activities/view?id=${view.activityId}`;
+    a.textContent = "Lihat aktiviti";
+    bubble.append(a);
+    log.append(row);
+    scrollBottom();
+    void lukisPeta(petaEl, view.route);
+  };
+
   const setBusy = (v: boolean) => {
     sibuk = v;
     hantar.disabled = v;
@@ -500,7 +601,9 @@ import Icon from "../../components/ui/Icon.astro";
     // Kad navigasi (contoh open_plan) ditangguh sampai jawapan akhir siap, supaya
     // card dan ayat keluar serentak - bukan card dulu, kemudian "menyusun jawapan".
     const deferred: ToolResult[] = [];
+    const deferredViews: ActivityMapView[] = [];
     const flushDeferred = () => {
+      for (const v of deferredViews.splice(0)) renderActivityMap(v);
       for (const r of deferred.splice(0)) renderResult(r);
     };
 
@@ -533,7 +636,7 @@ import Icon from "../../components/ui/Icon.astro";
           : [];
         if (!calls.length) {
           hideThinking();
-          if (!reply && !deferred.length) {
+          if (!reply && !deferred.length && !deferredViews.length) {
             showError("AI tak beri jawapan. Cuba lagi.");
             return;
           }
@@ -560,6 +663,7 @@ import Icon from "../../components/ui/Icon.astro";
             renderResult(result);
           } else {
             result = hasil.result;
+            if (hasil.view) deferredViews.push(hasil.view);
             if (
               typeof result.href === "string" &&
               typeof result.label === "string"

@@ -119,7 +119,8 @@ Item yang dah siap dibuang (lihat git history).
   Padam pelan: Dashboard + pelan penuh saja (di awam ia membuka semula slot had 3 pelan).
 - **Kemas kini pelan** (2026-10-22): buka pelan dari dashboard (URL bawa `kunci`), ubah masa/pace/tarikh pada borang, tekan "Kemas kini pelan" - params ditulis bawah kunci yang sama (progress/awan/aktif kekal), tanda siap sesi yang dah tiada dipangkas, dan pelan yang sudah di awan dihantar semula. "Buat pelan" di `/new` mencipta pelan baru dalam page (submit, tiada muat semula) - link berparam hanya mengisi borang, tak pernah mencipta. View hanya buka kunci yang ada dalam senarai pelan (`savedPlanParams`); kunci asing/tiada -> `/account/plans`. Kunci jadi pengecam - nilai di dalam teksnya mungkin lama. Semak: `bun scripts/check-plan-update.ts`.
 - **Akaun lain**: `/account/maf` (`components/Maf.astro full`: simpan `maf:terakhir` untuk Dashboard + butang
-  Pelan 5K ikut nadi; `/maf` lencong ke situ bila log masuk), `/account/profile` (Maklumat: nama `PATCH /me`; Zon bahaya: padam akaun `DELETE /me` dengan kata laluan dalam
+  Pelan 5K ikut nadi; `/maf` lencong ke situ bila log masuk), `/account/profile` (Maklumat: nama,
+  username, bio, lokasi, profil awam `PATCH /me`; Zon bahaya: padam akaun `DELETE /me` dengan kata laluan dalam
   `confirmDialog({ passwordLabel, action })`, lepas itu `localStorage.clear()` -> `/?akaun=dipadam`) +
   `/account/profile/password` (`PUT /me/password` - tamatkan semua sesi); navigasi = card dalam `components/ProfileShell.astro` (tab segmen bawah 48rem). Sidebar: X tutup laci (telefon) / lipat (desktop, `akaun:sidebar`).
 - **Simpan awan**: had ikut peranan - percuma 1, ahli 5, admin/owner 10 (`lib/cloud-sync.ts`, backend `/me/apps/nubi/plan`, migration 029).
@@ -131,7 +132,9 @@ Item yang dah siap dibuang (lihat git history).
   Persetujuan sebaris dengan Simpan (`nubi/consent/aktiviti`). Detail + peta: `/account/activities/view?id=` (MapLibre malas, laluan dari `.fit` asal; 2D Positron / 3D
   Liberty (OpenFreeMap) / Terrain (DEM Mapterhorn), zoom Ctrl/⌘+skrol atau dua jari, skrin penuh;
   `docs/plans/map-3d.md`). Nama aktiviti = `textContent` saja. "Padam semua data aktiviti" ada di
-  Profil > Keselamatan (Zon bahaya), bukan halaman Aktiviti. Backend + R2:
+  Profil > Keselamatan (Zon bahaya), bukan halaman Aktiviti. Detail: split setiap km (KM/Pace/Elev +
+  bar) di sebelah peta pada desktop, bawah peta pada telefon; card Cuaca berasingan (suhu, rasa macam,
+  kelembapan, angin, arah) bila fail FIT ada `weather_conditions`. Backend + R2:
   `hono-workers/docs/plans/nubi-activities.md`. Pelan: `docs/plans/strava-activities.md`.
 - **Rekod & ramalan** (2026-10-24): detail aktiviti ada split setiap km + best effort 1K/5K/10K/21K/42K
   dari rekod FIT (`lib/activity-analysis.ts`, `activitySplits`/`bestEfforts`); `/account/activities` ada
@@ -237,8 +240,8 @@ Item yang dah siap dibuang (lihat git history).
   dirender dengan `innerHTML`. Tanda siap = localStorage `pelan-5k:<bulan>-<tahap>-<masa>-<hari>[-pPace]`.
   Hari sesi tetap (`SESSION_DAYS`: 3 hari = Isn/Rab/Sab, 4 hari = Isn/Rab/Jum/Ahd - sesi akhir hujung
   minggu); `mula` dianjak ke Isnin (`startMonday`) dan minggu semasa + sesi hari ini diserlahkan.
-- Semak: `bun run build` + semua `bun scripts/check-*.ts` (28 skrip, termasuk `check-deficit`,
-  `check-session-analysis`, `check-activity-records`, `check-plan-list`, `check-login-next`) + `npx -y -p @astrojs/check -p typescript@5 astro-check`. CI: `.github/workflows/verify.yml` (push/PR: astro-check, semua `check-*.ts`, build). Belum ada lint.
+- Semak: `bun run build` + semua `bun scripts/check-*.ts` (29 skrip, termasuk `check-deficit`,
+  `check-session-analysis`, `check-activity-records`, `check-public-profile`, `check-plan-list`, `check-login-next`) + `npx -y -p @astrojs/check -p typescript@5 astro-check`. CI: `.github/workflows/verify.yml` (push/PR: astro-check, semua `check-*.ts`, build). Belum ada lint.
   `bunx tsc --noEmit -p .` saja tak membaca skrip dalam `.astro` - guna astro-check
   (`@astrojs/check` belum sokong TS 7, jadi tak dipasang).
 
@@ -380,6 +383,23 @@ luar skop). Akaun sahaja, dikira dalam pelayar, diisi dari profil latihan; keput
   profil (baca saja - kalkulator tak pernah menulis). `/privacy` dikemas kini (23 Okt).
 - [ ] Nanti kalau diminta: km dari pelan aktif, anggaran minggu ke berat sasaran.
 
+## 👤 Profil awam (2026-10-24)
+
+- [x] **Profil sendiri**: `/account/profile` ada ringkasan (initial, nama, @username, status) + form
+  nama/username/bio/lokasi/checkbox Profil awam (`PATCH /me`). `CurrentUser` bawa
+  `username`/`profilePublic`/`profile`.
+- [x] **Profil awam** `/u/<username>`: Worker frontend rewrite `/u` + `/u/*` -> `dist/u/index.html`;
+  shell fetch `GET /api/v1/public/profiles/:username/nubi`; papar nama/username/bio/lokasi/ahli
+  sejak/lencana + agregat larian & jalan. Tiada laluan/pelan/kesihatan/pace; 404 sama untuk
+  private/unknown; `noindex`. Backend: `services/nubi-public-profile.ts` + route profiles.
+- [x] **Privasi**: `/privacy` senarai fields awam; opt-in guna `profile_public` sedia ada (sama
+  dengan profil awam portfolio - statistik agregat Nubi ikut nampak bila flag itu on).
+- [x] **Semakan**: `bun scripts/check-public-profile.ts` (worker rewrite), semua check frontend,
+  astro-check + build; backend `bun run type-check` + `bun scripts/verify-public-profile.ts`
+  (17 checks).
+- [ ] Opt-in Nubi berasingan jika owner tak mahu statistik larian ikut flag portfolio.
+- [ ] SSR/SEO profil awam (v1 client-render, `noindex`).
+
 ## 🤖 Pembantu AI - chat (fasa 1c dibina 2026-10-23)
 
 Diminta kawan owner. Fail utama: **`hono-workers/docs/plans/ai/README.md`**; frontend: `docs/plans/ai/frontend-platform.md` (fasa 1) dan `docs/plans/ai/frontend-byok.md` (fasa 2). Keputusan owner: chat yang
@@ -395,6 +415,9 @@ API sendiri (Claude, OpenAI, OpenRouter, Command Code) fasa 2.
   `title` (bukan "Selesai"), ditangguh sampai jawapan akhir siap supaya keluar serentak; prompt
   backend larang URL placeholder dan wajib `open_plan`; `get_training_summary` pulangkan `mingguIni`.
   Semak `check-ai-tools` + backend `verify-ai`. Deploy backend untuk prompt berkuat kuasa.
+- [x] **Peta + cuaca aktiviti** (2026-10-24): `get_activity_detail` pulangkan `view` peta UI-only
+  (route tidak masuk mesej model); kad peta snapshot MapLibre malas, tiada animation/kawalan, pautan
+  detail. Cuaca FIT ikut masuk result AI. Semak `check-activity-file` (cuaca) + `check-ai-tools`.
 - [x] Copy button pada setiap bubble user/assistant.
 - [x] Teks AI dipapar dengan `textContent`, bukan `innerHTML`.
 - [x] `/privacy` + `/terms`: bahagian AI.

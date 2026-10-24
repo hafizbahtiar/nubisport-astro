@@ -80,75 +80,95 @@ const GAYA: {
   </Alert>
 
   <div id="isi" hidden>
-    <section class="panel">
-      <div class="panel-kepala">
-        <div class="tajuk">
-          <h3 class="display" id="nama"></h3>
-          <p class="muted" id="bila"></p>
-          <p id="sesi-pelan" hidden></p>
-        </div>
-        <button class="btn btn-outline btn-sm" type="button" id="padam"
-          >Padam</button
-        >
-      </div>
-
-      <div class="peta" id="peta" aria-label="Peta laluan">
-        <!-- Dalam bekas peta supaya kekal kelihatan dalam skrin penuh. Desktop: show() = popover; telefon: showModal() = sheet. -->
-        <dialog class="gaya" id="pilih-gaya" aria-labelledby="gaya-tajuk">
-          <div class="gaya-isi">
-            <span class="pemegang" aria-hidden="true"></span>
-            <div class="gaya-kepala">
-              <h4 id="gaya-tajuk">Gaya peta</h4>
-              <button
-                class="gaya-tutup"
-                type="button"
-                aria-label="Tutup"
-                data-tutup><Icon name="tutup" /></button
-              >
-            </div>
-            <fieldset>
-              <legend class="sr-only">Pilih gaya peta</legend>
-              {
-                GAYA.map((g) => (
-                  <label class="gaya-pilihan">
-                    <input
-                      class="sr-only"
-                      type="radio"
-                      name="gaya"
-                      value={g.id}
-                      data-url={g.url}
-                    />
-                    <span class={`contoh contoh-${g.id}`} aria-hidden="true">
-                      <Icon name={g.ikon} />
-                    </span>
-                    <span class="gaya-teks">
-                      <strong>{g.label}</strong>
-                      <small>{g.nota}</small>
-                    </span>
-                    <span class="gaya-tanda" aria-hidden="true">
-                      <Icon name="tanda" />
-                    </span>
-                  </label>
-                ))
-              }
-            </fieldset>
+    <div class="peta-split" id="peta-split">
+      <section class="panel peta-panel">
+        <div class="panel-kepala">
+          <div class="tajuk">
+            <h3 class="display" id="nama"></h3>
+            <p class="muted" id="bila"></p>
+            <p id="sesi-pelan" hidden></p>
           </div>
-        </dialog>
-        <div class="main-semula" id="main-semula" hidden>
-          <button
-            class="main-main"
-            id="main-main"
-            type="button"
-            aria-label="Main semula animasi laluan"
+          <button class="btn btn-outline btn-sm" type="button" id="padam"
+            >Padam</button
           >
-            <span aria-hidden="true"><Icon name="main" /></span>
-            <span>Main</span>
-          </button>
         </div>
-      </div>
-      <p class="muted" id="peta-status">Memuatkan laluan…</p>
-      <p class="muted kecil">Laluan ini hanya kelihatan kepada anda.</p>
-    </section>
+
+        <div class="peta" id="peta" aria-label="Peta laluan">
+          <!-- Dalam bekas peta supaya kekal kelihatan dalam skrin penuh. Desktop: show() = popover; telefon: showModal() = sheet. -->
+          <dialog class="gaya" id="pilih-gaya" aria-labelledby="gaya-tajuk">
+            <div class="gaya-isi">
+              <span class="pemegang" aria-hidden="true"></span>
+              <div class="gaya-kepala">
+                <h4 id="gaya-tajuk">Gaya peta</h4>
+                <button
+                  class="gaya-tutup"
+                  type="button"
+                  aria-label="Tutup"
+                  data-tutup><Icon name="tutup" /></button
+                >
+              </div>
+              <fieldset>
+                <legend class="sr-only">Pilih gaya peta</legend>
+                {
+                  GAYA.map((g) => (
+                    <label class="gaya-pilihan">
+                      <input
+                        class="sr-only"
+                        type="radio"
+                        name="gaya"
+                        value={g.id}
+                        data-url={g.url}
+                      />
+                      <span class={`contoh contoh-${g.id}`} aria-hidden="true">
+                        <Icon name={g.ikon} />
+                      </span>
+                      <span class="gaya-teks">
+                        <strong>{g.label}</strong>
+                        <small>{g.nota}</small>
+                      </span>
+                      <span class="gaya-tanda" aria-hidden="true">
+                        <Icon name="tanda" />
+                      </span>
+                    </label>
+                  ))
+                }
+              </fieldset>
+            </div>
+          </dialog>
+          <div class="main-semula" id="main-semula" hidden>
+            <button
+              class="main-main"
+              id="main-main"
+              type="button"
+              aria-label="Main semula animasi laluan"
+            >
+              <span aria-hidden="true"><Icon name="main" /></span>
+              <span>Main</span>
+            </button>
+          </div>
+        </div>
+        <p class="muted" id="peta-status">Memuatkan laluan…</p>
+        <p class="muted kecil">Laluan ini hanya kelihatan kepada anda.</p>
+      </section>
+
+      <section
+        class="panel split-panel"
+        id="split"
+        aria-labelledby="split-tajuk"
+        hidden
+      >
+        <h3 class="display" id="split-tajuk">Split setiap km</h3>
+        <ul class="split split-pace" id="split-senarai"></ul>
+        <div id="best" hidden>
+          <h4 class="sub">Best effort</h4>
+          <ul class="split" id="best-senarai"></ul>
+        </div>
+        <p class="muted kecil">
+          Masa bergerak dari rekod FIT. Bar lebih panjang = split lebih laju.
+          Split terakhir mungkin separa km.
+        </p>
+      </section>
+    </div>
 
     <ul class="stat" aria-label="Ringkasan">
       <li><span>Jarak</span><strong id="s-jarak"></strong></li>
@@ -170,17 +190,26 @@ const GAYA: {
       </li>
     </ul>
 
-    <section class="panel" id="split" aria-labelledby="split-tajuk" hidden>
-      <h3 class="display" id="split-tajuk">Split setiap km</h3>
-      <ul class="split split-pace" id="split-senarai"></ul>
-      <div id="best" hidden>
-        <h4 class="sub">Best effort</h4>
-        <ul class="split" id="best-senarai"></ul>
-      </div>
-      <p class="muted kecil">
-        Masa bergerak dari rekod FIT. Bar lebih panjang = split lebih laju.
-        Split terakhir mungkin separa km.
-      </p>
+    <section class="panel" id="cuaca" aria-labelledby="cuaca-tajuk" hidden>
+      <h3 class="display" id="cuaca-tajuk">Cuaca</h3>
+      <ul class="stat" aria-label="Cuaca semasa aktiviti">
+        <li id="cuaca-suhu" hidden>
+          <span>Suhu</span><strong id="s-suhu"></strong>
+        </li>
+        <li id="cuaca-rasa" hidden>
+          <span>Rasa macam</span><strong id="s-rasa"></strong>
+        </li>
+        <li id="cuaca-lembap" hidden>
+          <span>Kelembapan</span><strong id="s-lembap"></strong>
+        </li>
+        <li id="cuaca-angin" hidden>
+          <span>Angin</span><strong id="s-angin"></strong>
+        </li>
+        <li id="cuaca-arah" hidden>
+          <span>Arah angin</span><strong id="s-arah"></strong>
+        </li>
+      </ul>
+      <p class="muted kecil">Dari fail FIT, jika peranti merekod cuaca.</p>
     </section>
 
     <section class="panel" id="nadi" aria-labelledby="nadi-tajuk" hidden>
@@ -258,11 +287,12 @@ const GAYA: {
   import {
     SPORT_LABELS,
     formatKm,
-    fitRecords,
+    fitData,
     routeOf,
     trackOf,
     trackAt,
     type TrackPoint,
+    type ActivityWeather,
     heartSeries,
     altitudeSeries,
     hrZones,
@@ -430,7 +460,9 @@ const GAYA: {
         ? fileP
         : api(fileUrl(currentVersion)).catch(() => null));
       if (!f?.ok) throw new Error();
-      rekod = await fitRecords(await f.arrayBuffer());
+      const data = await fitData(await f.arrayBuffer());
+      rekod = data.records;
+      cuaca(data.weather);
     } catch {
       $("peta").hidden = true;
       $("peta-status").textContent =
@@ -541,6 +573,7 @@ const GAYA: {
       }),
     );
     $("split").hidden = false;
+    $("peta-split").classList.add("ada-split");
     if (!best.length) return;
     $("best-senarai").replaceChildren(
       ...best.map((b) => {
@@ -558,6 +591,60 @@ const GAYA: {
       }),
     );
     $("best").hidden = false;
+  }
+
+  const ARAH_ANGIN = ["U", "TL", "T", "TG", "S", "BD", "B", "BL"];
+
+  /** Cuaca dari FIT: hanya field yang ada; panel tersembunyi jika tiada data. */
+  function cuaca(w: ActivityWeather | null) {
+    if (!w) return;
+    const set = (row: string, id: string, teks: string | null) => {
+      const el = $(row);
+      if (teks === null) {
+        el.hidden = true;
+        return;
+      }
+      $(id).textContent = teks;
+      el.hidden = false;
+    };
+    const deg =
+      w.windDirectionDeg === null
+        ? null
+        : ((w.windDirectionDeg % 360) + 360) % 360;
+    set(
+      "cuaca-suhu",
+      "s-suhu",
+      w.temperatureC === null ? null : `${Math.round(w.temperatureC)}°C`,
+    );
+    set(
+      "cuaca-rasa",
+      "s-rasa",
+      w.feelsLikeC === null ? null : `${Math.round(w.feelsLikeC)}°C`,
+    );
+    set(
+      "cuaca-lembap",
+      "s-lembap",
+      w.humidityPct === null ? null : `${Math.round(w.humidityPct)}%`,
+    );
+    set(
+      "cuaca-angin",
+      "s-angin",
+      w.windSpeedMs === null ? null : `${Math.round(w.windSpeedMs * 3.6)} km/j`,
+    );
+    set(
+      "cuaca-arah",
+      "s-arah",
+      deg === null
+        ? null
+        : `${ARAH_ANGIN[Math.round(deg / 45) % 8]} (${Math.round(deg)}°)`,
+    );
+    $("cuaca").hidden = ![
+      "cuaca-suhu",
+      "cuaca-rasa",
+      "cuaca-lembap",
+      "cuaca-angin",
+      "cuaca-arah",
+    ].some((id) => !$(id).hidden);
   }
 
   const ZON = ["Ringan", "Aerobik asas", "Tempo", "Ambang laktat", "Maksimum"];
@@ -1069,8 +1156,26 @@ const GAYA: {
     font-size: 0.8rem;
   }
 
+  .peta-split {
+    display: grid;
+    gap: 1rem;
+  }
+  .peta-split .panel {
+    margin-bottom: 0;
+  }
+  @media (min-width: 60rem) {
+    .peta-split.ada-split {
+      grid-template-columns: minmax(0, 1.7fr) minmax(19rem, 1fr);
+      align-items: start;
+    }
+    .peta-split.ada-split .split-panel {
+      max-height: 32rem;
+      overflow-y: auto;
+    }
+  }
+
   .peta {
-    height: clamp(16rem, 55vh, 30rem);
+    height: clamp(16rem, 45vh, 28rem);
     border: 1px solid var(--line);
     border-radius: var(--radius);
     overflow: hidden;
@@ -1442,7 +1547,7 @@ const GAYA: {
     color: var(--navy);
   }
   .split-pace :global(li) {
-    grid-template-columns: 4.5rem 7rem 1fr 4rem;
+    grid-template-columns: 3.5rem 5.5rem 1fr 3.2rem;
   }
   .split :global(.split-bar) {
     height: 0.6rem;

@@ -1,15 +1,35 @@
 ---
-// Profil Nubi - Maklumat: nama (PATCH /me). Backend sama dengan portfolio - akaun satu, jadi
-// perubahan di sini juga nampak di hafizbahtiar.com. E-mel tidak boleh diubah (backend).
-// + Telegram (akaun dipautkan). Padam akaun ada di Keselamatan (password.astro).
+// Profil Nubi - Maklumat: nama, username, bio, lokasi + profil awam (PATCH /me). Backend sama
+// dengan portfolio - akaun satu, jadi perubahan di sini juga nampak di hafizbahtiar.com.
+// E-mel tidak boleh diubah (backend). + Telegram (akaun dipautkan). Padam akaun di Keselamatan.
 import ProfileShell from "../../../components/ProfileShell.astro";
 import Field from "../../../components/ui/Field.astro";
 import Alert from "../../../components/ui/Alert.astro";
+import Checkbox from "../../../components/ui/Checkbox.astro";
 ---
 
 <ProfileShell title="Maklumat">
+  <section class="panel" aria-labelledby="t-ringkas">
+    <div class="ringkas">
+      <span class="ringkas-avatar" id="ringkas-awal" aria-hidden="true">…</span>
+      <div class="ringkas-teks">
+        <h2 class="display" id="t-ringkas"><span id="ringkas-nama">…</span></h2>
+        <p class="muted" id="ringkas-username">…</p>
+      </div>
+      <span class="lencana" id="ringkas-status">Peribadi</span>
+    </div>
+    <p class="muted" id="ringkas-nota">…</p>
+    <a class="btn btn-outline btn-sm" id="ringkas-pautan" href="#" hidden
+      >Lihat profil awam</a
+    >
+  </section>
+
   <section class="panel" aria-labelledby="t-profil">
     <h2 class="display" id="t-profil">Maklumat anda</h2>
+    <p class="muted">
+      Nama, username, bio dan lokasi. Profil awam hanya menunjukkan apa yang
+      disenaraikan di bawah.
+    </p>
     <form class="form form-grid form-grid--lg" id="profil" novalidate>
       <Field label="Nama">
         <input
@@ -24,8 +44,47 @@ import Alert from "../../../components/ui/Alert.astro";
       <Field label="E-mel" hint="E-mel log masuk tak boleh diubah.">
         <input class="input" type="email" name="emel" readonly />
       </Field>
-      <Alert variant="danger" id="mesej-profil" hidden />
-      <Alert variant="success" id="ok-profil" hidden />
+      <Field
+        label="Username"
+        hint="3-30 huruf kecil, nombor atau sengkang tunggal. Perlu untuk profil awam."
+      >
+        <input
+          class="input"
+          type="text"
+          name="username"
+          maxlength="30"
+          autocomplete="username"
+          pattern="[a-z0-9](?:[a-z0-9-]*[a-z0-9])?"
+        />
+      </Field>
+      <Field label="Lokasi" hint="Contoh: Shah Alam, Selangor.">
+        <input
+          class="input"
+          type="text"
+          name="lokasi"
+          maxlength="100"
+          autocomplete="address-level2"
+        />
+      </Field>
+      <div class="medan-penuh">
+        <Field label="Bio" hint="Maksimum 1,000 aksara.">
+          <textarea class="input" name="bio" rows="3" maxlength="1000"
+          ></textarea>
+        </Field>
+      </div>
+      <div class="medan-penuh">
+        <Checkbox
+          name="awam"
+          label="Profil awam"
+          hint="Nama, username, bio, lokasi, ahli sejak, lencana dan jumlah aktiviti/km akan kelihatan kepada sesiapa yang ada pautan. Laluan, pelan, umur/berat/MAF dan pace tidak dipaparkan. Lalai peribadi."
+        />
+      </div>
+      <div class="medan-penuh">
+        <Alert variant="danger" id="mesej-profil" hidden />
+      </div>
+      <div class="medan-penuh">
+        <Alert variant="success" id="ok-profil" hidden />
+      </div>
       <button class="btn btn-primary" type="submit">Simpan</button>
     </form>
   </section>
@@ -67,21 +126,47 @@ import Alert from "../../../components/ui/Alert.astro";
     json,
     commonError,
     currentUser,
+    type CurrentUser,
   } from "../../../lib/api";
   import { confirmDialog } from "../../../lib/confirm";
 
   const profil = document.getElementById("profil") as HTMLFormElement;
+  const $ = (id: string) => document.getElementById(id)!;
+  const medan = (name: string) =>
+    profil.elements.namedItem(name) as HTMLInputElement;
   const papar = (id: string, teks: string | null) => {
     const el = document.getElementById(id)!;
     el.textContent = teks ?? "";
     el.hidden = !teks;
   };
 
+  const ringkas = (user: CurrentUser) => {
+    const username = user.username ?? "";
+    const awam = !!user.profilePublic && !!username;
+    $("ringkas-awal").textContent = user.name.charAt(0).toUpperCase() || "?";
+    $("ringkas-nama").textContent = user.name;
+    $("ringkas-username").textContent = username
+      ? `@${username}`
+      : "Belum ada username";
+    $("ringkas-status").textContent = awam ? "Profil awam" : "Peribadi";
+    $("ringkas-nota").textContent = awam
+      ? "Profil ini boleh dilihat sesiapa yang ada pautan. Laluan, pelan dan data kesihatan kekal peribadi."
+      : "Profil ini peribadi. Tetapkan username dan tandakan Profil awam untuk kongsi.";
+    const pautan = $("ringkas-pautan") as HTMLAnchorElement;
+    pautan.hidden = !awam;
+    if (awam) pautan.href = `/u/${encodeURIComponent(username)}`;
+  };
+
   // Pengawal sesi = AccountLayout; s null bermaksud page sedang dilencong ke /login.
   const s = await currentUser();
   if (s) {
-    profil.nama.value = s.name;
-    profil.emel.value = s.email;
+    medan("nama").value = s.name;
+    medan("emel").value = s.email;
+    medan("username").value = s.username ?? "";
+    medan("bio").value = s.profile?.bio ?? "";
+    medan("lokasi").value = s.profile?.location ?? "";
+    medan("awam").checked = !!s.profilePublic;
+    ringkas(s);
   }
 
   // Persetujuan AI boleh ditarik balik di sini - chat AI sendiri kekal bersih.
@@ -184,31 +269,70 @@ import Alert from "../../../components/ui/Alert.astro";
   profil.addEventListener("submit", async (e) => {
     e.preventDefault();
     papar("ok-profil", null);
-    const nama = String(profil.nama.value).trim();
+    const nama = String(medan("nama").value).trim();
+    const username = String(medan("username").value).trim().toLowerCase();
+    const bio = String(medan("bio").value).trim();
+    const lokasi = String(medan("lokasi").value).trim();
+    const awam = medan("awam").checked;
     if (!nama || nama.length > 100)
       return papar("mesej-profil", "Masukkan nama (maksimum 100 aksara).");
+    if (awam && !username)
+      return papar(
+        "mesej-profil",
+        "Set username dulu sebelum jadikan profil awam.",
+      );
     papar("mesej-profil", null);
     const butang = profil.querySelector("button")!;
     butang.disabled = true;
     try {
       const res = await api("/me", {
         method: "PATCH",
-        body: JSON.stringify({ displayName: nama }),
+        body: JSON.stringify({
+          displayName: nama,
+          username: username || null,
+          bio,
+          location: lokasi,
+          profilePublic: awam,
+        }),
       });
-      if (!res.ok)
-        return papar(
-          "mesej-profil",
-          commonError(res.status, await json(res)) ??
-            "Tak dapat simpan sekarang. Cuba lagi sekejap.",
-        );
+      if (!res.ok) {
+        const body = await json(res);
+        const mesej =
+          body.code === "username_taken"
+            ? "Username ini dah diambil. Pilih yang lain."
+            : body.code === "username_required"
+              ? "Set username dulu sebelum jadikan profil awam."
+              : body.field === "username"
+                ? "Username mesti 3-30 huruf kecil, nombor atau sengkang tunggal."
+                : (commonError(res.status, body) ??
+                  "Tak dapat simpan sekarang. Cuba lagi sekejap.");
+        return papar("mesej-profil", mesej);
+      }
       document
         .querySelectorAll("[data-saya-nama]")
         .forEach((el) => (el.textContent = nama));
       document
         .querySelectorAll("[data-saya-awal]")
         .forEach((el) => (el.textContent = nama.charAt(0).toUpperCase()));
-      if (s) cacheMe({ ...s, name: nama });
-      papar("ok-profil", "Nama disimpan.");
+      if (!s) return;
+      const next: CurrentUser = {
+        ...s,
+        name: nama,
+        username: username || null,
+        profilePublic: awam,
+        profile: {
+          displayName: nama,
+          bio: bio || null,
+          location: lokasi || null,
+          website: s.profile?.website ?? null,
+          linkedinUrl: s.profile?.linkedinUrl ?? null,
+          githubUrl: s.profile?.githubUrl ?? null,
+          twitterUrl: s.profile?.twitterUrl ?? null,
+        },
+      };
+      cacheMe(next);
+      ringkas(next);
+      papar("ok-profil", "Profil disimpan.");
     } catch {
       papar(
         "mesej-profil",
@@ -224,5 +348,55 @@ import Alert from "../../../components/ui/Alert.astro";
   input[readonly] {
     background: var(--paper-2);
     color: var(--muted);
+  }
+  .ringkas {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.75rem 1rem;
+  }
+  .ringkas-avatar {
+    display: grid;
+    place-items: center;
+    width: 3.25rem;
+    height: 3.25rem;
+    border-radius: 50%;
+    background: var(--navy);
+    color: var(--paper);
+    font: 700 1.35rem / 1 var(--display, var(--body));
+  }
+  .ringkas-teks {
+    display: grid;
+    gap: 0.15rem;
+    min-width: 0;
+  }
+  .ringkas-teks h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    overflow-wrap: anywhere;
+  }
+  .ringkas-teks p {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+  .ringkas-nota {
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+  #ringkas-pautan {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+  .medan-penuh {
+    grid-column: 1 / -1;
+  }
+  @media (max-width: 40rem) {
+    .ringkas {
+      grid-template-columns: auto minmax(0, 1fr);
+    }
+    #ringkas-status {
+      grid-column: 2;
+      justify-self: start;
+    }
   }
 </style>
