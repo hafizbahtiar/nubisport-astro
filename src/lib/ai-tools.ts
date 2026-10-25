@@ -250,7 +250,7 @@ async function prepareProfile(args: Record<string, unknown>): Promise<ToolOutcom
     proposal: {
       title: "Kemas kini profil",
       detail: lines.join("\n"),
-      href: "/account/profile/training",
+      href: "/account/settings/training",
       label: "Lihat profil",
       jalankan: async () => {
         if (!(await saveProfile(merged))) return { ralat: "Tak dapat simpan profil sekarang." };
@@ -258,7 +258,7 @@ async function prepareProfile(args: Record<string, unknown>): Promise<ToolOutcom
           disimpan: true,
           message: "Profil disimpan.",
           fields: Object.keys(changes),
-          href: "/account/profile/training",
+          href: "/account/settings/training",
           label: "Buka profil",
         };
       },
@@ -512,11 +512,11 @@ async function prepareWalk(args: Record<string, unknown>): Promise<ToolOutcome> 
         const ok = await setWalkUntil(until);
         return ok
           ? {
-              disimpan: true,
-              jalan: until,
-              message: days ? `Mod jalan ${days} hari disimpan.` : "Mod jalan ditamatkan.",
-              ...(info ? { href: info.href, label: "Lihat pelan" } : {}),
-            }
+            disimpan: true,
+            jalan: until,
+            message: days ? `Mod jalan ${days} hari disimpan.` : "Mod jalan ditamatkan.",
+            ...(info ? { href: info.href, label: "Lihat pelan" } : {}),
+          }
           : { ralat: "Mod jalan tak dapat disimpan. Cuba lagi." };
       },
     },

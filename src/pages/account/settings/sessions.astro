@@ -1,36 +1,36 @@
 ---
-// Nubi profile - Sessions: live logins of this account in both apps (GET /me/sessions), in the
+// Nubi settings - Sessions: live Nubi logins of this account (GET /me/sessions - the backend lists only
+// this app's sessions, never the portfolio's), in the
 // shared <Table>; end one of the others (DELETE /me/sessions/:id). This device signs out from the
 // user menu (logout), which also clears its cookies.
-import ProfileShell from "../../../components/ProfileShell.astro";
+import SettingsShell from "../../../components/SettingsShell.astro";
 import Alert from "../../../components/ui/Alert.astro";
 import Table from "../../../components/ui/Table.astro";
 ---
 
-<ProfileShell title="Sesi">
+<SettingsShell title="Sesi">
   <section class="panel" aria-labelledby="t-sessions">
     <h2 class="display" id="t-sessions">Sesi log masuk</h2>
     <p class="muted">
-      Peranti yang sedang log masuk ke akaun anda, di Nubi Sport dan
-      hafizbahtiar.com. Tak kenal satu? Tamatkan, kemudian tukar kata laluan.
+      Peranti yang sedang log masuk ke Nubi Sport dengan akaun anda. Tak kenal
+      satu? Tamatkan, kemudian tukar kata laluan.
     </p>
     <Alert variant="danger" id="sessions-error" hidden />
     <Table
       id="sessions-table"
       columns={[
         { label: "Peranti" },
-        { label: "App" },
         { label: "Lokasi" },
         { label: "Aktif terakhir" },
         { label: "Log masuk" },
         { label: "Tindakan", srOnly: true },
       ]}
-      searchPlaceholder="Cari peranti, app atau lokasi…"
+      searchPlaceholder="Cari peranti atau lokasi…"
       empty="Tiada sesi."
       emptyIcon="peranti"
     />
   </section>
-</ProfileShell>
+</SettingsShell>
 
 <script>
   import { api, json, commonError } from "../../../lib/api";
@@ -39,7 +39,6 @@ import Table from "../../../components/ui/Table.astro";
 
   interface Session {
     id: string;
-    app: "portfolio" | "nubi";
     userAgent: string | null;
     country: string | null;
     lastSeenAt: string | null;
@@ -48,11 +47,6 @@ import Table from "../../../components/ui/Table.astro";
   }
 
   const errorBox = document.getElementById("sessions-error")!;
-  const APP_NAMES: Record<string, string> = {
-    nubi: "Nubi Sport",
-    portfolio: "hafizbahtiar.com",
-  };
-  const appName = (s: Session) => APP_NAMES[s.app] ?? s.app;
   const formatTime = (iso: string) =>
     new Date(iso).toLocaleString("ms-MY", {
       timeZone: "Asia/Kuala_Lumpur",
@@ -129,14 +123,12 @@ import Table from "../../../components/ui/Table.astro";
   const table = createTable<Session>("sessions-table", {
     columns: [
       deviceCell,
-      appName,
       (s) => countryName(s.country),
       (s) => formatTime(s.lastSeenAt ?? s.createdAt),
       (s) => formatTime(s.createdAt),
       actionCell,
     ],
-    search: (s) =>
-      `${deviceLabel(s.userAgent)} ${appName(s)} ${countryName(s.country)}`,
+    search: (s) => `${deviceLabel(s.userAgent)} ${countryName(s.country)}`,
   });
 
   const load = async () => {
@@ -155,7 +147,7 @@ import Table from "../../../components/ui/Table.astro";
   const endSession = async (s: Session, button: HTMLButtonElement) => {
     const confirmed = await confirmDialog({
       title: "Tamatkan sesi?",
-      message: `${deviceLabel(s.userAgent)} (${appName(s)}) akan dilog keluar.`,
+      message: `${deviceLabel(s.userAgent)} akan dilog keluar dari Nubi Sport.`,
       confirmLabel: "Tamatkan",
       danger: true,
     });

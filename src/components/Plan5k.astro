@@ -593,7 +593,7 @@ const { full = false, mode = "public" } = Astro.props;
       }).then((k) => {
         const el = pelanEl.querySelector<HTMLElement>("[data-profil]");
         if (!el || !k.length) return;
-        el.innerHTML = `Disimpan ke profil: ${k.map((x) => PROFIL_LABEL[x] ?? x).join(", ")}. Ubah di <a class="link" href="/account/profile/training">Profil</a>.`;
+        el.innerHTML = `Disimpan ke profil: ${k.map((x) => PROFIL_LABEL[x] ?? x).join(", ")}. Ubah di <a class="link" href="/account/settings/training">Profil</a>.`;
         el.hidden = false;
       });
     }

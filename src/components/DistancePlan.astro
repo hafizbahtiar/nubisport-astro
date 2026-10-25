@@ -392,8 +392,7 @@ const { jarak, mode } = Astro.props;
       ? startMonday(new Date(`${q.get("mula")}T00:00:00`))
       : null;
     const walkBox =
-      !!isnin &&
-      (walk.active || !!cloud?.items.some((i) => i.key === kunci));
+      !!isnin && (walk.active || !!cloud?.items.some((i) => i.key === kunci));
     const hariIni = new Date().toDateString();
     const jumlah = h.minggu.reduce((n, w) => n + w.sesi.length, 0);
     const tajuk = `${c.nama} · ${tempoh} · ${hari} hari seminggu`;
@@ -517,7 +516,7 @@ const { jarak, mode } = Astro.props;
     }).then((k) => {
       const p = pelanEl.querySelector<HTMLElement>("[data-profil]");
       if (!p || !k.length) return;
-      p.innerHTML = `Disimpan ke profil: ${k.map((x) => PROFIL_LABEL[x] ?? x).join(", ")}. Ubah di <a class="link" href="/account/profile/training">Profil</a>.`;
+      p.innerHTML = `Disimpan ke profil: ${k.map((x) => PROFIL_LABEL[x] ?? x).join(", ")}. Ubah di <a class="link" href="/account/settings/training">Profil</a>.`;
       p.hidden = false;
     });
     kemas();

@@ -1,11 +1,11 @@
 ---
-// Nubi profile - Danger zone: delete all activity data (DELETE /me/apps/nubi/activities) or the
+// Nubi settings - Danger zone: delete all activity data (DELETE /me/apps/nubi/activities) or the
 // whole account (DELETE /me, PDPA; shared login, so the hafizbahtiar.com account goes too).
-import ProfileShell from "../../../components/ProfileShell.astro";
+import SettingsShell from "../../../components/SettingsShell.astro";
 import Alert from "../../../components/ui/Alert.astro";
 ---
 
-<ProfileShell title="Zon bahaya">
+<SettingsShell title="Zon bahaya">
   <section class="panel" aria-labelledby="t-bahaya">
     <h2 class="display" id="t-bahaya">Zon bahaya</h2>
     <p class="muted">
@@ -24,7 +24,7 @@ import Alert from "../../../components/ui/Alert.astro";
       </button>
     </div>
   </section>
-</ProfileShell>
+</SettingsShell>
 
 <script>
   import { api, json, commonError, currentUser } from "../../../lib/api";

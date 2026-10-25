@@ -1,11 +1,11 @@
 ---
-// Nubi profile - Settings: Telegram link (status + unlink, DELETE /me/telegram/link) and NUNI
+// Nubi settings - Settings: Telegram link (status + unlink, DELETE /me/telegram/link) and NUNI
 // AI consent (withdraw, DELETE /me/apps/nubi/aiconsent/ya).
-import ProfileShell from "../../../components/ProfileShell.astro";
+import SettingsShell from "../../../components/SettingsShell.astro";
 import Alert from "../../../components/ui/Alert.astro";
 ---
 
-<ProfileShell title="Tetapan">
+<SettingsShell title="Umum">
   <section class="panel" aria-labelledby="t-telegram">
     <h2 class="display" id="t-telegram">Telegram</h2>
     <p class="muted" id="telegram-status">Menyemak pautan…</p>
@@ -34,7 +34,7 @@ import Alert from "../../../components/ui/Alert.astro";
       >
     </div>
   </section>
-</ProfileShell>
+</SettingsShell>
 
 <script>
   import { api, cacheMe, json, currentUser } from "../../../lib/api";

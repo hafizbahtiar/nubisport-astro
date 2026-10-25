@@ -1,7 +1,7 @@
 ---
-// Profil Nubi - Maklumat latihan: tarikh lahir, keadaan MAF, hari, masa 5K/10K/21K, jantina, tinggi, berat
+// Tetapan Nubi - Maklumat latihan: tarikh lahir, keadaan MAF, hari, masa 5K/10K/21K, jantina, tinggi, berat
 // (lib/profile.ts, app_items `profil`). Mengisi borang MAF, pelan dan /account/deficit; URL pelan tetap menang.
-import ProfileShell from "../../../components/ProfileShell.astro";
+import SettingsShell from "../../../components/SettingsShell.astro";
 import Field from "../../../components/ui/Field.astro";
 import Alert from "../../../components/ui/Alert.astro";
 import ChipGroup from "../../../components/ui/ChipGroup.astro";
@@ -15,7 +15,7 @@ const p21 = DISTANCES["42k"].prasyarat;
 const hariIni = new Date().toISOString().slice(0, 10);
 ---
 
-<ProfileShell title="Latihan">
+<SettingsShell title="Latihan">
   <section class="panel" aria-labelledby="t-latihan">
     <h2 class="display" id="t-latihan">Maklumat latihan</h2>
     <p class="muted">
@@ -116,7 +116,7 @@ const hariIni = new Date().toISOString().slice(0, 10);
       <button class="btn btn-primary" type="submit">Simpan</button>
     </form>
   </section>
-</ProfileShell>
+</SettingsShell>
 
 <script>
   import {

@@ -1,5 +1,6 @@
 ---
-// Account profile pages: nav card (Maklumat / Tetapan / Latihan / Kata laluan / Sesi / Zon bahaya) beside the content.
+// Account settings pages (/account/settings/*): nav card beside the content. The profile itself
+// (/account/profile) is a separate page outside this shell.
 // Lebar: card menegak di kiri (melekat semasa skrol). Sempit (<= 48rem): card jadi tab segmen di atas.
 import AccountLayout from "../layouts/AccountLayout.astro";
 import Icon from "./ui/Icon.astro";
@@ -12,37 +13,31 @@ const { title } = Astro.props;
 // ikon: nama Lucide (src/lib/icon.ts), sama dengan NAV dalam AccountLayout.
 const SUB: { href: string; label: string; nota: string; ikon: IconName }[] = [
   {
-    href: "/account/profile",
-    label: "Maklumat",
-    nota: "Nama, username, bio, profil awam",
-    ikon: "pengguna",
-  },
-  {
-    href: "/account/profile/settings",
-    label: "Tetapan",
+    href: "/account/settings",
+    label: "Umum",
     nota: "Telegram, persetujuan AI",
     ikon: "tetapan",
   },
   {
-    href: "/account/profile/training",
+    href: "/account/settings/training",
     label: "Latihan",
     nota: "Umur, keadaan, masa terkini",
     ikon: "nadi",
   },
   {
-    href: "/account/profile/password",
+    href: "/account/settings/password",
     label: "Kata laluan",
     nota: "Tukar kata laluan",
     ikon: "mangga",
   },
   {
-    href: "/account/profile/sessions",
+    href: "/account/settings/sessions",
     label: "Sesi",
     nota: "Peranti yang log masuk",
     ikon: "peranti",
   },
   {
-    href: "/account/profile/danger",
+    href: "/account/settings/danger",
     label: "Zon bahaya",
     nota: "Padam aktiviti, padam akaun",
     ikon: "trash",
@@ -51,9 +46,9 @@ const SUB: { href: string; label: string; nota: string; ikon: IconName }[] = [
 const laluan = Astro.url.pathname.replace(/\/$/, "");
 ---
 
-<AccountLayout title={`Profil · ${title}`}>
+<AccountLayout title={`Tetapan · ${title}`}>
   <div class="profil">
-    <nav class="profil-nav" aria-label="Tetapan profil">
+    <nav class="profil-nav" aria-label="Tetapan akaun">
       <p class="profil-nav-tajuk">Tetapan akaun</p>
       <ul>
         {

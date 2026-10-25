@@ -164,7 +164,7 @@ const contacts = [
 </Layout>
 
 <script>
-  // Lepas padam akaun (/account/profile) - tunjuk sekali, buang param dari URL.
+  // Lepas padam akaun (/account/settings/danger) - tunjuk sekali, buang param dari URL.
   if (new URLSearchParams(location.search).get("akaun") === "dipadam") {
     document.getElementById("akaun-dipadam")!.hidden = false;
     history.replaceState(null, "", "/");

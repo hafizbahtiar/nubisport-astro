@@ -1,136 +1,150 @@
 ---
 // Profil Nubi - Maklumat: nama, username, bio, lokasi + profil awam (PATCH /me). Backend sama
 // dengan portfolio - akaun satu, jadi perubahan di sini juga nampak di hafizbahtiar.com.
-// E-mel tidak boleh diubah (backend). Telegram + NUNI di Tetapan; padam akaun di Zon bahaya.
+// E-mel tidak boleh diubah (backend). Its own page, not in the settings shell: Telegram, AI, training,
+// password, sessions and account deletion live under /account/settings/*.
 // View mode first; "Edit profil" swaps in the form. "Apa orang lain nampak" previews the saved state:
 // the members' feed (name, @username only when public) and /u/<username> (GET /public/profiles/:u/nubi).
-import ProfileShell from "../../../components/ProfileShell.astro";
+import AccountLayout from "../../../layouts/AccountLayout.astro";
 import Field from "../../../components/ui/Field.astro";
 import Alert from "../../../components/ui/Alert.astro";
 import Checkbox from "../../../components/ui/Checkbox.astro";
 ---
 
-<ProfileShell title="Maklumat">
-  <section class="panel" aria-labelledby="t-ringkas">
-    <div class="ringkas">
-      <span class="ringkas-avatar" id="ringkas-awal" aria-hidden="true">…</span>
-      <div class="ringkas-teks">
-        <h2 class="display" id="t-ringkas"><span id="ringkas-nama">…</span></h2>
-        <p class="muted" id="ringkas-username">…</p>
+<AccountLayout
+  title="Profil"
+  description="Profil Nubi Sport anda dan apa yang orang lain nampak."
+>
+  <div class="profile-page">
+    <section class="panel" aria-labelledby="t-ringkas">
+      <div class="ringkas">
+        <span class="ringkas-avatar" id="ringkas-awal" aria-hidden="true"
+          >…</span
+        >
+        <div class="ringkas-teks">
+          <h2 class="display" id="t-ringkas">
+            <span id="ringkas-nama">…</span>
+          </h2>
+          <p class="muted" id="ringkas-username">…</p>
+        </div>
+        <span class="lencana" id="ringkas-status">Peribadi</span>
       </div>
-      <span class="lencana" id="ringkas-status">Peribadi</span>
-    </div>
-    <p class="muted" id="ringkas-nota">…</p>
-    <a class="btn btn-outline btn-sm" id="ringkas-pautan" href="#" hidden
-      >Lihat profil awam</a
-    >
-  </section>
+      <p class="muted" id="ringkas-nota">…</p>
+      <a class="btn btn-outline btn-sm" id="ringkas-pautan" href="#" hidden
+        >Lihat profil awam</a
+      >
+    </section>
 
-  <section class="panel" aria-labelledby="t-profil">
-    <div class="panel-kepala">
-      <h2 class="display" id="t-profil">Maklumat anda</h2>
-      <button class="btn btn-outline btn-sm" type="button" id="profile-edit"
-        >Edit profil</button
-      >
-    </div>
-    <Alert variant="success" id="ok-profil" hidden />
-    <dl class="profile-view" id="profile-view">
-      <div><dt>Nama</dt><dd data-view="name">…</dd></div>
-      <div><dt>E-mel</dt><dd data-view="email">…</dd></div>
-      <div><dt>Username</dt><dd data-view="username">…</dd></div>
-      <div><dt>Lokasi</dt><dd data-view="location">…</dd></div>
-      <div class="medan-penuh"><dt>Bio</dt><dd data-view="bio">…</dd></div>
-      <div><dt>Profil awam</dt><dd data-view="public">…</dd></div>
-    </dl>
-    <form class="form form-grid form-grid--lg" id="profil" novalidate hidden>
-      <p class="muted medan-penuh">
-        Nama, username, bio dan lokasi. Profil awam hanya menunjukkan apa yang
-        disenaraikan di bawah.
-      </p>
-      <Field label="Nama">
-        <input
-          class="input"
-          type="text"
-          name="nama"
-          autocomplete="name"
-          maxlength="100"
-          required
-        />
-      </Field>
-      <Field label="E-mel" hint="E-mel log masuk tak boleh diubah.">
-        <input class="input" type="email" name="emel" readonly />
-      </Field>
-      <Field
-        label="Username"
-        hint="3-30 huruf kecil, nombor atau sengkang tunggal. Perlu untuk profil awam."
-      >
-        <input
-          class="input"
-          type="text"
-          name="username"
-          maxlength="30"
-          autocomplete="username"
-          pattern="[a-z0-9](?:[a-z0-9-]*[a-z0-9])?"
-        />
-      </Field>
-      <Field label="Lokasi" hint="Contoh: Shah Alam, Selangor.">
-        <input
-          class="input"
-          type="text"
-          name="lokasi"
-          maxlength="100"
-          autocomplete="address-level2"
-        />
-      </Field>
-      <div class="medan-penuh">
-        <Field label="Bio" hint="Maksimum 1,000 aksara.">
-          <textarea class="input" name="bio" rows="3" maxlength="1000"
-          ></textarea>
-        </Field>
-      </div>
-      <div class="medan-penuh">
-        <Checkbox
-          name="awam"
-          label="Profil awam"
-          hint="Nama, username, bio, lokasi, ahli sejak, lencana dan jumlah aktiviti/km akan kelihatan kepada sesiapa yang ada pautan. Laluan, pelan, umur/berat/MAF dan pace tidak dipaparkan. Lalai peribadi."
-        />
-      </div>
-      <div class="medan-penuh">
-        <Alert variant="danger" id="mesej-profil" hidden />
-      </div>
-      <div class="medan-penuh form-buttons">
-        <button class="btn btn-primary" type="submit">Simpan</button>
-        <button class="btn btn-outline" type="button" id="profile-cancel"
-          >Batal</button
+    <section class="panel" aria-labelledby="t-profil">
+      <div class="panel-kepala">
+        <h2 class="display" id="t-profil">Maklumat anda</h2>
+        <button class="btn btn-outline btn-sm" type="button" id="profile-edit"
+          >Edit profil</button
         >
       </div>
-    </form>
-  </section>
-
-  <section class="panel" aria-labelledby="t-others">
-    <h2 class="display" id="t-others">Apa orang lain nampak</h2>
-    <p class="muted">Ikut maklumat yang sudah disimpan.</p>
-    <div class="audience-grid">
-      <article class="audience">
-        <h3>Ahli Nubi (log masuk)</h3>
-        <p class="muted">
-          Pada aktiviti komuniti, sebelah larian yang anda kongsi.
+      <Alert variant="success" id="ok-profil" hidden />
+      <dl class="profile-view" id="profile-view">
+        <div><dt>Nama</dt><dd data-view="name">…</dd></div>
+        <div><dt>E-mel</dt><dd data-view="email">…</dd></div>
+        <div><dt>Username</dt><dd data-view="username">…</dd></div>
+        <div><dt>Lokasi</dt><dd data-view="location">…</dd></div>
+        <div class="medan-penuh"><dt>Bio</dt><dd data-view="bio">…</dd></div>
+        <div><dt>Profil awam</dt><dd data-view="public">…</dd></div>
+      </dl>
+      <form class="form form-grid form-grid--lg" id="profil" novalidate hidden>
+        <p class="muted medan-penuh">
+          Nama, username, bio dan lokasi. Profil awam hanya menunjukkan apa yang
+          disenaraikan di bawah.
         </p>
-        <p class="audience-card" id="preview-members">…</p>
-      </article>
-      <article class="audience">
-        <h3>Sesiapa dengan pautan</h3>
-        <p class="muted" id="preview-public-note">…</p>
-        <div class="audience-card" id="preview-public" hidden>
-          <strong data-preview="name"></strong>
-          <span class="muted" data-preview="username"></span>
-          <p data-preview="bio"></p>
-          <span class="muted" data-preview="meta"></span>
+        <Field label="Nama">
+          <input
+            class="input"
+            type="text"
+            name="nama"
+            autocomplete="name"
+            maxlength="100"
+            required
+          />
+        </Field>
+        <Field label="E-mel" hint="E-mel log masuk tak boleh diubah.">
+          <input class="input" type="email" name="emel" readonly />
+        </Field>
+        <Field
+          label="Username"
+          hint="3-30 huruf kecil, nombor atau sengkang tunggal. Perlu untuk profil awam."
+        >
+          <input
+            class="input"
+            type="text"
+            name="username"
+            maxlength="30"
+            autocomplete="username"
+            pattern="[a-z0-9](?:[a-z0-9-]*[a-z0-9])?"
+          />
+        </Field>
+        <Field label="Lokasi" hint="Contoh: Shah Alam, Selangor.">
+          <input
+            class="input"
+            type="text"
+            name="lokasi"
+            maxlength="100"
+            autocomplete="address-level2"
+          />
+        </Field>
+        <div class="medan-penuh">
+          <Field label="Bio" hint="Maksimum 1,000 aksara.">
+            <textarea class="input" name="bio" rows="3" maxlength="1000"
+            ></textarea>
+          </Field>
         </div>
-      </article>
-    </div>
-  </section>
-</ProfileShell>
+        <div class="medan-penuh">
+          <Checkbox
+            name="awam"
+            label="Profil awam"
+            hint="Nama, username, bio, lokasi, ahli sejak, lencana dan jumlah aktiviti/km akan kelihatan kepada sesiapa yang ada pautan. Laluan, pelan, umur/berat/MAF dan pace tidak dipaparkan. Lalai peribadi."
+          />
+        </div>
+        <div class="medan-penuh">
+          <Alert variant="danger" id="mesej-profil" hidden />
+        </div>
+        <div class="medan-penuh form-buttons">
+          <button class="btn btn-primary" type="submit">Simpan</button>
+          <button class="btn btn-outline" type="button" id="profile-cancel"
+            >Batal</button
+          >
+        </div>
+      </form>
+    </section>
+
+    <section class="panel" aria-labelledby="t-others">
+      <h2 class="display" id="t-others">Apa orang lain nampak</h2>
+      <p class="muted">Ikut maklumat yang sudah disimpan.</p>
+      <div class="audience-grid">
+        <article class="audience">
+          <h3>Ahli Nubi (log masuk)</h3>
+          <p class="muted">
+            Pada aktiviti komuniti, sebelah larian yang anda kongsi.
+          </p>
+          <p class="audience-card" id="preview-members">…</p>
+        </article>
+        <article class="audience">
+          <h3>Sesiapa dengan pautan</h3>
+          <p class="muted" id="preview-public-note">…</p>
+          <div class="audience-card" id="preview-public" hidden>
+            <strong data-preview="name"></strong>
+            <span class="muted" data-preview="username"></span>
+            <p data-preview="bio"></p>
+            <span class="muted" data-preview="meta"></span>
+          </div>
+        </article>
+      </div>
+    </section>
+    <p class="muted settings-link">
+      Telegram, kata laluan, sesi dan padam akaun ada di
+      <a class="link" href="/account/settings">Tetapan</a>.
+    </p>
+  </div>
+</AccountLayout>
 
 <script>
   import {
@@ -358,6 +372,25 @@ import Checkbox from "../../../components/ui/Checkbox.astro";
 </script>
 
 <style>
+  /* Same panel look as the settings pages (SettingsShell), without its nav. */
+  .profile-page {
+    display: grid;
+    gap: 1.5rem;
+    max-width: 56rem;
+  }
+  .profile-page :global(.panel) {
+    justify-items: stretch;
+    gap: 1rem;
+    box-shadow: var(--shadow-sm);
+  }
+  .profile-page :global(.panel h2) {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--navy);
+  }
+  .settings-link {
+    margin: 0;
+  }
   input[readonly] {
     background: var(--paper-2);
     color: var(--muted);
