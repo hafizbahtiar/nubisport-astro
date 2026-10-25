@@ -71,11 +71,24 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
         app: { name: string };
         telegramName: string | null;
       };
+      // Anti-phishing: anyone can /bind in their own chat and send the link to a member,
+      // and the Telegram name is whatever that sender set - so say so, and warn when the
+      // approval would move an existing link away from the member's own chat.
       tunjuk(
         status,
-        `Pautkan akaun ${data.app.name} dengan Telegram${
-          data.telegramName ? ` ${data.telegramName}` : ""
-        }. Benarkan hanya jika anda sendiri yang hantar /bind tadi. Selepas dibenarkan, anda boleh taip /nubiplan dalam bot.`,
+        [
+          `Pautkan akaun ${data.app.name} dengan Telegram${
+            data.telegramName ? ` bernama "${data.telegramName}"` : ""
+          }.`,
+          "Nama itu ditetapkan oleh pemilik Telegram tersebut - ia bukan bukti siapa dia.",
+          "Benarkan hanya jika anda sendiri yang hantar /bind tadi. Jika pautan ini dihantar oleh orang lain, tekan Batal: Telegram itu akan dapat lihat pelan anda melalui /nubiplan.",
+          sesi.telegram?.linkedAt
+            ? "Akaun anda sudah dipautkan ke Telegram lain - membenarkan akan menggantikan pautan itu."
+            : "",
+          "Selepas dibenarkan, taip /nubiplan dalam bot.",
+        ]
+          .filter(Boolean)
+          .join(" "),
       );
       tindakan.hidden = false;
 

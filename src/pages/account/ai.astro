@@ -589,6 +589,9 @@ import Icon from "../../components/ui/Icon.astro";
       return "Persetujuan AI diperlukan semula.";
     }
     if (body.code === "ai_quota_full") return "Kuota AI hari ini dah habis.";
+    // Backend: tool rounds for this message are used up (or the day rolled over mid-answer).
+    if (body.code === "ai_turn_over")
+      return "Jawapan ini tak dapat diteruskan. Hantar mesej baharu.";
     if (status === 429) return "Tunggu sekejap dan cuba lagi.";
     if (status === 503 || status === 502)
       return "AI sibuk sekarang. Cuba lagi sekejap.";
