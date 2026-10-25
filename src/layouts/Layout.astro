@@ -35,13 +35,6 @@ const {
     <ConfirmDialog />
     <ConnectionNotice />
     <script>
-      // Kiraan lawatan halaman awam (fire-and-forget, tanpa kuki). Halaman akaun tidak dikira.
-      if (
-        import.meta.env.PROD &&
-        !location.pathname.startsWith("/account") &&
-        navigator.sendBeacon
-      )
-        navigator.sendBeacon("/api/v1/public/visit", location.pathname);
       // PWA: pelan + pemasa boleh dibuka semula tanpa internet (public/sw.js).
       if (import.meta.env.PROD && "serviceWorker" in navigator)
         navigator.serviceWorker.register("/sw.js").catch(() => {});

@@ -215,8 +215,8 @@ Item yang dah siap dibuang (lihat git history).
   `-pPace` supaya dua sasaran tak berkongsi tanda siap.
 - **PWA + SEO + lawatan** (2026-10-22): `public/manifest.webmanifest` + `public/sw.js` (cache halaman
   awam; `/api/*` dan `/account/*` tidak dicache; `/plan-5k` + pemasa boleh dibuka luar talian selepas
-  lawatan pertama), `public/robots.txt` + `src/pages/sitemap.xml.ts`, beacon `POST /api/v1/public/visit`
-  dari `Layout.astro` (Nubi) dan portfolio `PublicLayout` (panel visits admin).
+  lawatan pertama), `public/robots.txt` + `src/pages/sitemap.xml.ts`. Beacon lawatan dibuang 2026-10-25 (pemilik
+  tak mahu kiraan lawatan; backend migration 043 buang jadual `visits`).
 - **Menu header** (2026-10-18): butang "Alat" buka panel 4 kad (MAF, Pace, Lumba, Panduan - `ALAT` dalam
   `Header.astro`). Telefon: logo + Log masuk + butang menu; panel tambah Pelan 5K + Tentang / Cara sertai (dulu
   telefon hanya boleh capai Pelan 5K). Esc / klik luar / klik pautan menutup. Alat baru = satu entri `ALAT`.
