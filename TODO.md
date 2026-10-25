@@ -323,7 +323,8 @@ Item yang dah siap dibuang (lihat git history).
 - [ ] Uji dengan aktiviti sebenar: split mesti berjumlah jarak aktiviti (termasuk split akhir separa),
   best 5K/10K hanya muncul bila rekod cukup panjang, PR dikemas kini selepas aktiviti dipadam.
 - **Jangan buat**: segmen/leaderboard, kelab, foto, gear, Beacon, komen, follow - bukan gap Nubi.
-  (Feed ahli + kudos: owner ubah keputusan 2026-10-25 - dibina, ahli sahaja, lalai peribadi.)
+  (Feed ahli + kudos: owner ubah keputusan 2026-10-25 - dibina macam Strava: aktiviti sendiri + ahli lain,
+  upload baharu lalai dikongsi kepada ahli, nadi tetap pilihan; aktiviti sebelum 041 kekal peribadi.)
 - [ ] **Migration 041 + 042** (feed + kudos) remote, kemudian deploy backend sebelum frontend - Nubi hantar
   `visibility`/`preview` semasa upload; backend lama (strict) tolak = upload 400.
 

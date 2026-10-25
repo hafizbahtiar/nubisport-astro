@@ -15,6 +15,7 @@ export interface FeedItem {
   maxHr: number | null;
   author: { name: string; profileHref: string | null };
   kudos: { count: number; mine: boolean };
+  own: boolean; // aktiviti sendiri - tiada butang kudos
 }
 export interface FeedPage {
   items: FeedItem[];

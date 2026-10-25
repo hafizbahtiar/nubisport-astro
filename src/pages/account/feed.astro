@@ -21,7 +21,7 @@ import "../../styles/panel.css";
       <div>
         <h2 class="display" id="tajuk-feed">Aktiviti komuniti</h2>
         <p class="muted">
-          Aktiviti yang dikongsi ahli lain. Peta ringkas sahaja; fail asal kekal
+          Aktiviti anda dan ahli lain. Peta ringkas sahaja; fail asal kekal
           peribadi.
         </p>
       </div>
@@ -32,8 +32,8 @@ import "../../styles/panel.css";
     <div class="feed-senarai" id="senarai"></div>
     <div class="feed-kosong" id="kosong" hidden>
       <p class="muted">
-        Belum ada aktiviti dikongsi. Kongsi aktiviti anda dari halaman Aktiviti
-        untuk mulakan feed komuniti.
+        Belum ada aktiviti dalam feed. Muat naik aktiviti dan ia akan muncul di
+        sini untuk ahli lain.
       </p>
       <a class="btn btn-primary btn-sm" href="/account/activities"
         >Buka Aktiviti</a
@@ -238,6 +238,12 @@ import "../../styles/panel.css";
     article.append(nilai);
 
     const kudos = el("div", "feed-kudos");
+    if (item.own) {
+      // Macam Strava: aktiviti sendiri tunjuk kiraan sahaja, tiada kudos sendiri.
+      kudos.append(el("span", "muted", `${item.kudos.count} sokongan`));
+      article.append(kudos);
+      return article;
+    }
     const btn = el(
       "button",
       "btn btn-outline btn-sm",
