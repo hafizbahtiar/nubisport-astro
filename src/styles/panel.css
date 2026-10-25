@@ -799,3 +799,126 @@ button.link {
   align-content: start;
   min-width: 0;
 }
+
+/* Feed komuniti: kad aktiviti ahli lain. */
+.feed-senarai {
+  display: grid;
+  gap: 1rem;
+  width: min(100%, 52rem);
+  margin-inline: auto;
+}
+
+.feed-kad {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+}
+
+.feed-kepala {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.feed-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  background: var(--navy);
+  color: var(--paper);
+  font: 700 1rem / 1 var(--display, var(--body));
+}
+
+.feed-orang {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.feed-nama {
+  color: var(--navy);
+  font-weight: 700;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+a.feed-nama:hover {
+  color: var(--orange-ink);
+}
+
+.feed-tajuk {
+  margin: 0;
+  color: var(--navy);
+  font-size: 1.1rem;
+  overflow-wrap: anywhere;
+}
+
+.feed-peta {
+  display: grid;
+  place-items: center;
+  height: clamp(9rem, 26vw, 14rem);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--paper-2);
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.feed-nilai {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: 0.55rem 0.9rem;
+  margin: 0;
+}
+
+.feed-nilai div {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.feed-nilai dt {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.feed-nilai dd {
+  margin: 0;
+  color: var(--navy);
+  font-weight: 700;
+}
+
+.feed-kudos {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.feed-kosong {
+  display: grid;
+  justify-items: start;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+}
+
+.feed-lagi {
+  justify-self: center;
+}
+
+@media (max-width: 36rem) {
+  .feed-kad {
+    padding: 0.85rem;
+  }
+}

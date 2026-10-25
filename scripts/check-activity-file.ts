@@ -2,7 +2,7 @@
 // FIT dijana di sini dengan Encoder SDK Garmin (koordinat rekaan di tengah laut, 0°N 0°E) - tiada
 // fail larian sebenar dalam repo. Nilai meniru larian contoh owner: 2,663 m, 1,876 s, nadi purata 140 / maks 164.
 import { Encoder, Profile } from "@garmin/fitsdk";
-import { readGpx, buildUploadForm, fitData, fitRoute, fitRecords, trackOf, trackAt, paceGradient, paceAt, nearestDistance, heartSeries, altitudeSeries, hrZones, nameFromFile, paceFromDistance, pairFiles, isoSeconds, toSport, formatDuration } from "../src/lib/activity-file";
+import { readGpx, buildUploadForm, summarizeFit, downsampledRoute, fitData, fitRoute, fitRecords, trackOf, trackAt, paceGradient, paceAt, nearestDistance, heartSeries, altitudeSeries, hrZones, nameFromFile, paceFromDistance, pairFiles, isoSeconds, toSport, formatDuration } from "../src/lib/activity-file";
 
 let gagal = 0;
 const ok = (c: unknown, msg: string) => {
@@ -124,7 +124,10 @@ const fail = (bait: BlobPart, nama: string) => new File([bait], nama);
   const gz = new Uint8Array(await (b.get("gpx") as File).arrayBuffer());
   ok(gz[0] === 0x1f && gz[1] === 0x8b, "GPX di-gzip");
   ok((b.get("fit") as File).name === "aktiviti.fit", "nama fail FIT tetap");
-  ok(JSON.parse(String(b.get("summary"))).startedAt === "2026-10-21T13:12:07Z", "summary");
+  const summary = JSON.parse(String(b.get("summary")));
+  ok(summary.startedAt === "2026-10-21T13:12:07Z", "summary");
+  ok(summary.preview.length === 82, "summary bawa preview laluan");
+  ok(summary.preview[0][0] === 0.001 && summary.preview.at(-1)[0] === 0.082, "preview mula/akhir");
 }
 
 ok(readGpx(gpx("2026-10-21T13:12:07.000Z")).startedAt === "2026-10-21T13:12:07Z", "GPX milisaat dibuang");
@@ -145,6 +148,17 @@ ok(formatDuration(1876) === "31m 16s" && formatDuration(3700) === "1j 1m", "temp
   ok(p.length === 82, `titik laluan ${p.length}`);
   ok(Math.abs(p[0][0] - 0.001) < 1e-6 && p[0][1] === 0, `titik pertama ${p[0]}`);
   ok(Math.abs(p.at(-1)![0] - 0.082) < 1e-6, `titik akhir ${p.at(-1)}`);
+
+  const banyak = Array.from({ length: 1000 }, (_, i) => [i / 1000, 101] as [number, number]);
+  const preview = downsampledRoute(banyak, 150);
+  ok(preview.length === 150, `preview maks 150 (${preview.length})`);
+  ok(preview[0][0] === 0 && preview.at(-1)![0] === 0.999, "preview kekalkan mula/akhir");
+  ok(downsampledRoute([], 150).length === 0, "preview kosong");
+  ok(downsampledRoute([[91, 0], [1, 2], [3, 4]] as [number, number][], 150).every(([lat]) => lat <= 90), "preview buang lat tidak sah");
+
+  const ringkas = await summarizeFit(fit().buffer, "Night_Run.fit");
+  ok(ringkas.preview?.length === 82, `summarize preview ${ringkas.preview?.length}`);
+  ok(ringkas.preview?.[0][0] === 0.001, "summarize preview mula");
 }
 
 // Ketinggian ikut jarak (profil ketinggian di page detail).

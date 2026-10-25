@@ -42,6 +42,23 @@ import Icon from "../../../components/ui/Icon.astro";
       <li><span>Pace</span><strong id="s-pace"></strong></li>
     </ul>
 
+    <section class="panel kongsi-panel" aria-labelledby="kongsi-tajuk">
+      <h3 class="display" id="kongsi-tajuk">Feed komuniti</h3>
+      <label class="check">
+        <input type="checkbox" id="kongsi-tanda" />
+        <span>Kongsi ke feed ahli</span>
+      </label>
+      <label class="check">
+        <input type="checkbox" id="kongsi-nadi" disabled />
+        <span>Kongsi nadi</span>
+      </label>
+      <p class="muted kecil">
+        Ringkasan dan peta ringkas laluan dilihat ahli Nubi. Nadi pilihan; fail
+        asal kekal peribadi. Boleh tarik balik bila-bila masa.
+      </p>
+      <p class="muted" id="kongsi-status" hidden></p>
+    </section>
+
     <section class="panel butiran" aria-label="Butiran aktiviti">
       <dl class="butiran-senarai">
         <div id="s-gap-baris" hidden>
@@ -106,7 +123,10 @@ import Icon from "../../../components/ui/Icon.astro";
           </div>
         </div>
         <p class="muted" id="peta-status">Memuatkan laluan…</p>
-        <p class="muted kecil">Laluan ini hanya kelihatan kepada anda.</p>
+        <p class="muted kecil">
+          Laluan penuh ini peribadi. Jika aktiviti dikongsi, ahli lain hanya
+          nampak peta ringkas dalam feed.
+        </p>
       </section>
 
       <section
@@ -227,6 +247,7 @@ import Icon from "../../../components/ui/Icon.astro";
     hrZones,
     paceFromDistance,
     formatDuration,
+    routePreview,
     type Sport,
   } from "../../../lib/activity-file";
   import {
@@ -305,6 +326,9 @@ import Icon from "../../../components/ui/Icon.astro";
     maxHr: number | null;
     runRatio: number | null;
     weather: ActivityWeather | null; // MET Norway masa upload (migration 040 backend)
+    visibility: "private" | "members";
+    shareHr: boolean;
+    hasPreview: boolean;
     updatedAt: string;
   }
 
@@ -333,6 +357,7 @@ import Icon from "../../../components/ui/Icon.astro";
     }
     const a = (await json(r)).data as Aktiviti;
     $("isi").hidden = false;
+    let rekodCache: any[] | null = null;
 
     const nama = a.name || SPORT_LABELS[a.sport];
     $("nama").textContent = nama; // teks pengguna - textContent sahaja
@@ -375,6 +400,70 @@ import Icon from "../../../components/ui/Icon.astro";
       $("s-lari-baris").hidden = false;
     }
 
+    const shareEl = $("kongsi-tanda") as HTMLInputElement;
+    const shareHrEl = $("kongsi-nadi") as HTMLInputElement;
+    const shareStatus = $("kongsi-status");
+    const setSharingUi = () => {
+      shareHrEl.disabled = !shareEl.checked;
+      if (!shareEl.checked) shareHrEl.checked = false;
+    };
+    const previewForShare = async (): Promise<
+      [number, number][] | undefined
+    > => {
+      if (a.hasPreview) return undefined;
+      if (rekodCache) {
+        const route = routePreview(rekodCache);
+        return route.length >= 2 ? route : undefined;
+      }
+      const f = await api(fileUrl(a.updatedAt)).catch(() => null);
+      if (!f?.ok) return undefined;
+      try {
+        const data = await fitData(await f.arrayBuffer());
+        const route = routePreview(data.records);
+        return route.length >= 2 ? route : undefined;
+      } catch {
+        return undefined;
+      }
+    };
+    const saveSharing = async () => {
+      const on = shareEl.checked;
+      const wasShared = a.visibility === "members";
+      shareStatus.hidden = false;
+      shareStatus.textContent = on ? "Menyediakan peta…" : "Menyimpan…";
+      shareEl.disabled = true;
+      shareHrEl.disabled = true;
+      const preview = on && !a.hasPreview ? await previewForShare() : undefined;
+      const res = await api(`${BASE}/${a.id}/visibility`, {
+        method: "PUT",
+        body: JSON.stringify({
+          visibility: on ? "members" : "private",
+          shareHr: on && shareHrEl.checked,
+          ...(preview ? { preview } : {}),
+        }),
+      }).catch(() => null);
+      shareEl.disabled = false;
+      if (!res?.ok) {
+        shareEl.checked = wasShared;
+        shareHrEl.checked = a.shareHr && wasShared;
+        setSharingUi();
+        shareStatus.textContent =
+          "Tak dapat ubah tetapan kongsi. Cuba lagi sekejap.";
+        return;
+      }
+      a.visibility = on ? "members" : "private";
+      a.shareHr = on && shareHrEl.checked;
+      if (preview) a.hasPreview = true;
+      setSharingUi();
+      shareStatus.textContent = on
+        ? "Aktiviti dikongsi ke feed ahli."
+        : "Aktiviti kembali peribadi.";
+    };
+    shareEl.checked = a.visibility === "members";
+    shareHrEl.checked = a.shareHr && shareEl.checked;
+    setSharingUi();
+    shareEl.addEventListener("change", () => void saveSharing());
+    shareHrEl.addEventListener("change", () => void saveSharing());
+
     $("padam").addEventListener("click", async () => {
       const ya = await confirmDialog({
         title: "Padam aktiviti ini?",
@@ -402,6 +491,7 @@ import Icon from "../../../components/ui/Icon.astro";
       if (!f?.ok) throw new Error();
       const data = await fitData(await f.arrayBuffer());
       rekod = data.records;
+      rekodCache = rekod;
       if (data.weather) cuaca(data.weather, "Dari fail FIT (peranti).");
       if (data.calories) {
         $("s-kalori").textContent = `${Math.round(data.calories)} kcal`;

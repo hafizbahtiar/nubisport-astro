@@ -1,0 +1,303 @@
+---
+// Feed komuniti ahli: aktiviti yang dikongsi ahli lain + kudos. Tiada komen/foto/follow.
+// Backend guard = requireAppRole nubi; page hanya sembunyikan akses.
+import AccountLayout from "../../layouts/AccountLayout.astro";
+import Alert from "../../components/ui/Alert.astro";
+import "../../styles/panel.css";
+---
+
+<AccountLayout title="Aktiviti komuniti">
+  <Alert variant="info" title="Ciri untuk ahli" id="bukan-ahli" hidden>
+    <p>
+      Feed komuniti terbuka untuk ahli Nubi Sport. Keahlian diluluskan pentadbir
+      - <a class="link" href="/account/pricing">lihat keahlian</a>.
+    </p>
+  </Alert>
+
+  <Alert variant="danger" id="status" hidden />
+
+  <section class="panel" id="feed" hidden aria-labelledby="tajuk-feed">
+    <div class="panel-kepala">
+      <div>
+        <h2 class="display" id="tajuk-feed">Aktiviti komuniti</h2>
+        <p class="muted">
+          Aktiviti yang dikongsi ahli lain. Peta ringkas sahaja; fail asal kekal
+          peribadi.
+        </p>
+      </div>
+      <a class="btn btn-outline btn-sm" href="/account/activities"
+        >Aktiviti saya</a
+      >
+    </div>
+    <div class="feed-senarai" id="senarai"></div>
+    <div class="feed-kosong" id="kosong" hidden>
+      <p class="muted">
+        Belum ada aktiviti dikongsi. Kongsi aktiviti anda dari halaman Aktiviti
+        untuk mulakan feed komuniti.
+      </p>
+      <a class="btn btn-primary btn-sm" href="/account/activities"
+        >Buka Aktiviti</a
+      >
+    </div>
+    <button
+      class="btn btn-outline btn-sm feed-lagi"
+      id="lagi"
+      type="button"
+      hidden
+    >
+      Muat lagi
+    </button>
+  </section>
+</AccountLayout>
+
+<script>
+  import { currentUser } from "../../lib/api";
+  import {
+    SPORT_LABELS,
+    formatDuration,
+    formatKm,
+    paceFromDistance,
+  } from "../../lib/activity-file";
+  import { fetchFeed, toggleKudos, type FeedItem } from "../../lib/feed";
+
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) =>
+    document.getElementById(id) as T;
+
+  const formatDate = (iso: string) =>
+    new Date(iso).toLocaleString("ms-MY", {
+      timeZone: "Asia/Kuala_Lumpur",
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+  const el = (tag: string, cls = "", teks = "") => {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (teks) e.textContent = teks;
+    return e;
+  };
+
+  const showError = (message: string) => {
+    const a = $("status");
+    a.className = "alert alert-danger";
+    a.textContent = message;
+    a.hidden = !message;
+  };
+
+  let next: string | null = null;
+  let loading = false;
+
+  // Map dimuat hanya bila kad masuk skrin.
+  let petaModul: Promise<
+    [typeof import("maplibre-gl"), { default: string }]
+  > | null = null;
+  const mapModule = () =>
+    (petaModul ??= Promise.all([
+      import("maplibre-gl"),
+      import("maplibre-gl/dist/maplibre-gl-worker.mjs?url"),
+      import("maplibre-gl/dist/maplibre-gl.css"),
+    ]).then(([ml, pekerja]) => {
+      ml.setWorkerUrl(pekerja.default);
+      return [ml, pekerja] as [
+        typeof import("maplibre-gl"),
+        { default: string },
+      ];
+    }));
+
+  // Satu kad = satu konteks WebGL; pelayar hadkan ~16. Peta dibuang bila kad keluar skrin, dilukis semula bila masuk.
+  const petaHidup = new Map<HTMLElement, { remove(): void }>();
+  const drawMap = async (kotak: HTMLElement, route: [number, number][]) => {
+    try {
+      const [ml] = await mapModule();
+      const lonLat = route.map(([lat, lon]) => [lon, lat] as [number, number]);
+      const lon = lonLat.map((p) => p[0]);
+      const lat = lonLat.map((p) => p[1]);
+      const bounds: [[number, number], [number, number]] = [
+        [Math.min(...lon), Math.min(...lat)],
+        [Math.max(...lon), Math.max(...lat)],
+      ];
+      kotak.replaceChildren();
+      const map = new ml.Map({
+        container: kotak,
+        style: "https://tiles.openfreemap.org/styles/positron",
+        bounds,
+        fitBoundsOptions: { padding: 18 },
+        interactive: false,
+      });
+      petaHidup.set(kotak, map);
+      map.on("load", () => {
+        const warna = getComputedStyle(document.documentElement);
+        const oren = warna.getPropertyValue("--orange").trim() || "#ff5a1f";
+        map.addSource("laluan", {
+          type: "geojson",
+          data: {
+            type: "Feature",
+            properties: {},
+            geometry: { type: "LineString", coordinates: lonLat },
+          },
+        });
+        map.addLayer({
+          id: "laluan-tepi",
+          type: "line",
+          source: "laluan",
+          layout: { "line-join": "round", "line-cap": "round" },
+          paint: { "line-color": "#fff", "line-width": 6 },
+        });
+        map.addLayer({
+          id: "laluan",
+          type: "line",
+          source: "laluan",
+          layout: { "line-join": "round", "line-cap": "round" },
+          paint: { "line-color": oren, "line-width": 3 },
+        });
+      });
+    } catch {
+      kotak.textContent = "Peta tak dapat dimuatkan.";
+    }
+  };
+
+  const petaObserver = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        const kotak = entry.target as HTMLElement;
+        if (!entry.isIntersecting) {
+          petaHidup.get(kotak)?.remove();
+          if (petaHidup.delete(kotak)) kotak.textContent = "Memuatkan peta…";
+          continue;
+        }
+        if (petaHidup.has(kotak)) continue;
+        const route = JSON.parse(kotak.dataset.route ?? "null") as
+          [number, number][] | null;
+        if (route) void drawMap(kotak, route);
+      }
+    },
+    { rootMargin: "200px" },
+  );
+
+  const feedCard = (item: FeedItem) => {
+    const article = el("article", "feed-kad");
+    const kepala = el("div", "feed-kepala");
+    const avatar = el(
+      "span",
+      "feed-avatar",
+      item.author.name.charAt(0).toUpperCase() || "N",
+    );
+    avatar.setAttribute("aria-hidden", "true");
+    const orang = el("div", "feed-orang");
+    const nama = item.author.profileHref
+      ? (el("a", "feed-nama", item.author.name) as HTMLAnchorElement)
+      : el("strong", "feed-nama", item.author.name);
+    if (nama instanceof HTMLAnchorElement) nama.href = item.author.profileHref!;
+    orang.append(nama, el("span", "muted", formatDate(item.startedAt)));
+    kepala.append(avatar, orang);
+
+    const tajuk = el(
+      "h3",
+      "feed-tajuk",
+      item.name?.trim() || SPORT_LABELS[item.sport],
+    );
+
+    article.append(kepala, tajuk);
+
+    if (item.preview?.length) {
+      const petaKotak = el("div", "feed-peta");
+      petaKotak.dataset.route = JSON.stringify(item.preview);
+      petaKotak.textContent = "Memuatkan peta…";
+      article.append(petaKotak);
+      petaObserver.observe(petaKotak);
+    }
+
+    const nilai = el("dl", "feed-nilai");
+    const tambah = (k: string, v: string | null) => {
+      if (!v) return;
+      const d = el("div");
+      d.append(el("dt", "", k), el("dd", "", v));
+      nilai.append(d);
+    };
+    tambah("Jarak", formatKm(item.distanceM));
+    tambah("Masa", formatDuration(item.movingS));
+    tambah("Pace", paceFromDistance(item.distanceM, item.movingS) ?? "");
+    tambah(
+      "Ketinggian",
+      item.elevationGainM != null
+        ? `${Math.round(item.elevationGainM)} m`
+        : null,
+    );
+    if (item.shareHr && item.avgHr != null) {
+      tambah(
+        "Nadi",
+        item.maxHr != null
+          ? `${Math.round(item.avgHr)} / ${Math.round(item.maxHr)} bpm`
+          : `${Math.round(item.avgHr)} bpm`,
+      );
+    }
+    article.append(nilai);
+
+    const kudos = el("div", "feed-kudos");
+    const btn = el(
+      "button",
+      "btn btn-outline btn-sm",
+      item.kudos.mine
+        ? `Disokong ${item.kudos.count}`
+        : `Sokong ${item.kudos.count}`,
+    ) as HTMLButtonElement;
+    btn.type = "button";
+    btn.setAttribute("aria-pressed", String(item.kudos.mine));
+    btn.addEventListener("click", async () => {
+      const on = !item.kudos.mine;
+      btn.disabled = true;
+      const nextState = await toggleKudos(item.id, on);
+      btn.disabled = false;
+      if (!nextState) {
+        showError("Tak dapat simpan sokongan. Cuba lagi.");
+        return;
+      }
+      item.kudos = nextState;
+      btn.textContent = nextState.mine
+        ? `Disokong ${nextState.count}`
+        : `Sokong ${nextState.count}`;
+      btn.setAttribute("aria-pressed", String(nextState.mine));
+      showError("");
+    });
+    kudos.append(btn);
+    article.append(kudos);
+    return article;
+  };
+
+  const loadMore = async () => {
+    if (loading) return;
+    loading = true;
+    $<HTMLButtonElement>("lagi").disabled = true;
+    const data = await fetchFeed(next);
+    loading = false;
+    $<HTMLButtonElement>("lagi").disabled = false;
+    if (!data) {
+      showError("Feed tak dapat dimuatkan. Semak sambungan dan cuba lagi.");
+      return;
+    }
+    showError("");
+    if (!data.items.length && !next) {
+      $("kosong").hidden = false;
+      $("lagi").hidden = true;
+      return;
+    }
+    $("kosong").hidden = true;
+    $("senarai").append(...data.items.map(feedCard));
+    next = data.next;
+    $("lagi").hidden = !next;
+  };
+
+  const s = await currentUser();
+  const nubi = s?.apps?.nubi;
+  const ahli = s?.role === "owner" || nubi === "ahli" || nubi === "admin";
+  $("bukan-ahli").hidden = ahli;
+  if (ahli) {
+    $("feed").hidden = false;
+    $("lagi").addEventListener("click", () => void loadMore());
+    await loadMore();
+  }
+</script>

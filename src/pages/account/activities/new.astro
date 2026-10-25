@@ -88,6 +88,20 @@ import Icon from "../../../components/ui/Icon.astro";
           hint="Termasuk laluan GPS, untuk analitik Nubi secara agregat. Anda boleh padam bila-bila masa. Ditanya sekali saja."
         />
       </div>
+      <div id="kongsi" hidden>
+        <Checkbox
+          name="kongsi"
+          id="kongsi-tanda"
+          label="Kongsi ke feed ahli"
+          hint="Ringkasan dan peta ringkas laluan dilihat ahli Nubi. Lalai peribadi; boleh tarik balik di Aktiviti."
+        />
+        <Checkbox
+          name="kongsi-nadi"
+          id="kongsi-nadi-tanda"
+          label="Kongsi nadi"
+          hint="Nadi purata/maks ialah data kesihatan. Pilihan, hanya jika aktiviti dikongsi."
+        />
+      </div>
       <div class="actions">
         <button class="btn btn-primary btn-sm" type="button" id="simpan"
           >Simpan</button
@@ -101,7 +115,8 @@ import Icon from "../../../components/ui/Icon.astro";
     </div>
 
     <p class="muted kecil">
-      Kami simpan ringkasan dan fail asal. Tiada peta dipaparkan kepada sesiapa.
+      Kami simpan ringkasan dan fail asal. Peta penuh hanya untuk anda; jika
+      anda kongsi aktiviti, ringkasan dan peta ringkas laluan dilihat ahli Nubi.
       Laluan GPS boleh mendedahkan alamat rumah, jadi tetapkan <em
         >privacy zones</em
       > di Strava sebelum eksport. Ini bukan sambungan terus ke Strava: muat naik
@@ -258,6 +273,9 @@ import Icon from "../../../components/ui/Icon.astro";
     ).length;
     $("hantar").hidden = dipilih.length === 0;
     $("setuju").hidden = !perluSetuju || n === 0;
+    $("kongsi").hidden = n === 0;
+    $<HTMLInputElement>("kongsi-nadi-tanda").disabled =
+      !$<HTMLInputElement>("kongsi-tanda").checked;
     const b = $<HTMLButtonElement>("simpan");
     b.hidden = n === 0;
     b.textContent = menyimpan ? "Menyimpan…" : `Simpan ${n} aktiviti`;
@@ -347,9 +365,16 @@ import Icon from "../../../components/ui/Icon.astro";
       status.set(k, { jenis: "kerja", teks: "Menyimpan…" });
       await kemas();
       try {
+        const body = await buildUploadForm(a);
+        const share = $<HTMLInputElement>("kongsi-tanda").checked;
+        body.set("visibility", share ? "members" : "private");
+        body.set(
+          "shareHr",
+          share && $<HTMLInputElement>("kongsi-nadi-tanda").checked ? "1" : "0",
+        );
         const r = await api(BASE, {
           method: "POST",
-          body: await buildUploadForm(a),
+          body,
         });
         const b = await json(r);
         if (r.ok) {
@@ -437,6 +462,11 @@ import Icon from "../../../components/ui/Icon.astro";
       void kemas();
     });
     $<HTMLInputElement>("setuju-tanda").addEventListener("change", segarButang);
+    $<HTMLInputElement>("kongsi-tanda").addEventListener("change", () => {
+      if (!$<HTMLInputElement>("kongsi-tanda").checked)
+        $<HTMLInputElement>("kongsi-nadi-tanda").checked = false;
+      segarButang();
+    });
     segarButang();
     void kemas();
   }

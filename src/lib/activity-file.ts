@@ -17,6 +17,8 @@ export interface ActivitySummary {
   avgHr: number | null;
   maxHr: number | null;
   runRatio: number | null; // bahagian masa bergerak pada kadens lari (0..1); null = tiada kadens
+  /** Laluan ringkas untuk peta feed (maks 150 titik); hanya dihantar ke ahli jika dikongsi. */
+  preview?: [number, number][];
   // Titik GPS pertama, 2 tempat perpuluhan (~1 km): Worker guna sekali untuk cuaca MET Norway, tidak disimpan.
   start?: { lat: number; lon: number } | null;
 }
@@ -87,6 +89,7 @@ export async function summarizeFit(bait: ArrayBuffer, nama: string): Promise<Act
 
   const jarak = s.totalDistance ?? rekod.findLast((r) => typeof r.distance === "number")?.distance ?? 0;
   const bergerak = s.totalTimerTime ?? s.totalElapsedTime ?? 0;
+  const route = routeOf(rekod);
   return {
     startedAt,
     sport: toSport(s.sport),
@@ -98,8 +101,9 @@ export async function summarizeFit(bait: ArrayBuffer, nama: string): Promise<Act
     avgHr: s.avgHeartRate ?? (nadi.length ? bulat(nadi.reduce((a, b) => a + b, 0) / nadi.length, 1) : null),
     maxHr: s.maxHeartRate ?? (nadi.length ? Math.max(...nadi) : null),
     runRatio: runShare(rekod),
+    preview: downsampledRoute(route),
     start: (() => {
-      const [lat, lon] = routeOf(rekod)[0] ?? [];
+      const [lat, lon] = route[0] ?? [];
       return lat === undefined ? null : { lat: bulat(lat, 2), lon: bulat(lon, 2) };
     })(),
   };
@@ -171,6 +175,23 @@ export function routeOf(rekod: any[]): [number, number][] {
     .map((r): [number, number] => [r.positionLat * darjah, r.positionLong * darjah]);
 }
 export const fitRoute = async (bait: ArrayBuffer) => routeOf(await fitRecords(bait));
+
+/** Laluan ringkas untuk peta feed: maks `max` titik, termasuk titik pertama/akhir, 5 tempat perpuluhan. */
+export function downsampledRoute(route: [number, number][], max = 150): [number, number][] {
+  const valid = route.filter(
+    ([lat, lon]) => Number.isFinite(lat) && Number.isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180,
+  );
+  if (valid.length < 2) return [];
+  const n = Math.max(2, Math.min(max, valid.length));
+  const picks: [number, number][] = [];
+  for (let i = 0; i < n; i++) {
+    const point = valid[Math.round((i * (valid.length - 1)) / (n - 1))];
+    picks.push([Math.round(point[0] * 1e5) / 1e5, Math.round(point[1] * 1e5) / 1e5]);
+  }
+  return picks;
+}
+
+export const routePreview = (rekod: any[], max = 150) => downsampledRoute(routeOf(rekod), max);
 
 export interface TrackPoint {
   lat: number;

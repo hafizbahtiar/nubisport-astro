@@ -64,6 +64,7 @@ import Table from "../../../components/ui/Table.astro";
           { label: "Masa", numeric: true },
           { label: "Pace", numeric: true },
           { label: "Nadi", numeric: true },
+          { label: "Feed" },
           { label: "Tindakan", srOnly: true },
         ]}
       >
@@ -126,6 +127,9 @@ import Table from "../../../components/ui/Table.astro";
     movingS: number;
     avgHr: number | null;
     hasGpx: boolean;
+    visibility: "private" | "members";
+    shareHr: boolean;
+    hasPreview: boolean;
     updatedAt: string;
   }
 
@@ -157,7 +161,10 @@ import Table from "../../../components/ui/Table.astro";
     b.setAttribute("aria-label", label);
     return b;
   };
-  const papar = (teks: string, jenis: "success" | "danger" = "danger") => {
+  const papar = (
+    teks: string,
+    jenis: "success" | "danger" | "info" = "danger",
+  ) => {
     const a = $("status");
     a.className = `alert alert-${jenis}`;
     a.textContent = teks;
@@ -305,12 +312,58 @@ import Table from "../../../components/ui/Table.astro";
       (a) => paceFromDistance(a.distanceM, a.movingS) ?? "-",
       (a) => (a.avgHr ? `${Math.round(a.avgHr)} bpm` : "-"),
       (a) => {
+        const b = butang(
+          a.visibility === "members" ? "Peribadi" : "Kongsi",
+          `${a.visibility === "members" ? "Jadikan peribadi" : "Kongsi ke feed"}: ${a.name || SPORT_LABELS[a.sport]}`,
+        );
+        b.addEventListener("click", () => void shareActivity(a));
+        return b;
+      },
+      (a) => {
         const b = butang("Padam", `Padam ${a.name || SPORT_LABELS[a.sport]}`);
         b.addEventListener("click", () => padam(a));
         return b;
       },
     ],
   });
+
+  /** Share/unshare one activity; old rows get a preview from their own .fit on first share. */
+  async function shareActivity(a: Baris) {
+    const on = a.visibility !== "members";
+    papar(on ? "Menyediakan peta…" : "Menyimpan…", "info");
+    let preview: [number, number][] | undefined;
+    if (on && !a.hasPreview) {
+      const f = await api(`${BASE}/${a.id}/file`).catch(() => null);
+      if (f?.ok) {
+        try {
+          const { fitData, routePreview } =
+            await import("../../../lib/activity-file");
+          const { records } = await fitData(await f.arrayBuffer());
+          const route = routePreview(records);
+          if (route.length >= 2) preview = route;
+        } catch {
+          /* share ringkasan saja */
+        }
+      }
+    }
+    const r = await api(`${BASE}/${a.id}/visibility`, {
+      method: "PUT",
+      body: JSON.stringify({
+        visibility: on ? "members" : "private",
+        shareHr: on ? a.shareHr : false,
+        ...(preview ? { preview } : {}),
+      }),
+    }).catch(() => null);
+    if (!r?.ok) {
+      papar("Tak dapat ubah tetapan kongsi. Cuba lagi sekejap.");
+      return;
+    }
+    papar(
+      on ? "Aktiviti dikongsi ke feed ahli." : "Aktiviti kembali peribadi.",
+      "success",
+    );
+    await senarai();
+  }
 
   async function padam(a: Baris) {
     const ya = await confirmDialog({
