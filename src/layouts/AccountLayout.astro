@@ -210,8 +210,15 @@ const laluan = Astro.url.pathname.replace(/\/$/, "") || "/";
                     ? "Ahli"
                     : "Belum ahli",
             );
-            // Link ahli/owner sengaja TIDAK dibuka dari cache: cache boleh stale selepas
-            // role dibuang. Skrip modul di bawah buka ikut /me segar.
+            // Role links from the cache too, so the sidebar doesn't shift on every nav. Safe:
+            // the cache is this tab's own account (logout clears it, session_active gates it),
+            // a stale role shows a link for one load at most (the module below re-checks /me
+            // both ways), and the backend checks the role on every call anyway.
+            const show = (a, ok) =>
+              document.querySelectorAll(a).forEach((e) => (e.hidden = !ok));
+            show("[data-ahli]", owner || n === "ahli" || n === "admin");
+            show("[data-admin]", owner || n === "admin");
+            show("[data-owner]", owner);
           }
         } catch {}
       </script>

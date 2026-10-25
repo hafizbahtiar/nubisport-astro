@@ -1,14 +1,10 @@
 ---
-// Profil Nubi - Maklumat: nama, username, bio, lokasi + profil awam (PATCH /me). Backend sama
-// dengan portfolio - akaun satu, jadi perubahan di sini juga nampak di hafizbahtiar.com.
-// E-mel tidak boleh diubah (backend). Its own page, not in the settings shell: Telegram, AI, training,
-// password, sessions and account deletion live under /account/settings/*.
-// View mode first; "Edit profil" swaps in the form. "Apa orang lain nampak" previews the saved state:
-// the members' feed (name, @username only when public) and /u/<username> (GET /public/profiles/:u/nubi).
+// Nubi profile (view only). Order: who you are (header + Edit) -> your details -> who sees what
+// (members' feed, and /u/<username> from GET /public/profiles/:u/nubi). Editing is
+// /account/profile/edit; Telegram, AI, training, password, sessions and deletion live under
+// /account/settings/*. Full width; the two-column body stacks below 64rem.
 import AccountLayout from "../../../layouts/AccountLayout.astro";
-import Field from "../../../components/ui/Field.astro";
 import Alert from "../../../components/ui/Alert.astro";
-import Checkbox from "../../../components/ui/Checkbox.astro";
 ---
 
 <AccountLayout
@@ -16,120 +12,56 @@ import Checkbox from "../../../components/ui/Checkbox.astro";
   description="Profil Nubi Sport anda dan apa yang orang lain nampak."
 >
   <div class="profile-page">
-    <section class="panel" aria-labelledby="t-ringkas">
-      <div class="ringkas">
-        <span class="ringkas-avatar" id="ringkas-awal" aria-hidden="true"
-          >…</span
-        >
-        <div class="ringkas-teks">
-          <h2 class="display" id="t-ringkas">
-            <span id="ringkas-nama">…</span>
-          </h2>
-          <p class="muted" id="ringkas-username">…</p>
-        </div>
-        <span class="lencana" id="ringkas-status">Peribadi</span>
+    <Alert variant="success" id="profile-saved" hidden>
+      <p>Profil disimpan.</p>
+    </Alert>
+
+    <section class="panel profile-head" aria-labelledby="t-name">
+      <span class="avatar" id="avatar" aria-hidden="true">…</span>
+      <div class="identity">
+        <h2 class="display" id="t-name">…</h2>
+        <p class="muted" id="handle">…</p>
+        <p id="bio" hidden></p>
       </div>
-      <p class="muted" id="ringkas-nota">…</p>
-      <a class="btn btn-outline btn-sm" id="ringkas-pautan" href="#" hidden
-        >Lihat profil awam</a
-      >
+      <div class="head-actions">
+        <span class="lencana" id="visibility">Peribadi</span>
+        <a class="btn btn-primary btn-sm" href="/account/profile/edit"
+          >Edit profil</a
+        >
+        <a class="btn btn-outline btn-sm" id="public-link" href="#" hidden
+          >Lihat profil awam</a
+        >
+      </div>
     </section>
 
-    <section class="panel" aria-labelledby="t-profil">
-      <div class="panel-kepala">
-        <h2 class="display" id="t-profil">Maklumat anda</h2>
-        <button class="btn btn-outline btn-sm" type="button" id="profile-edit"
-          >Edit profil</button
-        >
-      </div>
-      <Alert variant="success" id="ok-profil" hidden />
-      <dl class="profile-view" id="profile-view">
-        <div><dt>Nama</dt><dd data-view="name">…</dd></div>
-        <div><dt>E-mel</dt><dd data-view="email">…</dd></div>
-        <div><dt>Username</dt><dd data-view="username">…</dd></div>
-        <div><dt>Lokasi</dt><dd data-view="location">…</dd></div>
-        <div class="medan-penuh"><dt>Bio</dt><dd data-view="bio">…</dd></div>
-        <div><dt>Profil awam</dt><dd data-view="public">…</dd></div>
-      </dl>
-      <form class="form form-grid form-grid--lg" id="profil" novalidate hidden>
-        <p class="muted medan-penuh">
-          Nama, username, bio dan lokasi. Profil awam hanya menunjukkan apa yang
-          disenaraikan di bawah.
+    <div class="profile-body">
+      <section class="panel" aria-labelledby="t-details">
+        <h2 class="display" id="t-details">Maklumat</h2>
+        <dl class="details">
+          <div><dt>Nama</dt><dd data-view="name">…</dd></div>
+          <div><dt>Username</dt><dd data-view="username">…</dd></div>
+          <div><dt>E-mel</dt><dd data-view="email">…</dd></div>
+          <div><dt>Lokasi</dt><dd data-view="location">…</dd></div>
+          <div class="full-row"><dt>Bio</dt><dd data-view="bio">…</dd></div>
+        </dl>
+        <p class="muted small">
+          E-mel hanya anda yang nampak. Telegram, kata laluan dan sesi ada di
+          <a class="link" href="/account/settings">Tetapan</a>.
         </p>
-        <Field label="Nama">
-          <input
-            class="input"
-            type="text"
-            name="nama"
-            autocomplete="name"
-            maxlength="100"
-            required
-          />
-        </Field>
-        <Field label="E-mel" hint="E-mel log masuk tak boleh diubah.">
-          <input class="input" type="email" name="emel" readonly />
-        </Field>
-        <Field
-          label="Username"
-          hint="3-30 huruf kecil, nombor atau sengkang tunggal. Perlu untuk profil awam."
-        >
-          <input
-            class="input"
-            type="text"
-            name="username"
-            maxlength="30"
-            autocomplete="username"
-            pattern="[a-z0-9](?:[a-z0-9-]*[a-z0-9])?"
-          />
-        </Field>
-        <Field label="Lokasi" hint="Contoh: Shah Alam, Selangor.">
-          <input
-            class="input"
-            type="text"
-            name="lokasi"
-            maxlength="100"
-            autocomplete="address-level2"
-          />
-        </Field>
-        <div class="medan-penuh">
-          <Field label="Bio" hint="Maksimum 1,000 aksara.">
-            <textarea class="input" name="bio" rows="3" maxlength="1000"
-            ></textarea>
-          </Field>
-        </div>
-        <div class="medan-penuh">
-          <Checkbox
-            name="awam"
-            label="Profil awam"
-            hint="Nama, username, bio, lokasi, ahli sejak, lencana dan jumlah aktiviti/km akan kelihatan kepada sesiapa yang ada pautan. Laluan, pelan, umur/berat/MAF dan pace tidak dipaparkan. Lalai peribadi."
-          />
-        </div>
-        <div class="medan-penuh">
-          <Alert variant="danger" id="mesej-profil" hidden />
-        </div>
-        <div class="medan-penuh form-buttons">
-          <button class="btn btn-primary" type="submit">Simpan</button>
-          <button class="btn btn-outline" type="button" id="profile-cancel"
-            >Batal</button
-          >
-        </div>
-      </form>
-    </section>
+      </section>
 
-    <section class="panel" aria-labelledby="t-others">
-      <h2 class="display" id="t-others">Apa orang lain nampak</h2>
-      <p class="muted">Ikut maklumat yang sudah disimpan.</p>
-      <div class="audience-grid">
+      <section class="panel" aria-labelledby="t-others">
+        <h2 class="display" id="t-others">Apa orang lain nampak</h2>
         <article class="audience">
           <h3>Ahli Nubi (log masuk)</h3>
-          <p class="muted">
+          <p class="muted small">
             Pada aktiviti komuniti, sebelah larian yang anda kongsi.
           </p>
           <p class="audience-card" id="preview-members">…</p>
         </article>
         <article class="audience">
           <h3>Sesiapa dengan pautan</h3>
-          <p class="muted" id="preview-public-note">…</p>
+          <p class="muted small" id="preview-public-note">…</p>
           <div class="audience-card" id="preview-public" hidden>
             <strong data-preview="name"></strong>
             <span class="muted" data-preview="username"></span>
@@ -137,50 +69,49 @@ import Checkbox from "../../../components/ui/Checkbox.astro";
             <span class="muted" data-preview="meta"></span>
           </div>
         </article>
-      </div>
-    </section>
-    <p class="muted settings-link">
-      Telegram, kata laluan, sesi dan padam akaun ada di
-      <a class="link" href="/account/settings">Tetapan</a>.
-    </p>
+      </section>
+    </div>
   </div>
 </AccountLayout>
 
 <script>
-  import {
-    api,
-    cacheMe,
-    json,
-    commonError,
-    currentUser,
-    type CurrentUser,
-  } from "../../../lib/api";
+  import { json, currentUser, type CurrentUser } from "../../../lib/api";
 
-  const profil = document.getElementById("profil") as HTMLFormElement;
   const $ = (id: string) => document.getElementById(id)!;
-  const medan = (name: string) =>
-    profil.elements.namedItem(name) as HTMLInputElement;
-  const papar = (id: string, teks: string | null) => {
-    const el = document.getElementById(id)!;
-    el.textContent = teks ?? "";
-    el.hidden = !teks;
+  const viewField = (key: string) =>
+    document.querySelector<HTMLElement>(`[data-view="${key}"]`)!;
+  const isPublic = (user: CurrentUser) =>
+    !!user.profilePublic && !!user.username;
+
+  // Back from /account/profile/edit after a save: show once, drop the param.
+  if (new URLSearchParams(location.search).has("saved")) {
+    $("profile-saved").hidden = false;
+    history.replaceState(null, "", location.pathname);
+  }
+
+  const renderHead = (user: CurrentUser) => {
+    $("avatar").textContent = user.name.charAt(0).toUpperCase() || "?";
+    $("t-name").textContent = user.name;
+    $("handle").textContent = user.username
+      ? `@${user.username}`
+      : "Belum ada username";
+    const bio = $("bio");
+    bio.textContent = user.profile?.bio ?? "";
+    bio.hidden = !user.profile?.bio;
+    $("visibility").textContent = isPublic(user) ? "Profil awam" : "Peribadi";
+    const link = $("public-link") as HTMLAnchorElement;
+    link.hidden = !isPublic(user);
+    if (isPublic(user)) link.href = `/u/${encodeURIComponent(user.username!)}`;
   };
 
-  const ringkas = (user: CurrentUser) => {
-    const username = user.username ?? "";
-    const awam = !!user.profilePublic && !!username;
-    $("ringkas-awal").textContent = user.name.charAt(0).toUpperCase() || "?";
-    $("ringkas-nama").textContent = user.name;
-    $("ringkas-username").textContent = username
-      ? `@${username}`
-      : "Belum ada username";
-    $("ringkas-status").textContent = awam ? "Profil awam" : "Peribadi";
-    $("ringkas-nota").textContent = awam
-      ? "Profil ini boleh dilihat sesiapa yang ada pautan. Laluan, pelan dan data kesihatan kekal peribadi."
-      : "Profil ini peribadi. Tetapkan username dan tandakan Profil awam untuk kongsi.";
-    const pautan = $("ringkas-pautan") as HTMLAnchorElement;
-    pautan.hidden = !awam;
-    if (awam) pautan.href = `/u/${encodeURIComponent(username)}`;
+  const renderDetails = (user: CurrentUser) => {
+    viewField("name").textContent = user.name;
+    viewField("username").textContent = user.username
+      ? `@${user.username}`
+      : "-";
+    viewField("email").textContent = user.email;
+    viewField("location").textContent = user.profile?.location || "-";
+    viewField("bio").textContent = user.profile?.bio || "-";
   };
 
   const formatMonth = (yyyyMm: string) =>
@@ -193,14 +124,12 @@ import Checkbox from "../../../components/ui/Checkbox.astro";
   // What other people see - from the saved user, plus the real public endpoint when public.
   const renderPreview = async (user: CurrentUser) => {
     const username = user.username ?? "";
-    const isPublic = !!user.profilePublic && !!username;
-    $("preview-members").textContent = isPublic
+    $("preview-members").textContent = isPublic(user)
       ? `${user.name} · @${username}`
       : `${user.name} (username disorok sebab profil peribadi)`;
     const card = $("preview-public");
     const note = $("preview-public-note");
-    card.hidden = true;
-    if (!isPublic) {
+    if (!isPublic(user)) {
       note.textContent =
         'Tiada apa-apa: pautan /u/ memaparkan "tidak dijumpai" selagi profil peribadi.';
       return;
@@ -238,145 +167,20 @@ import Checkbox from "../../../components/ui/Checkbox.astro";
     card.hidden = false;
   };
 
-  const viewField = (key: string) =>
-    document.querySelector<HTMLElement>(`[data-view="${key}"]`)!;
-  const showView = (user: CurrentUser) => {
-    viewField("name").textContent = user.name;
-    viewField("email").textContent = user.email;
-    viewField("username").textContent = user.username
-      ? `@${user.username}`
-      : "-";
-    viewField("location").textContent = user.profile?.location || "-";
-    viewField("bio").textContent = user.profile?.bio || "-";
-    viewField("public").textContent =
-      user.profilePublic && user.username ? "Ya" : "Tidak (peribadi)";
-    $("profile-view").hidden = false;
-    profil.hidden = true;
-    $("profile-edit").hidden = false;
+  // Session guard = AccountLayout; null means the page is redirecting to /login.
+  const user = await currentUser();
+  if (user) {
+    renderHead(user);
+    renderDetails(user);
     void renderPreview(user);
-  };
-
-  $("profile-edit").addEventListener("click", () => {
-    papar("ok-profil", null);
-    $("profile-view").hidden = true;
-    $("profile-edit").hidden = true;
-    profil.hidden = false;
-    medan("nama").focus();
-  });
-
-  // Pengawal sesi = AccountLayout; s null bermaksud page sedang dilencong ke /login.
-  const s = await currentUser();
-  // Last saved state: Batal resets the form to it, and the next save builds on it.
-  let saved = s;
-  const fillForm = (user: CurrentUser) => {
-    medan("nama").value = user.name;
-    medan("emel").value = user.email;
-    medan("username").value = user.username ?? "";
-    medan("bio").value = user.profile?.bio ?? "";
-    medan("lokasi").value = user.profile?.location ?? "";
-    medan("awam").checked = !!user.profilePublic;
-  };
-  if (s) {
-    fillForm(s);
-    ringkas(s);
-    showView(s);
   }
-  $("profile-cancel").addEventListener("click", () => {
-    papar("mesej-profil", null);
-    if (!saved) return;
-    fillForm(saved);
-    showView(saved);
-    $("profile-edit").focus();
-  });
-
-  profil.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    papar("ok-profil", null);
-    const nama = String(medan("nama").value).trim();
-    const username = String(medan("username").value).trim().toLowerCase();
-    const bio = String(medan("bio").value).trim();
-    const lokasi = String(medan("lokasi").value).trim();
-    const awam = medan("awam").checked;
-    if (!nama || nama.length > 100)
-      return papar("mesej-profil", "Masukkan nama (maksimum 100 aksara).");
-    if (awam && !username)
-      return papar(
-        "mesej-profil",
-        "Set username dulu sebelum jadikan profil awam.",
-      );
-    papar("mesej-profil", null);
-    const butang = profil.querySelector<HTMLButtonElement>(
-      'button[type="submit"]',
-    )!;
-    butang.disabled = true;
-    try {
-      const res = await api("/me", {
-        method: "PATCH",
-        body: JSON.stringify({
-          displayName: nama,
-          username: username || null,
-          bio,
-          location: lokasi,
-          profilePublic: awam,
-        }),
-      });
-      if (!res.ok) {
-        const body = await json(res);
-        const mesej =
-          body.code === "username_taken"
-            ? "Username ini dah diambil. Pilih yang lain."
-            : body.code === "username_required"
-              ? "Set username dulu sebelum jadikan profil awam."
-              : body.field === "username"
-                ? "Username mesti 3-30 huruf kecil, nombor atau sengkang tunggal."
-                : (commonError(res.status, body) ??
-                  "Tak dapat simpan sekarang. Cuba lagi sekejap.");
-        return papar("mesej-profil", mesej);
-      }
-      document
-        .querySelectorAll("[data-saya-nama]")
-        .forEach((el) => (el.textContent = nama));
-      document
-        .querySelectorAll("[data-saya-awal]")
-        .forEach((el) => (el.textContent = nama.charAt(0).toUpperCase()));
-      if (!saved) return;
-      const next: CurrentUser = {
-        ...saved,
-        name: nama,
-        username: username || null,
-        profilePublic: awam,
-        profile: {
-          displayName: nama,
-          bio: bio || null,
-          location: lokasi || null,
-          website: saved.profile?.website ?? null,
-          linkedinUrl: saved.profile?.linkedinUrl ?? null,
-          githubUrl: saved.profile?.githubUrl ?? null,
-          twitterUrl: saved.profile?.twitterUrl ?? null,
-        },
-      };
-      saved = next;
-      cacheMe(next);
-      ringkas(next);
-      showView(next);
-      papar("ok-profil", "Profil disimpan.");
-    } catch {
-      papar(
-        "mesej-profil",
-        "Tiada sambungan. Semak internet anda dan cuba lagi.",
-      );
-    } finally {
-      butang.disabled = false;
-    }
-  });
 </script>
 
 <style>
-  /* Same panel look as the settings pages (SettingsShell), without its nav. */
   .profile-page {
     display: grid;
     gap: 1.5rem;
-    max-width: 56rem;
+    width: 100%;
   }
   .profile-page :global(.panel) {
     justify-items: stretch;
@@ -388,97 +192,83 @@ import Checkbox from "../../../components/ui/Checkbox.astro";
     font-size: 1.5rem;
     color: var(--navy);
   }
-  .settings-link {
-    margin: 0;
-  }
-  input[readonly] {
-    background: var(--paper-2);
-    color: var(--muted);
-  }
-  .ringkas {
-    display: grid;
+
+  /* Header: avatar | name, handle, bio | badge + actions. */
+  .profile-head {
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
-    gap: 0.75rem 1rem;
+    gap: 1rem 1.25rem;
   }
-  .ringkas-avatar {
+  .avatar {
     display: grid;
     place-items: center;
-    width: 3.25rem;
-    height: 3.25rem;
+    width: 4rem;
+    height: 4rem;
     border-radius: 50%;
     background: var(--navy);
     color: var(--paper);
-    font: 700 1.35rem / 1 var(--display, var(--body));
+    font: 700 1.6rem / 1 var(--display, var(--body));
   }
-  .ringkas-teks {
+  .identity {
     display: grid;
-    gap: 0.15rem;
+    gap: 0.2rem;
     min-width: 0;
   }
-  .ringkas-teks h2 {
-    margin: 0;
-    font-size: 1.5rem;
-    overflow-wrap: anywhere;
-  }
-  .ringkas-teks p {
+  .identity p {
     margin: 0;
     overflow-wrap: anywhere;
   }
-  .ringkas-nota {
-    grid-column: 1 / -1;
-    margin: 0;
+  #bio {
+    margin-top: 0.35rem;
+    white-space: pre-line;
   }
-  #ringkas-pautan {
-    grid-column: 1 / -1;
-    justify-self: start;
+  .head-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
   }
-  .medan-penuh {
-    grid-column: 1 / -1;
-  }
-  .profile-view {
+
+  /* Body: details | audience side by side on wide screens. */
+  .profile-body {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-    gap: 0.9rem 1.5rem;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: 1.5rem;
+    align-items: start;
+  }
+  .details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: 1rem 1.5rem;
     margin: 0;
   }
-  .profile-view[hidden],
-  #profil[hidden] {
-    display: none;
-  }
-  .profile-view dt {
+  .details dt {
     font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--muted);
   }
-  .profile-view dd {
+  .details dd {
     margin: 0.15rem 0 0;
     overflow-wrap: anywhere;
     white-space: pre-line;
   }
-  .form-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
+  .full-row {
+    grid-column: 1 / -1;
   }
-  .audience-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-    gap: 1rem;
+  .small {
+    margin: 0;
+    font-size: 0.88rem;
   }
   .audience {
     display: grid;
-    gap: 0.5rem;
-    align-content: start;
+    gap: 0.4rem;
   }
   .audience h3 {
     margin: 0;
     font-size: 1rem;
-  }
-  .audience p {
-    margin: 0;
   }
   .audience-card {
     display: grid;
@@ -489,16 +279,28 @@ import Checkbox from "../../../components/ui/Checkbox.astro";
     border-radius: var(--radius);
     overflow-wrap: anywhere;
   }
+  .audience-card p {
+    margin: 0;
+  }
   .audience-card[hidden] {
     display: none;
   }
+
+  @media (max-width: 63.99rem) {
+    .profile-body {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
   @media (max-width: 40rem) {
-    .ringkas {
+    .profile-head {
       grid-template-columns: auto minmax(0, 1fr);
     }
-    #ringkas-status {
-      grid-column: 2;
-      justify-self: start;
+    .head-actions {
+      grid-column: 1 / -1;
+      justify-content: flex-start;
+    }
+    .head-actions .btn {
+      flex: 1 1 auto;
     }
   }
 </style>

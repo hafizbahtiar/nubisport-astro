@@ -3,6 +3,8 @@
 // 401 -> satu /auth/refresh (dikongsi) + satu cubaan semula. Jangan panggil refresh selari:
 // refresh token berputar, panggilan kedua akan gagal.
 
+import { claimDeviceData } from "./device-data";
+
 export interface CurrentUser {
   id: number;
   name: string;
@@ -90,6 +92,8 @@ export async function fetchMe(): Promise<CurrentUser | null> {
   const res = await api("/me", { cache: "no-store" });
   const s = res.ok ? ((await json(res)).data as CurrentUser) : null;
   cacheMe(s);
+  // Another account's plans were in this browser (lib/device-data.ts): wiped - redraw without them.
+  if (s && claimDeviceData(s.id)) location.reload();
   return s;
 }
 

@@ -1,0 +1,250 @@
+---
+// Edit the Nubi profile (PATCH /me): name, username, location, bio, public flag. Same account as
+// hafizbahtiar.com, so changes show there too. Email can't change (backend).
+// lib/unsaved-guard: leaving with changes (back link, Batal, browser back) asks first.
+import AccountLayout from "../../../layouts/AccountLayout.astro";
+import Field from "../../../components/ui/Field.astro";
+import Alert from "../../../components/ui/Alert.astro";
+import Checkbox from "../../../components/ui/Checkbox.astro";
+---
+
+<AccountLayout title="Edit profil" description="Ubah profil Nubi Sport anda.">
+  <p class="back-link-row">
+    <a
+      class="back-link back-link--accent"
+      href="/account/profile"
+      data-profile-back>← Profil</a
+    >
+  </p>
+
+  <section class="panel profile-edit" aria-labelledby="t-edit">
+    <div class="profile-edit-head">
+      <h2 class="display" id="t-edit">Edit profil</h2>
+      <p class="muted">
+        Profil awam hanya menunjukkan nama, username, bio, lokasi, tarikh
+        sertai, lencana dan jumlah aktiviti.
+      </p>
+    </div>
+
+    <form class="form form-grid form-grid--lg" id="profile-form" novalidate>
+      <Field label="Nama">
+        <input
+          class="input"
+          type="text"
+          name="name"
+          autocomplete="name"
+          maxlength="100"
+          required
+        />
+      </Field>
+      <Field label="E-mel" hint="E-mel log masuk tak boleh diubah.">
+        <input class="input" type="email" name="email" readonly />
+      </Field>
+      <Field
+        label="Username"
+        hint="3-30 huruf kecil, nombor atau sengkang tunggal. Perlu untuk profil awam."
+      >
+        <input
+          class="input"
+          type="text"
+          name="username"
+          maxlength="30"
+          autocomplete="username"
+          pattern="[a-z0-9](?:[a-z0-9-]*[a-z0-9])?"
+        />
+      </Field>
+      <Field label="Lokasi" hint="Contoh: Shah Alam, Selangor.">
+        <input
+          class="input"
+          type="text"
+          name="location"
+          maxlength="100"
+          autocomplete="address-level2"
+        />
+      </Field>
+      <div class="full-row">
+        <Field label="Bio" hint="Maksimum 1,000 aksara.">
+          <textarea class="input" name="bio" rows="4" maxlength="1000"
+          ></textarea>
+        </Field>
+      </div>
+      <div class="full-row">
+        <Checkbox
+          name="public"
+          label="Profil awam"
+          hint="Kelihatan kepada sesiapa yang ada pautan /u/username anda. Laluan, pelan, umur/berat/MAF dan pace tidak dipaparkan. Lalai peribadi."
+        />
+      </div>
+      <div class="full-row">
+        <Alert variant="danger" id="profile-error" hidden />
+      </div>
+      <div class="full-row form-buttons">
+        <button class="btn btn-primary" type="submit">Simpan</button>
+        <button class="btn btn-outline" type="button" id="profile-cancel"
+          >Batal</button
+        >
+      </div>
+    </form>
+  </section>
+</AccountLayout>
+
+<script>
+  import {
+    api,
+    cacheMe,
+    json,
+    commonError,
+    currentUser,
+    type CurrentUser,
+  } from "../../../lib/api";
+  import { mountUnsavedGuard } from "../../../lib/unsaved-guard";
+
+  const form = document.getElementById("profile-form") as HTMLFormElement;
+  const backLink = document.querySelector<HTMLAnchorElement>(
+    "[data-profile-back]",
+  )!;
+  const errorBox = document.getElementById("profile-error")!;
+  const field = (name: string) =>
+    form.elements.namedItem(name) as HTMLInputElement;
+  const showError = (text: string | null) => {
+    errorBox.textContent = text ?? "";
+    errorBox.hidden = !text;
+  };
+
+  // Session guard = AccountLayout; null means the page is redirecting to /login.
+  const user = await currentUser();
+  if (user) {
+    field("name").value = user.name;
+    field("email").value = user.email;
+    field("username").value = user.username ?? "";
+    field("bio").value = user.profile?.bio ?? "";
+    field("location").value = user.profile?.location ?? "";
+    field("public").checked = !!user.profilePublic;
+  }
+
+  // Mounted after the fill, so the snapshot is the saved profile, not the empty form.
+  const guard = mountUnsavedGuard(form, {
+    active: () => true,
+    backLink,
+    message:
+      "Perubahan pada profil ini belum disimpan. Kalau keluar sekarang, perubahan akan hilang.",
+  });
+  guard.arm();
+  // Batal goes through the guarded back link, so it asks the same question.
+  document
+    .getElementById("profile-cancel")!
+    .addEventListener("click", () => backLink.click());
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!user) return;
+    const name = field("name").value.trim();
+    const username = field("username").value.trim().toLowerCase();
+    const bio = field("bio").value.trim();
+    const location = field("location").value.trim();
+    const isPublic = field("public").checked;
+    if (!name || name.length > 100)
+      return showError("Masukkan nama (maksimum 100 aksara).");
+    if (isPublic && !username)
+      return showError("Set username dulu sebelum jadikan profil awam.");
+    showError(null);
+    const button = form.querySelector<HTMLButtonElement>(
+      'button[type="submit"]',
+    )!;
+    button.disabled = true;
+    try {
+      const res = await api("/me", {
+        method: "PATCH",
+        body: JSON.stringify({
+          displayName: name,
+          username: username || null,
+          bio,
+          location,
+          profilePublic: isPublic,
+        }),
+      });
+      if (!res.ok) {
+        const body = await json(res);
+        return showError(
+          body.code === "username_taken"
+            ? "Username ini dah diambil. Pilih yang lain."
+            : body.code === "username_required"
+              ? "Set username dulu sebelum jadikan profil awam."
+              : body.field === "username"
+                ? "Username mesti 3-30 huruf kecil, nombor atau sengkang tunggal."
+                : (commonError(res.status, body) ??
+                  "Tak dapat simpan sekarang. Cuba lagi sekejap."),
+        );
+      }
+      const next: CurrentUser = {
+        ...user,
+        name,
+        username: username || null,
+        profilePublic: isPublic,
+        profile: {
+          displayName: name,
+          bio: bio || null,
+          location: location || null,
+          website: user.profile?.website ?? null,
+          linkedinUrl: user.profile?.linkedinUrl ?? null,
+          githubUrl: user.profile?.githubUrl ?? null,
+          twitterUrl: user.profile?.twitterUrl ?? null,
+        },
+      };
+      cacheMe(next);
+      guard.markClean();
+      window.location.replace("/account/profile?saved=1");
+    } catch {
+      showError("Tiada sambungan. Semak internet anda dan cuba lagi.");
+    } finally {
+      button.disabled = false;
+    }
+  });
+</script>
+
+<style>
+  .profile-edit {
+    justify-items: stretch;
+    gap: 1.25rem;
+    box-shadow: var(--shadow-sm);
+  }
+  .profile-edit-head {
+    display: grid;
+    gap: 0.35rem;
+  }
+  .profile-edit-head h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--navy);
+  }
+  .profile-edit-head p {
+    margin: 0;
+  }
+  /* Full width at every size (.form caps at 44rem); two columns from tablet up. */
+  #profile-form {
+    max-width: none;
+  }
+  @media (min-width: 48rem) {
+    #profile-form {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: start;
+    }
+  }
+  input[readonly] {
+    background: var(--paper-2);
+    color: var(--muted);
+  }
+  .full-row {
+    grid-column: 1 / -1;
+  }
+  .form-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  @media (max-width: 30rem) {
+    .form-buttons .btn {
+      flex: 1 1 100%;
+    }
+  }
+</style>

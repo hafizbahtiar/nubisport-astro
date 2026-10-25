@@ -72,6 +72,7 @@ const { up = false, id } = Astro.props;
 <script>
   import { api, cacheMe } from "../../lib/api";
   import { confirmDialog } from "../../lib/confirm";
+  import { clearDeviceData } from "../../lib/device-data";
 
   document.querySelectorAll<HTMLElement>("[data-user-menu]").forEach((root) => {
     const butang = root.querySelector<HTMLButtonElement>("[data-butang]")!;
@@ -112,18 +113,16 @@ const { up = false, id } = Astro.props;
       const ya = await confirmDialog({
         title: "Log keluar?",
         message:
-          "Lepas ini, log masuk semula untuk buka Dashboard dan pelan versi penuh.",
+          "Pelan, tanda siap dan tetapan dalam pelayar ini akan dibuang supaya akaun lain tak nampak. Pelan di awan kembali bila anda log masuk semula.",
         confirmLabel: "Log keluar",
         danger: true,
       });
       if (!ya) return butang.focus();
       await api("/auth/logout", { method: "POST" }).catch(() => {});
       cacheMe(null);
-      // Kalendar automatik milik akaun ini - jangan auto-kemas kini untuk akaun seterusnya.
-      try {
-        localStorage.removeItem("nubi:kalendar");
-        localStorage.removeItem("nubi:kalendar-ics");
-      } catch {}
+      // Plans, ticks, MAF, calendar feed belong to this account - the next one must not see or
+      // cloud-save them (lib/device-data.ts).
+      clearDeviceData();
       // Cookie httpOnly dipadam oleh backend; session_active juga, tetapi pastikan UI ikut.
       document.cookie = "session_active=; Max-Age=0; path=/";
       location.replace("/");
