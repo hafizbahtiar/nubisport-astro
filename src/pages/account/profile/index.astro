@@ -1,7 +1,9 @@
 ---
 // Profil Nubi - Maklumat: nama, username, bio, lokasi + profil awam (PATCH /me). Backend sama
 // dengan portfolio - akaun satu, jadi perubahan di sini juga nampak di hafizbahtiar.com.
-// E-mel tidak boleh diubah (backend). + Telegram (akaun dipautkan). Padam akaun di Keselamatan.
+// E-mel tidak boleh diubah (backend). Telegram + NUNI di Tetapan; padam akaun di Zon bahaya.
+// View mode first; "Edit profil" swaps in the form. "Apa orang lain nampak" previews the saved state:
+// the members' feed (name, @username only when public) and /u/<username> (GET /public/profiles/:u/nubi).
 import ProfileShell from "../../../components/ProfileShell.astro";
 import Field from "../../../components/ui/Field.astro";
 import Alert from "../../../components/ui/Alert.astro";
@@ -25,12 +27,26 @@ import Checkbox from "../../../components/ui/Checkbox.astro";
   </section>
 
   <section class="panel" aria-labelledby="t-profil">
-    <h2 class="display" id="t-profil">Maklumat anda</h2>
-    <p class="muted">
-      Nama, username, bio dan lokasi. Profil awam hanya menunjukkan apa yang
-      disenaraikan di bawah.
-    </p>
-    <form class="form form-grid form-grid--lg" id="profil" novalidate>
+    <div class="panel-kepala">
+      <h2 class="display" id="t-profil">Maklumat anda</h2>
+      <button class="btn btn-outline btn-sm" type="button" id="profile-edit"
+        >Edit profil</button
+      >
+    </div>
+    <Alert variant="success" id="ok-profil" hidden />
+    <dl class="profile-view" id="profile-view">
+      <div><dt>Nama</dt><dd data-view="name">…</dd></div>
+      <div><dt>E-mel</dt><dd data-view="email">…</dd></div>
+      <div><dt>Username</dt><dd data-view="username">…</dd></div>
+      <div><dt>Lokasi</dt><dd data-view="location">…</dd></div>
+      <div class="medan-penuh"><dt>Bio</dt><dd data-view="bio">…</dd></div>
+      <div><dt>Profil awam</dt><dd data-view="public">…</dd></div>
+    </dl>
+    <form class="form form-grid form-grid--lg" id="profil" novalidate hidden>
+      <p class="muted medan-penuh">
+        Nama, username, bio dan lokasi. Profil awam hanya menunjukkan apa yang
+        disenaraikan di bawah.
+      </p>
       <Field label="Nama">
         <input
           class="input"
@@ -82,39 +98,36 @@ import Checkbox from "../../../components/ui/Checkbox.astro";
       <div class="medan-penuh">
         <Alert variant="danger" id="mesej-profil" hidden />
       </div>
-      <div class="medan-penuh">
-        <Alert variant="success" id="ok-profil" hidden />
+      <div class="medan-penuh form-buttons">
+        <button class="btn btn-primary" type="submit">Simpan</button>
+        <button class="btn btn-outline" type="button" id="profile-cancel"
+          >Batal</button
+        >
       </div>
-      <button class="btn btn-primary" type="submit">Simpan</button>
     </form>
   </section>
 
-  <section class="panel" aria-labelledby="t-telegram">
-    <h2 class="display" id="t-telegram">Telegram</h2>
-    <p class="muted" id="telegram-status">Menyemak pautan…</p>
-    <Alert variant="danger" id="mesej-telegram" hidden />
-    <div class="actions">
-      <a
-        class="btn btn-outline"
-        id="telegram-paut"
-        href="/api/v1/public/telegram"
-        target="_blank"
-        rel="noopener">Pautkan Telegram</a
-      >
-      <button class="btn btn-bahaya" type="button" id="telegram-nyahpaut" hidden
-        >Nyahpaut Telegram</button
-      >
-    </div>
-  </section>
-
-  <section class="panel" aria-labelledby="t-ai">
-    <h2 class="display" id="t-ai">NUNI</h2>
-    <p class="muted" id="ai-status">Menyemak persetujuan…</p>
-    <Alert variant="danger" id="mesej-ai" hidden />
-    <div class="actions">
-      <button class="btn btn-outline" type="button" id="ai-tarik" hidden
-        >Tarik balik persetujuan AI</button
-      >
+  <section class="panel" aria-labelledby="t-others">
+    <h2 class="display" id="t-others">Apa orang lain nampak</h2>
+    <p class="muted">Ikut maklumat yang sudah disimpan.</p>
+    <div class="audience-grid">
+      <article class="audience">
+        <h3>Ahli Nubi (log masuk)</h3>
+        <p class="muted">
+          Pada aktiviti komuniti, sebelah larian yang anda kongsi.
+        </p>
+        <p class="audience-card" id="preview-members">…</p>
+      </article>
+      <article class="audience">
+        <h3>Sesiapa dengan pautan</h3>
+        <p class="muted" id="preview-public-note">…</p>
+        <div class="audience-card" id="preview-public" hidden>
+          <strong data-preview="name"></strong>
+          <span class="muted" data-preview="username"></span>
+          <p data-preview="bio"></p>
+          <span class="muted" data-preview="meta"></span>
+        </div>
+      </article>
     </div>
   </section>
 </ProfileShell>
@@ -128,7 +141,6 @@ import Checkbox from "../../../components/ui/Checkbox.astro";
     currentUser,
     type CurrentUser,
   } from "../../../lib/api";
-  import { confirmDialog } from "../../../lib/confirm";
 
   const profil = document.getElementById("profil") as HTMLFormElement;
   const $ = (id: string) => document.getElementById(id)!;
@@ -157,113 +169,110 @@ import Checkbox from "../../../components/ui/Checkbox.astro";
     if (awam) pautan.href = `/u/${encodeURIComponent(username)}`;
   };
 
-  // Pengawal sesi = AccountLayout; s null bermaksud page sedang dilencong ke /login.
-  const s = await currentUser();
-  if (s) {
-    medan("nama").value = s.name;
-    medan("emel").value = s.email;
-    medan("username").value = s.username ?? "";
-    medan("bio").value = s.profile?.bio ?? "";
-    medan("lokasi").value = s.profile?.location ?? "";
-    medan("awam").checked = !!s.profilePublic;
-    ringkas(s);
-  }
-
-  // Persetujuan AI boleh ditarik balik di sini - chat AI sendiri kekal bersih.
-  const aiStatus = document.getElementById("ai-status")!;
-  const aiTarik = document.getElementById("ai-tarik") as HTMLButtonElement;
-  const aiMesej = document.getElementById("mesej-ai")!;
-  const muatAi = async () => {
-    const res = await api("/me/apps/nubi/aiconsent").catch(() => null);
-    const aktif = res?.ok && ((await json(res)).data?.items?.length ?? 0) > 0;
-    aiStatus.textContent = aktif
-      ? "Persetujuan AI aktif. Chat dibuang bila page dimuat semula; Nubi tak simpan kandungan chat."
-      : "Belum setuju. Pembantu AI akan minta persetujuan sebelum mula.";
-    aiTarik.hidden = !aktif;
-  };
-  void muatAi();
-  aiTarik.addEventListener("click", async () => {
-    const ya = await confirmDialog({
-      title: "Tarik balik persetujuan AI?",
-      message:
-        "Pembantu AI akan meminta persetujuan semula sebelum digunakan. Chat lama dibuang bila page dimuat semula.",
-      confirmLabel: "Tarik balik",
-      danger: true,
-    });
-    if (!ya) return aiTarik.focus();
-    aiMesej.hidden = true;
-    const res = await api("/me/apps/nubi/aiconsent/ya", {
-      method: "DELETE",
-    }).catch(() => null);
-    if (!res?.ok) {
-      aiMesej.textContent =
-        "Tak dapat tarik balik sekarang. Cuba lagi sekejap.";
-      aiMesej.hidden = false;
-      return;
-    }
-    aiStatus.textContent =
-      "Persetujuan AI ditarik balik. Pembantu AI akan minta persetujuan semula.";
-    aiTarik.hidden = true;
-  });
-
-  // Telegram: status + nyahpaut dari profil. Amaran dihantar ke chat oleh backend
-  // sebelum pautan dibuang (best effort - outage Telegram tak menghalang nyahpaut).
-  const telegramStatus = document.getElementById("telegram-status")!;
-  const telegramPaut = document.getElementById("telegram-paut")!;
-  const telegramNyah = document.getElementById(
-    "telegram-nyahpaut",
-  ) as HTMLButtonElement;
-  const telegramMesej = document.getElementById("mesej-telegram")!;
-  const linkedAt = s?.telegram?.linkedAt ?? null;
-  if (linkedAt) {
-    telegramStatus.textContent = `Terikat sejak ${new Date(
-      linkedAt,
-    ).toLocaleDateString("ms-MY", {
-      day: "numeric",
+  const formatMonth = (yyyyMm: string) =>
+    new Date(`${yyyyMm}-01T00:00:00Z`).toLocaleDateString("ms-MY", {
       month: "long",
       year: "numeric",
-    })}. Bot boleh tunjuk pelan anda.`;
-    telegramPaut.hidden = true;
-    telegramNyah.hidden = false;
-  } else {
-    telegramStatus.textContent =
-      "Belum terikat. Pautkan untuk guna /nubiplan dalam bot.";
-  }
-
-  telegramNyah.addEventListener("click", async () => {
-    telegramMesej.hidden = true;
-    const ya = await confirmDialog({
-      title: "Nyahpaut Telegram?",
-      message:
-        "Amaran akan dihantar ke chat Telegram, kemudian pautan dibuang. Bot tak lagi boleh tunjuk pelan anda sampai anda /bind semula.",
-      confirmLabel: "Nyahpaut",
-      danger: true,
+      timeZone: "UTC",
     });
-    if (!ya) return telegramNyah.focus();
-    telegramNyah.disabled = true;
-    try {
-      const res = await api("/me/telegram/link", { method: "DELETE" });
-      if (!res.ok) {
-        telegramMesej.textContent =
-          "Tak dapat nyahpaut sekarang. Cuba lagi sekejap.";
-        telegramMesej.hidden = false;
-        return;
-      }
-      const body = await json(res);
-      if (s) cacheMe({ ...s, telegram: { linkedAt: null } });
-      telegramStatus.textContent =
-        body.data?.alerted === false
-          ? "Telegram dinyahpaut. Amaran chat tak dapat dihantar, tetapi pautan sudah dibuang."
-          : "Telegram dinyahpaut. Amaran dihantar ke chat.";
-      telegramNyah.hidden = true;
-      telegramPaut.hidden = false;
-    } catch {
-      telegramMesej.textContent =
-        "Tiada sambungan. Semak internet anda dan cuba lagi.";
-      telegramMesej.hidden = false;
-    } finally {
-      telegramNyah.disabled = false;
+
+  // What other people see - from the saved user, plus the real public endpoint when public.
+  const renderPreview = async (user: CurrentUser) => {
+    const username = user.username ?? "";
+    const isPublic = !!user.profilePublic && !!username;
+    $("preview-members").textContent = isPublic
+      ? `${user.name} · @${username}`
+      : `${user.name} (username disorok sebab profil peribadi)`;
+    const card = $("preview-public");
+    const note = $("preview-public-note");
+    card.hidden = true;
+    if (!isPublic) {
+      note.textContent =
+        'Tiada apa-apa: pautan /u/ memaparkan "tidak dijumpai" selagi profil peribadi.';
+      return;
     }
+    note.textContent = `Pautan /u/${username}:`;
+    const res = await fetch(
+      // noCache=1: skip the 60 s memo so the preview matches what was just saved.
+      `/api/v1/public/profiles/${encodeURIComponent(username)}/nubi?noCache=1`,
+      { cache: "no-store" },
+    ).catch(() => null);
+    const data = res?.ok ? (await json(res)).data : null;
+    if (!data) {
+      // e.g. email not verified yet, or a ban - the endpoint answers 404 for both.
+      note.textContent =
+        "Pautan /u/ belum aktif (contohnya e-mel belum disahkan). Cuba lagi sekejap.";
+      return;
+    }
+    const field = (key: string) =>
+      card.querySelector<HTMLElement>(`[data-preview="${key}"]`)!;
+    field("name").textContent = data.displayName;
+    field("username").textContent = `@${data.username}`;
+    field("bio").textContent = data.bio ?? "";
+    field("bio").hidden = !data.bio;
+    const km = (data.activities.distanceM / 1000).toLocaleString("ms-MY", {
+      maximumFractionDigits: 1,
+    });
+    field("meta").textContent = [
+      data.location,
+      data.memberSince && `Ahli sejak ${formatMonth(data.memberSince)}`,
+      `${data.activities.count} aktiviti · ${km} km`,
+      `${data.badges.length} lencana`,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    card.hidden = false;
+  };
+
+  const viewField = (key: string) =>
+    document.querySelector<HTMLElement>(`[data-view="${key}"]`)!;
+  const showView = (user: CurrentUser) => {
+    viewField("name").textContent = user.name;
+    viewField("email").textContent = user.email;
+    viewField("username").textContent = user.username
+      ? `@${user.username}`
+      : "-";
+    viewField("location").textContent = user.profile?.location || "-";
+    viewField("bio").textContent = user.profile?.bio || "-";
+    viewField("public").textContent =
+      user.profilePublic && user.username ? "Ya" : "Tidak (peribadi)";
+    $("profile-view").hidden = false;
+    profil.hidden = true;
+    $("profile-edit").hidden = false;
+    void renderPreview(user);
+  };
+
+  $("profile-edit").addEventListener("click", () => {
+    papar("ok-profil", null);
+    $("profile-view").hidden = true;
+    $("profile-edit").hidden = true;
+    profil.hidden = false;
+    medan("nama").focus();
+  });
+
+  // Pengawal sesi = AccountLayout; s null bermaksud page sedang dilencong ke /login.
+  const s = await currentUser();
+  // Last saved state: Batal resets the form to it, and the next save builds on it.
+  let saved = s;
+  const fillForm = (user: CurrentUser) => {
+    medan("nama").value = user.name;
+    medan("emel").value = user.email;
+    medan("username").value = user.username ?? "";
+    medan("bio").value = user.profile?.bio ?? "";
+    medan("lokasi").value = user.profile?.location ?? "";
+    medan("awam").checked = !!user.profilePublic;
+  };
+  if (s) {
+    fillForm(s);
+    ringkas(s);
+    showView(s);
+  }
+  $("profile-cancel").addEventListener("click", () => {
+    papar("mesej-profil", null);
+    if (!saved) return;
+    fillForm(saved);
+    showView(saved);
+    $("profile-edit").focus();
   });
 
   profil.addEventListener("submit", async (e) => {
@@ -282,7 +291,9 @@ import Checkbox from "../../../components/ui/Checkbox.astro";
         "Set username dulu sebelum jadikan profil awam.",
       );
     papar("mesej-profil", null);
-    const butang = profil.querySelector("button")!;
+    const butang = profil.querySelector<HTMLButtonElement>(
+      'button[type="submit"]',
+    )!;
     butang.disabled = true;
     try {
       const res = await api("/me", {
@@ -314,9 +325,9 @@ import Checkbox from "../../../components/ui/Checkbox.astro";
       document
         .querySelectorAll("[data-saya-awal]")
         .forEach((el) => (el.textContent = nama.charAt(0).toUpperCase()));
-      if (!s) return;
+      if (!saved) return;
       const next: CurrentUser = {
-        ...s,
+        ...saved,
         name: nama,
         username: username || null,
         profilePublic: awam,
@@ -324,14 +335,16 @@ import Checkbox from "../../../components/ui/Checkbox.astro";
           displayName: nama,
           bio: bio || null,
           location: lokasi || null,
-          website: s.profile?.website ?? null,
-          linkedinUrl: s.profile?.linkedinUrl ?? null,
-          githubUrl: s.profile?.githubUrl ?? null,
-          twitterUrl: s.profile?.twitterUrl ?? null,
+          website: saved.profile?.website ?? null,
+          linkedinUrl: saved.profile?.linkedinUrl ?? null,
+          githubUrl: saved.profile?.githubUrl ?? null,
+          twitterUrl: saved.profile?.twitterUrl ?? null,
         },
       };
+      saved = next;
       cacheMe(next);
       ringkas(next);
+      showView(next);
       papar("ok-profil", "Profil disimpan.");
     } catch {
       papar(
@@ -389,6 +402,62 @@ import Checkbox from "../../../components/ui/Checkbox.astro";
   }
   .medan-penuh {
     grid-column: 1 / -1;
+  }
+  .profile-view {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 0.9rem 1.5rem;
+    margin: 0;
+  }
+  .profile-view[hidden],
+  #profil[hidden] {
+    display: none;
+  }
+  .profile-view dt {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .profile-view dd {
+    margin: 0.15rem 0 0;
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+  }
+  .form-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .audience-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: 1rem;
+  }
+  .audience {
+    display: grid;
+    gap: 0.5rem;
+    align-content: start;
+  }
+  .audience h3 {
+    margin: 0;
+    font-size: 1rem;
+  }
+  .audience p {
+    margin: 0;
+  }
+  .audience-card {
+    display: grid;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0.85rem 1rem;
+    background: var(--paper-2);
+    border-radius: var(--radius);
+    overflow-wrap: anywhere;
+  }
+  .audience-card[hidden] {
+    display: none;
   }
   @media (max-width: 40rem) {
     .ringkas {

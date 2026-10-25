@@ -1,5 +1,5 @@
 ---
-// Halaman profil akaun: card navigasi (Maklumat / Latihan / Keselamatan) di sebelah kandungan.
+// Account profile pages: nav card (Maklumat / Tetapan / Latihan / Kata laluan / Sesi / Zon bahaya) beside the content.
 // Lebar: card menegak di kiri (melekat semasa skrol). Sempit (<= 48rem): card jadi tab segmen di atas.
 import AccountLayout from "../layouts/AccountLayout.astro";
 import Icon from "./ui/Icon.astro";
@@ -14,8 +14,14 @@ const SUB: { href: string; label: string; nota: string; ikon: IconName }[] = [
   {
     href: "/account/profile",
     label: "Maklumat",
-    nota: "Nama, username, profil awam, Telegram",
+    nota: "Nama, username, bio, profil awam",
     ikon: "pengguna",
+  },
+  {
+    href: "/account/profile/settings",
+    label: "Tetapan",
+    nota: "Telegram, persetujuan AI",
+    ikon: "tetapan",
   },
   {
     href: "/account/profile/training",
@@ -25,9 +31,21 @@ const SUB: { href: string; label: string; nota: string; ikon: IconName }[] = [
   },
   {
     href: "/account/profile/password",
-    label: "Keselamatan",
-    nota: "Kata laluan, padam akaun",
+    label: "Kata laluan",
+    nota: "Tukar kata laluan",
     ikon: "mangga",
+  },
+  {
+    href: "/account/profile/sessions",
+    label: "Sesi",
+    nota: "Peranti yang log masuk",
+    ikon: "peranti",
+  },
+  {
+    href: "/account/profile/danger",
+    label: "Zon bahaya",
+    nota: "Padam aktiviti, padam akaun",
+    ikon: "trash",
   },
 ];
 const laluan = Astro.url.pathname.replace(/\/$/, "");

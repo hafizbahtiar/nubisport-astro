@@ -1,0 +1,119 @@
+---
+// Nubi profile - Danger zone: delete all activity data (DELETE /me/apps/nubi/activities) or the
+// whole account (DELETE /me, PDPA; shared login, so the hafizbahtiar.com account goes too).
+import ProfileShell from "../../../components/ProfileShell.astro";
+import Alert from "../../../components/ui/Alert.astro";
+---
+
+<ProfileShell title="Zon bahaya">
+  <section class="panel" aria-labelledby="t-bahaya">
+    <h2 class="display" id="t-bahaya">Zon bahaya</h2>
+    <p class="muted">
+      Padam data aktiviti sahaja (fail, ringkasan dan persetujuan), atau padam
+      akaun dan semua data. Tindakan di sini tak boleh dibatalkan.
+    </p>
+    <Alert variant="success" id="ok-aktiviti" hidden />
+    <Alert variant="danger" id="mesej-aktiviti" hidden />
+    <Alert variant="danger" id="mesej-padam" hidden />
+    <div class="actions">
+      <button class="btn btn-outline" type="button" id="padam-aktiviti">
+        Padam data aktiviti
+      </button>
+      <button class="btn btn-bahaya" type="button" id="padam-akaun">
+        Padam akaun
+      </button>
+    </div>
+  </section>
+</ProfileShell>
+
+<script>
+  import { api, json, commonError, currentUser } from "../../../lib/api";
+  import { confirmDialog } from "../../../lib/confirm";
+  import { ticksFrom, offerUntick } from "../../../lib/plan-sync";
+
+  const papar = (id: string, teks: string | null) => {
+    const el = document.getElementById(id)!;
+    el.textContent = teks ?? "";
+    el.hidden = !teks;
+  };
+
+  const padamAktiviti = document.getElementById(
+    "padam-aktiviti",
+  ) as HTMLButtonElement;
+  padamAktiviti.addEventListener("click", async () => {
+    papar("ok-aktiviti", null);
+    papar("mesej-aktiviti", null);
+    const ya = await confirmDialog({
+      title: "Padam semua data aktiviti?",
+      message:
+        "Semua aktiviti, fail asal dan rekod persetujuan anda akan dibuang daripada Nubi Sport. Muat naik seterusnya akan minta persetujuan semula. Tindakan ini tak boleh dibatalkan.",
+      confirmLabel: "Padam semua",
+      danger: true,
+    });
+    if (!ya) return padamAktiviti.focus();
+    padamAktiviti.disabled = true;
+    try {
+      const tanda = await ticksFrom("semua").catch(() => null);
+      const res = await api("/me/apps/nubi/activities", { method: "DELETE" });
+      if (!res.ok) {
+        papar(
+          "mesej-aktiviti",
+          "Data tak dapat dipadam. Semak sambungan dan cuba lagi.",
+        );
+        return;
+      }
+      await offerUntick(tanda);
+      papar(
+        "ok-aktiviti",
+        "Data aktiviti dipadam. Persetujuan aktiviti juga ditarik balik.",
+      );
+    } catch {
+      papar(
+        "mesej-aktiviti",
+        "Tiada sambungan. Semak internet anda dan cuba lagi.",
+      );
+    } finally {
+      padamAktiviti.disabled = false;
+    }
+  });
+
+  // Pengawal sesi = AccountLayout; s null bermaksud page sedang dilencong ke /login.
+  const s = await currentUser();
+  const padam = document.getElementById("padam-akaun") as HTMLButtonElement;
+  padam.addEventListener("click", async () => {
+    papar("mesej-padam", null);
+    if (s?.role === "owner")
+      return papar("mesej-padam", "Akaun pemilik tak boleh dipadam.");
+    const dipadam = await confirmDialog({
+      title: "Padam akaun?",
+      message:
+        "Akaun anda akan dipadam untuk selamanya: profil, maklumat latihan, pelan yang disimpan, aktiviti dan fail Strava. Log masuk dikongsi dengan hafizbahtiar.com, jadi akaun di sana juga dipadam. Masukkan kata laluan untuk sahkan.",
+      confirmLabel: "Padam akaun",
+      danger: true,
+      passwordLabel: "Kata laluan",
+      action: async (password) => {
+        if (!password) return "Masukkan kata laluan anda.";
+        const res = await api("/me", {
+          method: "DELETE",
+          body: JSON.stringify({ password }),
+        });
+        if (res.ok) return null;
+        const body = await json(res);
+        return (
+          commonError(res.status, body) ??
+          (body.code === "owner_account"
+            ? "Akaun pemilik tak boleh dipadam."
+            : res.status === 400
+              ? "Kata laluan salah."
+              : "Tak dapat padam sekarang. Cuba lagi sekejap.")
+        );
+      },
+    });
+    if (!dipadam) return padam.focus();
+    // Semua storan laman ini milik Nubi (pelan, progres, MAF, lokasi) - buang semuanya.
+    localStorage.clear();
+    sessionStorage.clear();
+    document.cookie = "session_active=; Max-Age=0; path=/";
+    location.replace("/?akaun=dipadam");
+  });
+</script>

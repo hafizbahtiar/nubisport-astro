@@ -1,0 +1,142 @@
+---
+// Nubi profile - Settings: Telegram link (status + unlink, DELETE /me/telegram/link) and NUNI
+// AI consent (withdraw, DELETE /me/apps/nubi/aiconsent/ya).
+import ProfileShell from "../../../components/ProfileShell.astro";
+import Alert from "../../../components/ui/Alert.astro";
+---
+
+<ProfileShell title="Tetapan">
+  <section class="panel" aria-labelledby="t-telegram">
+    <h2 class="display" id="t-telegram">Telegram</h2>
+    <p class="muted" id="telegram-status">Menyemak pautan…</p>
+    <Alert variant="danger" id="mesej-telegram" hidden />
+    <div class="actions">
+      <a
+        class="btn btn-outline"
+        id="telegram-paut"
+        href="/api/v1/public/telegram"
+        target="_blank"
+        rel="noopener">Pautkan Telegram</a
+      >
+      <button class="btn btn-bahaya" type="button" id="telegram-nyahpaut" hidden
+        >Nyahpaut Telegram</button
+      >
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="t-ai">
+    <h2 class="display" id="t-ai">NUNI</h2>
+    <p class="muted" id="ai-status">Menyemak persetujuan…</p>
+    <Alert variant="danger" id="mesej-ai" hidden />
+    <div class="actions">
+      <button class="btn btn-outline" type="button" id="ai-tarik" hidden
+        >Tarik balik persetujuan AI</button
+      >
+    </div>
+  </section>
+</ProfileShell>
+
+<script>
+  import { api, cacheMe, json, currentUser } from "../../../lib/api";
+  import { confirmDialog } from "../../../lib/confirm";
+
+  // Session guard = AccountLayout; null means the page is redirecting to /login.
+  const s = await currentUser();
+
+  // Persetujuan AI boleh ditarik balik di sini - chat AI sendiri kekal bersih.
+  const aiStatus = document.getElementById("ai-status")!;
+  const aiTarik = document.getElementById("ai-tarik") as HTMLButtonElement;
+  const aiMesej = document.getElementById("mesej-ai")!;
+  const muatAi = async () => {
+    const res = await api("/me/apps/nubi/aiconsent").catch(() => null);
+    const aktif = res?.ok && ((await json(res)).data?.items?.length ?? 0) > 0;
+    aiStatus.textContent = aktif
+      ? "Persetujuan AI aktif. Chat dibuang bila page dimuat semula; Nubi tak simpan kandungan chat."
+      : "Belum setuju. Pembantu AI akan minta persetujuan sebelum mula.";
+    aiTarik.hidden = !aktif;
+  };
+  void muatAi();
+  aiTarik.addEventListener("click", async () => {
+    const ya = await confirmDialog({
+      title: "Tarik balik persetujuan AI?",
+      message:
+        "Pembantu AI akan meminta persetujuan semula sebelum digunakan. Chat lama dibuang bila page dimuat semula.",
+      confirmLabel: "Tarik balik",
+      danger: true,
+    });
+    if (!ya) return aiTarik.focus();
+    aiMesej.hidden = true;
+    const res = await api("/me/apps/nubi/aiconsent/ya", {
+      method: "DELETE",
+    }).catch(() => null);
+    if (!res?.ok) {
+      aiMesej.textContent =
+        "Tak dapat tarik balik sekarang. Cuba lagi sekejap.";
+      aiMesej.hidden = false;
+      return;
+    }
+    aiStatus.textContent =
+      "Persetujuan AI ditarik balik. Pembantu AI akan minta persetujuan semula.";
+    aiTarik.hidden = true;
+  });
+
+  // Telegram: status + nyahpaut dari profil. Amaran dihantar ke chat oleh backend
+  // sebelum pautan dibuang (best effort - outage Telegram tak menghalang nyahpaut).
+  const telegramStatus = document.getElementById("telegram-status")!;
+  const telegramPaut = document.getElementById("telegram-paut")!;
+  const telegramNyah = document.getElementById(
+    "telegram-nyahpaut",
+  ) as HTMLButtonElement;
+  const telegramMesej = document.getElementById("mesej-telegram")!;
+  const linkedAt = s?.telegram?.linkedAt ?? null;
+  if (linkedAt) {
+    telegramStatus.textContent = `Terikat sejak ${new Date(
+      linkedAt,
+    ).toLocaleDateString("ms-MY", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    })}. Bot boleh tunjuk pelan anda.`;
+    telegramPaut.hidden = true;
+    telegramNyah.hidden = false;
+  } else {
+    telegramStatus.textContent =
+      "Belum terikat. Pautkan untuk guna /nubiplan dalam bot.";
+  }
+
+  telegramNyah.addEventListener("click", async () => {
+    telegramMesej.hidden = true;
+    const ya = await confirmDialog({
+      title: "Nyahpaut Telegram?",
+      message:
+        "Amaran akan dihantar ke chat Telegram, kemudian pautan dibuang. Bot tak lagi boleh tunjuk pelan anda sampai anda /bind semula.",
+      confirmLabel: "Nyahpaut",
+      danger: true,
+    });
+    if (!ya) return telegramNyah.focus();
+    telegramNyah.disabled = true;
+    try {
+      const res = await api("/me/telegram/link", { method: "DELETE" });
+      if (!res.ok) {
+        telegramMesej.textContent =
+          "Tak dapat nyahpaut sekarang. Cuba lagi sekejap.";
+        telegramMesej.hidden = false;
+        return;
+      }
+      const body = await json(res);
+      if (s) cacheMe({ ...s, telegram: { linkedAt: null } });
+      telegramStatus.textContent =
+        body.data?.alerted === false
+          ? "Telegram dinyahpaut. Amaran chat tak dapat dihantar, tetapi pautan sudah dibuang."
+          : "Telegram dinyahpaut. Amaran dihantar ke chat.";
+      telegramNyah.hidden = true;
+      telegramPaut.hidden = false;
+    } catch {
+      telegramMesej.textContent =
+        "Tiada sambungan. Semak internet anda dan cuba lagi.";
+      telegramMesej.hidden = false;
+    } finally {
+      telegramNyah.disabled = false;
+    }
+  });
+</script>

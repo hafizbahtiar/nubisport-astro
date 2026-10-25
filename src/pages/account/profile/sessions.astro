@@ -1,0 +1,196 @@
+---
+// Nubi profile - Sessions: live logins of this account in both apps (GET /me/sessions), in the
+// shared <Table>; end one of the others (DELETE /me/sessions/:id). This device signs out from the
+// user menu (logout), which also clears its cookies.
+import ProfileShell from "../../../components/ProfileShell.astro";
+import Alert from "../../../components/ui/Alert.astro";
+import Table from "../../../components/ui/Table.astro";
+---
+
+<ProfileShell title="Sesi">
+  <section class="panel" aria-labelledby="t-sessions">
+    <h2 class="display" id="t-sessions">Sesi log masuk</h2>
+    <p class="muted">
+      Peranti yang sedang log masuk ke akaun anda, di Nubi Sport dan
+      hafizbahtiar.com. Tak kenal satu? Tamatkan, kemudian tukar kata laluan.
+    </p>
+    <Alert variant="danger" id="sessions-error" hidden />
+    <Table
+      id="sessions-table"
+      columns={[
+        { label: "Peranti" },
+        { label: "App" },
+        { label: "Lokasi" },
+        { label: "Aktif terakhir" },
+        { label: "Log masuk" },
+        { label: "Tindakan", srOnly: true },
+      ]}
+      searchPlaceholder="Cari peranti, app atau lokasi…"
+      empty="Tiada sesi."
+      emptyIcon="peranti"
+    />
+  </section>
+</ProfileShell>
+
+<script>
+  import { api, json, commonError } from "../../../lib/api";
+  import { confirmDialog } from "../../../lib/confirm";
+  import { createTable } from "../../../lib/table";
+
+  interface Session {
+    id: string;
+    app: "portfolio" | "nubi";
+    userAgent: string | null;
+    country: string | null;
+    lastSeenAt: string | null;
+    createdAt: string;
+    current: boolean;
+  }
+
+  const errorBox = document.getElementById("sessions-error")!;
+  const APP_NAMES: Record<string, string> = {
+    nubi: "Nubi Sport",
+    portfolio: "hafizbahtiar.com",
+  };
+  const appName = (s: Session) => APP_NAMES[s.app] ?? s.app;
+  const formatTime = (iso: string) =>
+    new Date(iso).toLocaleString("ms-MY", {
+      timeZone: "Asia/Kuala_Lumpur",
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+  let regionNames: Intl.DisplayNames | null = null;
+  try {
+    regionNames = new Intl.DisplayNames(["ms"], { type: "region" });
+  } catch {}
+
+  // Rough guess from the user agent - enough to tell "my phone" from "the office PC".
+  const deviceLabel = (ua: string | null) => {
+    if (!ua) return "Peranti tidak diketahui";
+    const browser = /Edg\//.test(ua)
+      ? "Edge"
+      : /Firefox\//.test(ua)
+        ? "Firefox"
+        : /Chrome\//.test(ua)
+          ? "Chrome"
+          : /Safari\//.test(ua)
+            ? "Safari"
+            : "Pelayar";
+    const os = /iPhone/.test(ua)
+      ? "iPhone"
+      : /iPad/.test(ua)
+        ? "iPad"
+        : /Android/.test(ua)
+          ? "Android"
+          : /Windows/.test(ua)
+            ? "Windows"
+            : /Mac OS X/.test(ua)
+              ? "Mac"
+              : /Linux/.test(ua)
+                ? "Linux"
+                : "";
+    return os ? `${browser} di ${os}` : browser;
+  };
+
+  const countryName = (code: string | null) => {
+    if (!code) return "-";
+    try {
+      return regionNames?.of(code) ?? code;
+    } catch {
+      return code;
+    }
+  };
+
+  const deviceCell = (s: Session) => {
+    const cell = document.createElement("span");
+    cell.className = "device-cell";
+    const name = document.createElement("strong");
+    name.textContent = deviceLabel(s.userAgent);
+    cell.append(name);
+    if (s.current) {
+      const tag = document.createElement("span");
+      tag.className = "session-current";
+      tag.textContent = "Peranti ini";
+      cell.append(tag);
+    }
+    return cell;
+  };
+
+  const actionCell = (s: Session) => {
+    if (s.current) return null;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "btn btn-outline btn-sm";
+    button.textContent = "Tamatkan";
+    button.addEventListener("click", () => endSession(s, button));
+    return button;
+  };
+
+  const table = createTable<Session>("sessions-table", {
+    columns: [
+      deviceCell,
+      appName,
+      (s) => countryName(s.country),
+      (s) => formatTime(s.lastSeenAt ?? s.createdAt),
+      (s) => formatTime(s.createdAt),
+      actionCell,
+    ],
+    search: (s) =>
+      `${deviceLabel(s.userAgent)} ${appName(s)} ${countryName(s.country)}`,
+  });
+
+  const load = async () => {
+    table.loading();
+    const res = await api("/me/sessions").catch(() => null);
+    const body = res ? await json(res) : {};
+    if (!res?.ok) {
+      table.data([]);
+      errorBox.textContent = "Tak dapat muat sesi sekarang. Muat semula page.";
+      errorBox.hidden = false;
+      return;
+    }
+    table.data(body.data as Session[]);
+  };
+
+  const endSession = async (s: Session, button: HTMLButtonElement) => {
+    const confirmed = await confirmDialog({
+      title: "Tamatkan sesi?",
+      message: `${deviceLabel(s.userAgent)} (${appName(s)}) akan dilog keluar.`,
+      confirmLabel: "Tamatkan",
+      danger: true,
+    });
+    if (!confirmed) return;
+    button.disabled = true;
+    errorBox.hidden = true;
+    const res = await api(`/me/sessions/${encodeURIComponent(s.id)}`, {
+      method: "DELETE",
+    }).catch(() => null);
+    // 404 = that session already ended on its own - same result.
+    if (res && (res.ok || res.status === 404)) return load();
+    button.disabled = false;
+    errorBox.textContent =
+      (res && commonError(res.status, await json(res))) ??
+      "Tak dapat tamatkan sesi sekarang. Cuba lagi.";
+    errorBox.hidden = false;
+  };
+
+  load();
+</script>
+
+<style>
+  /* Cells are built by createTable at runtime, so these need :global. */
+  :global(.device-cell) {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  :global(.session-current) {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    background: var(--paper-2);
+    color: var(--success-ink);
+  }
+</style>
