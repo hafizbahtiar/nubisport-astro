@@ -77,6 +77,13 @@ const laluan = Astro.url.pathname.replace(/\/$/, "");
   </div>
 </AccountLayout>
 
+<script>
+  // Phone tab bar: bring the current tab into view (e.g. Zon bahaya is off-screen at the end).
+  document
+    .querySelector<HTMLElement>('.profil-nav a[aria-current="page"]')
+    ?.scrollIntoView({ block: "nearest", inline: "center" });
+</script>
+
 <style>
   .profil {
     display: grid;
@@ -206,13 +213,28 @@ const laluan = Astro.url.pathname.replace(/\/$/, "");
     .ikon {
       display: none;
     }
+    /* Phone: one row of tabs, swipe sideways; the current tab is scrolled into view (script). */
     .profil-nav ul {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      display: flex;
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+      scroll-snap-type: x proximity;
+      scroll-padding-inline: 0.35rem;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .profil-nav ul::-webkit-scrollbar {
+      display: none;
+    }
+    .profil-nav li {
+      flex: none;
+      scroll-snap-align: start;
     }
     .profil-nav a {
       justify-content: center;
       gap: 0.5rem;
-      padding: 0.55rem;
+      padding: 0.55rem 0.9rem;
+      white-space: nowrap;
     }
     .profil-nav a[aria-current="page"] {
       box-shadow: none;

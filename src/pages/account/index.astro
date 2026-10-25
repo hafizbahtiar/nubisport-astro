@@ -693,17 +693,21 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
     gap: 0.3rem;
   }
 
+  /* Plan cards: as many columns as fit (min 20rem), one column on phones. */
   .senarai {
     justify-self: stretch;
     list-style: none;
     padding: 0;
     margin: 0;
     display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
     gap: 0.75rem;
   }
   /* Item dijana skrip - tiada atribut skop Astro, jadi :global. */
   .senarai :global(li) {
     display: grid;
+    grid-template-rows: 1fr auto; /* actions line up at the bottom of each card */
+    min-width: 0;
     border: 1px solid var(--line);
     border-radius: var(--radius);
   }
@@ -717,9 +721,11 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
   .senarai :global(a) {
     display: grid;
     gap: 0.3rem;
+    align-content: start;
     padding: 1rem 1rem 0.5rem;
     color: var(--ink);
     text-decoration: none;
+    overflow-wrap: anywhere;
   }
   .senarai :global(.item-bawah) {
     display: flex;
@@ -752,10 +758,13 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
   }
   .awan-slot {
     display: flex;
+    flex-wrap: wrap;
     gap: 0.35rem;
+    max-width: 100%;
   }
   .awan-slot :global(i) {
-    width: 2.25rem;
+    flex: 0 1 2.25rem;
+    min-width: 0.9rem;
     height: 0.5rem;
     border-radius: 999px;
     background: var(--line);
@@ -765,6 +774,25 @@ import AccountLayout from "../../layouts/AccountLayout.astro";
   }
   .awan-nota {
     font-size: 0.85rem;
+  }
+  /* Phone: meter text above a full-width slot bar; card buttons share the row evenly. */
+  @media (max-width: 40rem) {
+    .awan-slot {
+      flex: 1 1 100%;
+    }
+    .awan-slot :global(i) {
+      flex: 1 1 0;
+    }
+    .senarai :global(.item-butang) {
+      flex: 1 1 100%;
+      margin-left: 0;
+    }
+    .senarai :global(.item-butang .btn) {
+      flex: 1 1 auto;
+    }
+    .tukar .btn {
+      flex: 1 1 100%;
+    }
   }
   .tukar {
     justify-self: stretch;
