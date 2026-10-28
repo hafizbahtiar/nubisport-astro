@@ -193,6 +193,42 @@ export function downsampledRoute(route: [number, number][], max = 150): [number,
 
 export const routePreview = (rekod: any[], max = 150) => downsampledRoute(routeOf(rekod), max);
 
+// Salinan rekod untuk ahli lain (detail dari feed, macam Strava): medan ini saja, satu lajur setiap medan.
+// Tiada cuaca, peranti atau fail asal. Backend buang heartRate bila nadi tak dikongsi.
+const SHARED_FIELDS = [
+  "timestamp", "positionLat", "positionLong", "distance", "altitude", "enhancedAltitude",
+  "speed", "enhancedSpeed", "cadence", "fractionalCadence", "heartRate",
+] as const;
+const SHARED_MAX = 50_000; // sama dengan validator backend
+export type SharedRecords = Partial<Record<(typeof SHARED_FIELDS)[number], (number | null)[]>>;
+
+/** null = tiada rekod bermasa yang cukup. */
+export function sharedRecords(rekod: any[]): SharedRecords | null {
+  const rows = rekod.filter((r) => r?.timestamp != null && Number.isFinite(+new Date(r.timestamp)));
+  // shortcut: aktiviti > 50k rekod (~14 j pada 1 s) tiada detail ahli; jarangkan rekod kalau perlu.
+  if (rows.length < 2 || rows.length > SHARED_MAX) return null;
+  const out: SharedRecords = {};
+  for (const field of SHARED_FIELDS) {
+    const column = rows.map((r) =>
+      field === "timestamp" ? +new Date(r.timestamp) : typeof r[field] === "number" && Number.isFinite(r[field]) ? r[field] : null,
+    );
+    if (column.some((v) => v !== null)) out[field] = column;
+  }
+  return out;
+}
+
+/** Balik ke bentuk rekod FIT supaya page detail guna fungsi analisis yang sama. */
+export function recordsFromShared(shared: SharedRecords): any[] {
+  return (shared.timestamp ?? []).map((_, i) => {
+    const record: Record<string, unknown> = {};
+    for (const [field, column] of Object.entries(shared)) {
+      const value = column?.[i];
+      if (value != null) record[field] = field === "timestamp" ? new Date(value) : value;
+    }
+    return record;
+  });
+}
+
 export interface TrackPoint {
   lat: number;
   lon: number;

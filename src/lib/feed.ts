@@ -1,5 +1,6 @@
 // Feed komuniti Nubi: DTO dari backend, tiada data lain ahli. API: lib/api.ts.
 import { api, json } from "./api";
+import { sharedRecords, type SharedRecords } from "./activity-file";
 
 export interface FeedItem {
   id: number;
@@ -41,4 +42,32 @@ export async function toggleKudos(
   if (!r?.ok) return null;
   const body = await json(r).catch(() => null);
   return body?.success && body.data ? body.data : null;
+}
+
+export interface FeedActivity extends FeedItem {
+  elapsedS: number;
+}
+
+const dataOf = async <T>(path: string): Promise<T | null> => {
+  const r = await api(path).catch(() => null);
+  if (!r?.ok) return null;
+  const body = await json(r).catch(() => null);
+  return body?.success && body.data ? (body.data as T) : null;
+};
+
+/** Satu aktiviti dalam feed (peraturan sama dengan feed). null = tiada / tak dikongsi. */
+export const fetchFeedActivity = (id: number) => dataOf<FeedActivity>(`/me/apps/nubi/feed/${id}`);
+
+/** Salinan rekod pemilik. null = dikongsi sebelum salinan wujud, atau tak dikongsi lagi. */
+export const fetchFeedRecords = (id: number) => dataOf<SharedRecords>(`/me/apps/nubi/feed/${id}/records`);
+
+/** Hantar salinan rekod aktiviti sendiri. false = gagal; aktiviti tetap dikongsi, cuma tanpa detail. */
+export async function uploadSharedRecords(id: number, records: any[]): Promise<boolean> {
+  const body = sharedRecords(records);
+  if (!body) return false;
+  const r = await api(`/me/apps/nubi/activities/${id}/shared`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  }).catch(() => null);
+  return !!r?.ok;
 }

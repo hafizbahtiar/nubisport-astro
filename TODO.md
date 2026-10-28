@@ -327,8 +327,9 @@ Item yang dah siap dibuang (lihat git history).
   upload baharu lalai dikongsi kepada ahli, nadi tetap pilihan; aktiviti sebelum 041 kekal peribadi.)
 - [ ] **Migration 041 + 042** (feed + kudos) remote, kemudian deploy backend sebelum frontend - Nubi hantar
   `visibility`/`preview` semasa upload; backend lama (strict) tolak = upload 400.
-- [ ] **Detail aktiviti ahli lain dari feed** (cadangan 2026-10-28): `docs/plans/feed-activity-detail.md` -
-  owner putuskan zon privasi mula/tamat dulu. Aktiviti sendiri dah dipautkan dari tajuk kad feed.
+- [ ] **Detail aktiviti ahli lain dari feed** (dibina 2026-10-28, macam Strava): tajuk kad -> page detail
+  `?source=feed` dari salinan rekod pemilik (R2 `shared.json`, tiada migration); `docs/plans/feed-activity-detail.md`.
+  Deploy backend dulu, kemudian frontend. Aktiviti dikongsi sebelum ini perlu kongsi semula untuk dapat detail.
 
 ## 🗂 Struktur pelan - index / view / new (2026-10-22)
 

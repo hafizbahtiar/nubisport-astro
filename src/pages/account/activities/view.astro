@@ -12,8 +12,8 @@ import Icon from "../../../components/ui/Icon.astro";
 ---
 
 <AccountLayout title="Aktiviti">
-  <a class="back-link back-link--spaced" href="/account/activities"
-    ><Icon name="kiri" />Semua aktiviti</a
+  <a class="back-link back-link--spaced" href="/account/activities" id="kembali"
+    ><Icon name="kiri" /><span id="kembali-teks">Semua aktiviti</span></a
   >
 
   <Alert variant="info" title="Ciri untuk ahli" id="bukan-ahli" hidden>
@@ -42,7 +42,11 @@ import Icon from "../../../components/ui/Icon.astro";
       <li><span>Pace</span><strong id="s-pace"></strong></li>
     </ul>
 
-    <section class="panel kongsi-panel" aria-labelledby="kongsi-tajuk">
+    <section
+      class="panel kongsi-panel"
+      id="kongsi-panel"
+      aria-labelledby="kongsi-tajuk"
+    >
       <h3 class="display" id="kongsi-tajuk">Feed komuniti</h3>
       <label class="check">
         <input type="checkbox" id="kongsi-tanda" />
@@ -53,8 +57,9 @@ import Icon from "../../../components/ui/Icon.astro";
         <span>Kongsi nadi</span>
       </label>
       <p class="muted kecil">
-        Ringkasan dan peta ringkas laluan dilihat ahli Nubi. Nadi pilihan; fail
-        asal kekal peribadi. Boleh tarik balik bila-bila masa.
+        Ahli Nubi boleh buka detail aktiviti ini: laluan penuh, split,
+        ketinggian dan pace. Nadi pilihan; fail asal dan cuaca kekal peribadi.
+        Boleh tarik balik bila-bila masa.
       </p>
       <p class="muted" id="kongsi-status" hidden></p>
     </section>
@@ -123,9 +128,8 @@ import Icon from "../../../components/ui/Icon.astro";
           </div>
         </div>
         <p class="muted" id="peta-status">Memuatkan laluan…</p>
-        <p class="muted kecil">
-          Laluan penuh ini peribadi. Jika aktiviti dikongsi, ahli lain hanya
-          nampak peta ringkas dalam feed.
+        <p class="muted kecil" id="laluan-nota">
+          Laluan penuh ini peribadi, kecuali aktiviti dikongsi ke feed ahli.
         </p>
       </section>
 
@@ -248,8 +252,14 @@ import Icon from "../../../components/ui/Icon.astro";
     paceFromDistance,
     formatDuration,
     routePreview,
+    recordsFromShared,
     type Sport,
   } from "../../../lib/activity-file";
+  import {
+    fetchFeedActivity,
+    fetchFeedRecords,
+    uploadSharedRecords,
+  } from "../../../lib/feed";
   import {
     sessionLabel,
     sessionFor,
@@ -337,43 +347,77 @@ import Icon from "../../../components/ui/Icon.astro";
     const id = Number(params.get("id"));
     const version = params.get("v");
     const sah = Number.isSafeInteger(id) && id > 0;
+    // Dari feed (aktiviti ahli lain, macam Strava): baca saja, data dari salinan rekod pemilik.
+    const fromFeed = params.get("source") === "feed";
     const fileUrl = (v: string) =>
       `${BASE}/${id}/file?v=${encodeURIComponent(v)}`;
     // Row + fail serentak dengan /me (backend tapis ikut pemilik). Link lama (tiada v) baca row
     // dulu supaya URL fail guna updatedAt semasa - immutable tak boleh dipakai pada URL tanpa versi.
     const fileP =
-      sah && version ? api(fileUrl(version)).catch(() => null) : null;
-    const rowP = sah ? api(`${BASE}/${id}`).catch(() => null) : null;
+      sah && version && !fromFeed
+        ? api(fileUrl(version)).catch(() => null)
+        : null;
+    const rowP =
+      sah && !fromFeed ? api(`${BASE}/${id}`).catch(() => null) : null;
+    const feedP = sah && fromFeed ? fetchFeedActivity(id) : null;
+    const recordsP = sah && fromFeed ? fetchFeedRecords(id) : null;
     const s = await currentUser();
     const nubi = s?.apps?.nubi;
     if (!(s?.role === "owner" || nubi === "ahli" || nubi === "admin")) {
       $("bukan-ahli").hidden = false;
       return;
     }
-    const r = await rowP;
-    if (!r?.ok) {
-      $("tiada").hidden = false;
-      return;
+    let a: Aktiviti;
+    let author: string | null = null;
+    if (fromFeed) {
+      const item = await feedP;
+      if (!item) {
+        $("tiada").hidden = false;
+        return;
+      }
+      // Feed tiada cuaca / % lari / kawalan pemilik.
+      a = {
+        ...item,
+        runRatio: null,
+        weather: null,
+        visibility: "members",
+        hasPreview: !!item.preview,
+        updatedAt: "",
+      };
+      author = item.author.name;
+      ($("kembali") as HTMLAnchorElement).href = "/account/feed";
+      $("kembali-teks").textContent = "Feed komuniti";
+      for (const ownerOnly of ["padam", "kongsi-panel", "laluan-nota"])
+        $(ownerOnly).hidden = true;
+    } else {
+      const r = await rowP;
+      if (!r?.ok) {
+        $("tiada").hidden = false;
+        return;
+      }
+      a = (await json(r)).data as Aktiviti;
     }
-    const a = (await json(r)).data as Aktiviti;
     $("isi").hidden = false;
     let rekodCache: any[] | null = null;
 
     const nama = a.name || SPORT_LABELS[a.sport];
     $("nama").textContent = nama; // teks pengguna - textContent sahaja
     document.title = `${nama} - ${document.title}`;
-    $("bila").textContent = `${SPORT_LABELS[a.sport]}, ${new Date(
-      a.startedAt,
-    ).toLocaleString("ms-MY", {
-      timeZone: "Asia/Kuala_Lumpur",
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    })}`;
-    const sesiPelan = sessionFor(a);
+    $("bila").textContent =
+      `${author ? `${author} · ` : ""}${SPORT_LABELS[a.sport]}, ${new Date(
+        a.startedAt,
+      ).toLocaleString("ms-MY", {
+        timeZone: "Asia/Kuala_Lumpur",
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`;
+    const sesiPelan: ReturnType<typeof sessionFor> = fromFeed
+      ? Promise.resolve(null)
+      : sessionFor(a);
     void sesiPelan.then((m) => {
       if (!m) return;
       $("sesi-pelan").textContent = m.ditanda
@@ -407,23 +451,23 @@ import Icon from "../../../components/ui/Icon.astro";
       shareHrEl.disabled = !shareEl.checked;
       if (!shareEl.checked) shareHrEl.checked = false;
     };
+    const ownRecords = async (): Promise<any[] | null> => {
+      if (rekodCache) return rekodCache;
+      const f = await api(fileUrl(a.updatedAt)).catch(() => null);
+      if (!f?.ok) return null;
+      try {
+        return (await fitData(await f.arrayBuffer())).records;
+      } catch {
+        return null;
+      }
+    };
     const previewForShare = async (): Promise<
       [number, number][] | undefined
     > => {
       if (a.hasPreview) return undefined;
-      if (rekodCache) {
-        const route = routePreview(rekodCache);
-        return route.length >= 2 ? route : undefined;
-      }
-      const f = await api(fileUrl(a.updatedAt)).catch(() => null);
-      if (!f?.ok) return undefined;
-      try {
-        const data = await fitData(await f.arrayBuffer());
-        const route = routePreview(data.records);
-        return route.length >= 2 ? route : undefined;
-      } catch {
-        return undefined;
-      }
+      const records = await ownRecords();
+      const route = records ? routePreview(records) : [];
+      return route.length >= 2 ? route : undefined;
     };
     const saveSharing = async () => {
       const on = shareEl.checked;
@@ -449,6 +493,11 @@ import Icon from "../../../components/ui/Icon.astro";
         shareStatus.textContent =
           "Tak dapat ubah tetapan kongsi. Cuba lagi sekejap.";
         return;
+      }
+      // Salinan rekod untuk detail ahli lain; gagal = ahli nampak ringkasan saja (cuba kongsi semula).
+      if (on && !wasShared) {
+        const records = await ownRecords();
+        if (records) await uploadSharedRecords(a.id, records);
       }
       a.visibility = on ? "members" : "private";
       a.shareHr = on && shareHrEl.checked;
@@ -484,23 +533,30 @@ import Icon from "../../../components/ui/Icon.astro";
 
     let rekod: any[];
     try {
-      const currentVersion = a.updatedAt;
-      const f = await (fileP && version === currentVersion
-        ? fileP
-        : api(fileUrl(currentVersion)).catch(() => null));
-      if (!f?.ok) throw new Error();
-      const data = await fitData(await f.arrayBuffer());
-      rekod = data.records;
-      rekodCache = rekod;
-      if (data.weather) cuaca(data.weather, "Dari fail FIT (peranti).");
-      if (data.calories) {
-        $("s-kalori").textContent = `${Math.round(data.calories)} kcal`;
-        $("s-kalori-baris").hidden = false;
+      if (fromFeed) {
+        const shared = await recordsP;
+        if (!shared) throw new Error("tiada-salinan");
+        rekod = recordsFromShared(shared);
+      } else {
+        const currentVersion = a.updatedAt;
+        const f = await (fileP && version === currentVersion
+          ? fileP
+          : api(fileUrl(currentVersion)).catch(() => null));
+        if (!f?.ok) throw new Error();
+        const data = await fitData(await f.arrayBuffer());
+        rekod = data.records;
+        rekodCache = rekod;
+        if (data.weather) cuaca(data.weather, "Dari fail FIT (peranti).");
+        if (data.calories) {
+          $("s-kalori").textContent = `${Math.round(data.calories)} kcal`;
+          $("s-kalori-baris").hidden = false;
+        }
       }
     } catch {
       $("peta").hidden = true;
-      $("peta-status").textContent =
-        "Laluan tak dapat dimuatkan. Muat semula halaman untuk cuba lagi.";
+      $("peta-status").textContent = fromFeed
+        ? "Laluan dan split tak tersedia untuk aktiviti ini - ia dikongsi sebelum detail ahli wujud."
+        : "Laluan tak dapat dimuatkan. Muat semula halaman untuk cuba lagi.";
       return;
     }
     nadi(heartSeries(rekod), a.maxHr);

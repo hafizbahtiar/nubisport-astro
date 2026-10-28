@@ -2,7 +2,10 @@
 // FIT dijana di sini dengan Encoder SDK Garmin (koordinat rekaan di tengah laut, 0°N 0°E) - tiada
 // fail larian sebenar dalam repo. Nilai meniru larian contoh owner: 2,663 m, 1,876 s, nadi purata 140 / maks 164.
 import { Encoder, Profile } from "@garmin/fitsdk";
-import { readGpx, buildUploadForm, summarizeFit, downsampledRoute, fitData, fitRoute, fitRecords, trackOf, trackAt, paceGradient, paceAt, nearestDistance, heartSeries, altitudeSeries, hrZones, nameFromFile, paceFromDistance, pairFiles, isoSeconds, toSport, formatDuration } from "../src/lib/activity-file";
+import { readGpx, buildUploadForm, summarizeFit, downsampledRoute, fitData, fitRoute, fitRecords, trackOf, trackAt, paceGradient, paceAt, nearestDistance, heartSeries, altitudeSeries, hrZones, nameFromFile, paceFromDistance, pairFiles, isoSeconds, toSport, formatDuration, sharedRecords, recordsFromShared } from "../src/lib/activity-file";
+
+// Sama dengan allow-list validator backend (hono-workers validators/nubi-activities.ts).
+const SHARED_ALLOWED = ["timestamp", "positionLat", "positionLong", "distance", "altitude", "enhancedAltitude", "speed", "enhancedSpeed", "cadence", "fractionalCadence", "heartRate"];
 
 let gagal = 0;
 const ok = (c: unknown, msg: string) => {
@@ -181,6 +184,20 @@ ok(formatDuration(1876) === "31m 16s" && formatDuration(3700) === "1j 1m", "temp
   ok(z.join() === [0, 0, b(27), b(27), b(28)].join(), `zon ${z}`);
   ok(hrZones([], 164).join() === "0,0,0,0,0", "tiada nadi = zon kosong");
   ok(hrZones([[0, 200], [5, 200], [400, 200]], 164).join() === "0,0,0,0,1", "atas maks = Z5, jeda dihadkan 10 s");
+}
+
+// Salinan rekod untuk ahli lain (detail feed): medan dibenarkan saja, dan page detail dapat hasil sama.
+{
+  const rekod = await fitRecords(fit().buffer);
+  const shared = sharedRecords([...rekod, { temperature: 30 }]); // tiada timestamp = dibuang
+  ok(!!shared && Object.keys(shared).every((k) => SHARED_ALLOWED.includes(k)), `medan ${Object.keys(shared ?? {})}`);
+  ok(shared?.timestamp?.length === rekod.length, "satu entri setiap rekod");
+  const back = recordsFromShared(JSON.parse(JSON.stringify(shared)));
+  ok(JSON.stringify(trackOf(back)) === JSON.stringify(trackOf(rekod)), "track sama lepas JSON");
+  ok(heartSeries(back).join() === heartSeries(rekod).join(), "nadi sama");
+  const noHr = recordsFromShared({ ...shared!, heartRate: undefined });
+  ok(heartSeries(noHr).length === 0 && trackOf(noHr).length === trackOf(rekod).length, "tanpa nadi: laluan kekal");
+  ok(sharedRecords([{ timestamp: new Date() }]) === null, "satu rekod = null");
 }
 
 if (gagal) {

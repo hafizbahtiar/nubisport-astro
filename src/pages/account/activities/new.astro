@@ -93,7 +93,7 @@ import Icon from "../../../components/ui/Icon.astro";
           name="kongsi"
           id="kongsi-tanda"
           label="Kongsi ke feed ahli"
-          hint="Ringkasan dan peta ringkas laluan dilihat ahli Nubi (lalai, macam Strava). Buang tanda untuk peribadi; boleh ubah di Aktiviti."
+          hint="Ahli Nubi boleh buka detail aktiviti: laluan, split, ketinggian dan pace (lalai, macam Strava). Buang tanda untuk peribadi; boleh ubah di Aktiviti."
           checked
         />
         <Checkbox
@@ -116,12 +116,11 @@ import Icon from "../../../components/ui/Icon.astro";
     </div>
 
     <p class="muted kecil">
-      Kami simpan ringkasan dan fail asal. Peta penuh hanya untuk anda; jika
-      anda kongsi aktiviti, ringkasan dan peta ringkas laluan dilihat ahli Nubi.
-      Laluan GPS boleh mendedahkan alamat rumah, jadi tetapkan <em
-        >privacy zones</em
-      > di Strava sebelum eksport. Ini bukan sambungan terus ke Strava: muat naik
-      setiap aktiviti baru. Had 5,000 aktiviti.
+      Kami simpan ringkasan dan fail asal. Kalau anda kongsi aktiviti, ahli Nubi
+      boleh buka detailnya - laluan penuh, split, ketinggian dan pace (nadi
+      hanya kalau anda pilih). Laluan GPS boleh mendedahkan alamat rumah, jadi
+      tetapkan <em>privacy zones</em> di Strava sebelum eksport. Ini bukan sambungan
+      terus ke Strava: muat naik setiap aktiviti baru. Had 5,000 aktiviti.
     </p>
   </section>
 </AccountLayout>
@@ -131,6 +130,7 @@ import Icon from "../../../components/ui/Icon.astro";
   import {
     SPORT_LABELS,
     buildUploadForm,
+    fitRecords,
     formatDuration,
     paceFromDistance,
     pairFiles,
@@ -142,6 +142,7 @@ import Icon from "../../../components/ui/Icon.astro";
     syncActivities,
     walkedNote,
   } from "../../../lib/plan-sync";
+  import { uploadSharedRecords } from "../../../lib/feed";
 
   const $ = <T extends HTMLElement = HTMLElement>(id: string) =>
     document.getElementById(id) as T;
@@ -379,6 +380,12 @@ import Icon from "../../../components/ui/Icon.astro";
         });
         const b = await json(r);
         if (r.ok) {
+          // Detail untuk ahli lain; gagal = aktiviti tetap dikongsi, cuma ahli nampak ringkasan saja.
+          if (share)
+            await uploadSharedRecords(
+              b.data.activity.id,
+              await fitRecords(await a.fit.arrayBuffer()),
+            ).catch(() => false);
           b.data.created ? baru++ : dikemas++;
           disimpan.push(a);
           status.set(k, {

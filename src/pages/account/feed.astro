@@ -196,13 +196,11 @@ import "../../styles/panel.css";
     kepala.append(avatar, orang);
 
     const activityName = item.name?.trim() || SPORT_LABELS[item.sport];
-    const tajuk = el("h3", "feed-tajuk", item.own ? "" : activityName);
-    // Detail hanya untuk aktiviti sendiri: backend tak hantar aktiviti ahli lain (docs/plans/feed-activity-detail.md).
-    if (item.own) {
-      const link = el("a", "link", activityName) as HTMLAnchorElement;
-      link.href = `/account/activities/view?id=${Number(item.id)}`;
-      tajuk.append(link);
-    }
+    const tajuk = el("h3", "feed-tajuk");
+    // Macam Strava: tajuk buka detail. Aktiviti ahli lain = mod baca saja (source=feed).
+    const link = el("a", "link", activityName) as HTMLAnchorElement;
+    link.href = `/account/activities/view?id=${Number(item.id)}${item.own ? "" : "&source=feed"}`;
+    tajuk.append(link);
 
     article.append(kepala, tajuk);
 
