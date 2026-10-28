@@ -2,10 +2,7 @@
 // FIT dijana di sini dengan Encoder SDK Garmin (koordinat rekaan di tengah laut, 0°N 0°E) - tiada
 // fail larian sebenar dalam repo. Nilai meniru larian contoh owner: 2,663 m, 1,876 s, nadi purata 140 / maks 164.
 import { Encoder, Profile } from "@garmin/fitsdk";
-import { readGpx, buildUploadForm, summarizeFit, downsampledRoute, fitData, fitRoute, fitRecords, trackOf, trackAt, paceGradient, paceAt, nearestDistance, heartSeries, altitudeSeries, hrZones, nameFromFile, paceFromDistance, pairFiles, isoSeconds, toSport, formatDuration, sharedRecords, recordsFromShared } from "../src/lib/activity-file";
-
-// Sama dengan allow-list validator backend (hono-workers validators/nubi-activities.ts).
-const SHARED_ALLOWED = ["timestamp", "positionLat", "positionLong", "distance", "altitude", "enhancedAltitude", "speed", "enhancedSpeed", "cadence", "fractionalCadence", "heartRate"];
+import { readGpx, buildUploadForm, summarizeFit, downsampledRoute, fitData, fitRoute, fitRecords, trackOf, trackAt, paceGradient, paceAt, nearestDistance, heartSeries, altitudeSeries, hrZones, nameFromFile, paceFromDistance, pairFiles, isoSeconds, toSport, formatDuration, sharedRecords, recordsFromShared, SHARED_FIELDS, previewTrack } from "../src/lib/activity-file";
 
 let gagal = 0;
 const ok = (c: unknown, msg: string) => {
@@ -159,7 +156,7 @@ ok(formatDuration(1876) === "31m 16s" && formatDuration(3700) === "1j 1m", "temp
   ok(downsampledRoute([], 150).length === 0, "preview kosong");
   ok(downsampledRoute([[91, 0], [1, 2], [3, 4]] as [number, number][], 150).every(([lat]) => lat <= 90), "preview buang lat tidak sah");
 
-  const ringkas = await summarizeFit(fit().buffer, "Night_Run.fit");
+  const { summary: ringkas } = await summarizeFit(fit().buffer, "Night_Run.fit");
   ok(ringkas.preview?.length === 82, `summarize preview ${ringkas.preview?.length}`);
   ok(ringkas.preview?.[0][0] === 0.001, "summarize preview mula");
 }
@@ -190,7 +187,7 @@ ok(formatDuration(1876) === "31m 16s" && formatDuration(3700) === "1j 1m", "temp
 {
   const rekod = await fitRecords(fit().buffer);
   const shared = sharedRecords([...rekod, { temperature: 30 }]); // tiada timestamp = dibuang
-  ok(!!shared && Object.keys(shared).every((k) => SHARED_ALLOWED.includes(k)), `medan ${Object.keys(shared ?? {})}`);
+  ok(!!shared && Object.keys(shared).every((k) => (SHARED_FIELDS as readonly string[]).includes(k)), `medan ${Object.keys(shared ?? {})}`);
   ok(shared?.timestamp?.length === rekod.length, "satu entri setiap rekod");
   const back = recordsFromShared(JSON.parse(JSON.stringify(shared)));
   ok(JSON.stringify(trackOf(back)) === JSON.stringify(trackOf(rekod)), "track sama lepas JSON");
@@ -198,6 +195,14 @@ ok(formatDuration(1876) === "31m 16s" && formatDuration(3700) === "1j 1m", "temp
   const noHr = recordsFromShared({ ...shared!, heartRate: undefined });
   ok(heartSeries(noHr).length === 0 && trackOf(noHr).length === trackOf(rekod).length, "tanpa nadi: laluan kekal");
   ok(sharedRecords([{ timestamp: new Date() }]) === null, "satu rekod = null");
+}
+
+// Preview feed -> track anggaran (aktiviti lama tanpa salinan): hujung = jarak + masa aktiviti, masa naik.
+{
+  const t = previewTrack([[3, 101], [3.001, 101], [3.002, 101]], 5000, 1800);
+  ok(t.length === 3 && t[0].t === 0 && t[2].t === 1800 && Math.round(t[2].distanceM) === 5000, `previewTrack hujung ${JSON.stringify(t[2])}`);
+  ok(Math.round(t[1].t) === 900, `previewTrack tengah ${t[1].t}`);
+  ok(previewTrack([[3, 101]], 5000, 1800).length === 0 && previewTrack([[3, 101], [3, 101]], 5000, 1800).length === 0, "satu titik / tiada gerak = []");
 }
 
 if (gagal) {

@@ -27,6 +27,7 @@ export interface ActivityFiles {
   ringkasan: ActivitySummary;
   fit: File;
   gpx: File | null;
+  shared: SharedRecords | null; // salinan untuk ahli lain, dari parse yang sama (tak parse fail kali kedua)
 }
 
 export interface FileFailure {
@@ -71,7 +72,7 @@ export function runShare(rekod: any[]): number | null {
 }
 
 /** Ringkasan dari bait FIT. SDK Garmin dimuat hanya bila perlu (saiznya besar). */
-export async function summarizeFit(bait: ArrayBuffer, nama: string): Promise<ActivitySummary> {
+export async function summarizeFit(bait: ArrayBuffer, nama: string): Promise<{ summary: ActivitySummary; records: any[] }> {
   const { Decoder, Stream } = await import("@garmin/fitsdk");
   const d = new Decoder(Stream.fromArrayBuffer(bait));
   if (!d.isFIT() || !d.checkIntegrity()) throw new Error("Bukan fail FIT yang sah, atau fail rosak.");
@@ -90,7 +91,7 @@ export async function summarizeFit(bait: ArrayBuffer, nama: string): Promise<Act
   const jarak = s.totalDistance ?? rekod.findLast((r) => typeof r.distance === "number")?.distance ?? 0;
   const bergerak = s.totalTimerTime ?? s.totalElapsedTime ?? 0;
   const route = routeOf(rekod);
-  return {
+  const summary: ActivitySummary = {
     startedAt,
     sport: toSport(s.sport),
     name: nameFromFile(nama),
@@ -107,6 +108,7 @@ export async function summarizeFit(bait: ArrayBuffer, nama: string): Promise<Act
       return lat === undefined ? null : { lat: bulat(lat, 2), lon: bulat(lon, 2) };
     })(),
   };
+  return { summary, records: rekod };
 }
 
 /** Cuaca dari mesej weather_conditions FIT. null = peranti tiada data cuaca. */
@@ -195,7 +197,7 @@ export const routePreview = (rekod: any[], max = 150) => downsampledRoute(routeO
 
 // Salinan rekod untuk ahli lain (detail dari feed, macam Strava): medan ini saja, satu lajur setiap medan.
 // Tiada cuaca, peranti atau fail asal. Backend buang heartRate bila nadi tak dikongsi.
-const SHARED_FIELDS = [
+export const SHARED_FIELDS = [
   "timestamp", "positionLat", "positionLong", "distance", "altitude", "enhancedAltitude",
   "speed", "enhancedSpeed", "cadence", "fractionalCadence", "heartRate",
 ] as const;
@@ -237,6 +239,27 @@ export interface TrackPoint {
   elevation: number | null;
   heartRate: number | null;
   speed: number | null;
+}
+
+/**
+ * Track anggaran dari preview feed (150 titik, tiada masa sebenar) untuk aktiviti yang dikongsi sebelum
+ * salinan rekod wujud: jarak diskalakan ke jarak aktiviti, masa ikut pace purata. Untuk peta + animasi
+ * saja - jangan kira split/pace dari sini.
+ */
+export function previewTrack(preview: [number, number][], distanceM: number, movingS: number): TrackPoint[] {
+  const geo = [0];
+  for (let i = 1; i < preview.length; i++) {
+    const [lat0, lon0] = preview[i - 1], [lat1, lon1] = preview[i];
+    const x = (lon1 - lon0) * Math.cos((((lat0 + lat1) / 2) * Math.PI) / 180);
+    geo.push(geo[i - 1] + Math.hypot(x, lat1 - lat0) * 111_320);
+  }
+  const total = geo.at(-1) ?? 0;
+  if (preview.length < 2 || total <= 0) return [];
+  const scale = distanceM > 0 ? distanceM / total : 1;
+  const duration = Math.max(movingS, 1);
+  return preview.map(([lat, lon], i) => ({
+    lat, lon, t: (geo[i] / total) * duration, distanceM: geo[i] * scale, elevation: null, heartRate: null, speed: null,
+  }));
 }
 
 /** Titik GPS + masa/distance/nadi untuk replay peta. [] = tiada GPS/timestamp. */
@@ -393,8 +416,8 @@ export async function pairFiles(fail: File[]): Promise<{ aktiviti: ActivityFiles
   for (const f of fail) {
     try {
       if (/\.fit$/i.test(f.name)) {
-        const r = await summarizeFit(await f.arrayBuffer(), f.name);
-        fit.set(r.startedAt, { ringkasan: r, fit: f, gpx: null });
+        const { summary, records } = await summarizeFit(await f.arrayBuffer(), f.name);
+        fit.set(summary.startedAt, { ringkasan: summary, fit: f, gpx: null, shared: sharedRecords(records) });
       } else if (/\.gpx$/i.test(f.name)) {
         gpx.push({ f, ...readGpx(await f.text()) });
       } else {

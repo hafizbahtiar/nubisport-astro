@@ -1,6 +1,6 @@
 // Feed komuniti Nubi: DTO dari backend, tiada data lain ahli. API: lib/api.ts.
 import { api, json } from "./api";
-import { sharedRecords, type SharedRecords } from "./activity-file";
+import type { ActivityWeather, SharedRecords } from "./activity-file";
 
 export interface FeedItem {
   id: number;
@@ -23,51 +23,46 @@ export interface FeedPage {
   next: string | null;
 }
 
-export async function fetchFeed(cursor?: string | null): Promise<FeedPage | null> {
-  const query = new URLSearchParams({ limit: "20" });
-  if (cursor) query.set("cursor", cursor);
-  const r = await api(`/me/apps/nubi/feed?${query}`).catch(() => null);
-  if (!r?.ok) return null;
-  const body = await json(r).catch(() => null);
-  return body?.success && body.data ? (body.data as FeedPage) : null;
-}
-
-export async function toggleKudos(
-  id: number,
-  on: boolean,
-): Promise<{ count: number; mine: boolean } | null> {
-  const r = await api(`/me/apps/nubi/feed/${id}/kudos`, {
-    method: on ? "POST" : "DELETE",
-  }).catch(() => null);
-  if (!r?.ok) return null;
-  const body = await json(r).catch(() => null);
-  return body?.success && body.data ? body.data : null;
-}
-
-export interface FeedActivity extends FeedItem {
-  elapsedS: number;
-}
-
-const dataOf = async <T>(path: string): Promise<T | null> => {
-  const r = await api(path).catch(() => null);
+// Satu pembaca untuk semua panggilan feed: { success, data } -> data, selain itu null.
+const dataOf = async <T>(path: string, init?: RequestInit): Promise<T | null> => {
+  const r = await api(path, init).catch(() => null);
   if (!r?.ok) return null;
   const body = await json(r).catch(() => null);
   return body?.success && body.data ? (body.data as T) : null;
 };
 
+export function fetchFeed(cursor?: string | null): Promise<FeedPage | null> {
+  const query = new URLSearchParams({ limit: "20" });
+  if (cursor) query.set("cursor", cursor);
+  return dataOf<FeedPage>(`/me/apps/nubi/feed?${query}`);
+}
+
+export const toggleKudos = (id: number, on: boolean) =>
+  dataOf<{ count: number; mine: boolean }>(`/me/apps/nubi/feed/${id}/kudos`, {
+    method: on ? "POST" : "DELETE",
+  });
+
+export interface FeedActivity extends FeedItem {
+  elapsedS: number;
+  runRatio: number | null;
+  weather: ActivityWeather | null;
+}
+
 /** Satu aktiviti dalam feed (peraturan sama dengan feed). null = tiada / tak dikongsi. */
 export const fetchFeedActivity = (id: number) => dataOf<FeedActivity>(`/me/apps/nubi/feed/${id}`);
 
-/** Salinan rekod pemilik. null = dikongsi sebelum salinan wujud, atau tak dikongsi lagi. */
-export const fetchFeedRecords = (id: number) => dataOf<SharedRecords>(`/me/apps/nubi/feed/${id}/records`);
+/** Salinan rekod pemilik - JSON mentah (backend hantar terus dari storan). null = tiada salinan / tak dikongsi. */
+export async function fetchFeedRecords(id: number): Promise<SharedRecords | null> {
+  const r = await api(`/me/apps/nubi/feed/${id}/records`).catch(() => null);
+  return r?.ok ? ((await r.json().catch(() => null)) as SharedRecords | null) : null;
+}
 
 /** Hantar salinan rekod aktiviti sendiri. false = gagal; aktiviti tetap dikongsi, cuma tanpa detail. */
-export async function uploadSharedRecords(id: number, records: any[]): Promise<boolean> {
-  const body = sharedRecords(records);
-  if (!body) return false;
+export async function uploadSharedRecords(id: number, shared: SharedRecords | null): Promise<boolean> {
+  if (!shared) return false;
   const r = await api(`/me/apps/nubi/activities/${id}/shared`, {
     method: "PUT",
-    body: JSON.stringify(body),
+    body: JSON.stringify(shared),
   }).catch(() => null);
   return !!r?.ok;
 }

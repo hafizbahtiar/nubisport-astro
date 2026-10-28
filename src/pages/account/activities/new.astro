@@ -130,7 +130,6 @@ import Icon from "../../../components/ui/Icon.astro";
   import {
     SPORT_LABELS,
     buildUploadForm,
-    fitRecords,
     formatDuration,
     paceFromDistance,
     pairFiles,
@@ -381,11 +380,7 @@ import Icon from "../../../components/ui/Icon.astro";
         const b = await json(r);
         if (r.ok) {
           // Detail untuk ahli lain; gagal = aktiviti tetap dikongsi, cuma ahli nampak ringkasan saja.
-          if (share)
-            await uploadSharedRecords(
-              b.data.activity.id,
-              await fitRecords(await a.fit.arrayBuffer()),
-            ).catch(() => false);
+          if (share) await uploadSharedRecords(b.data.activity.id, a.shared);
           b.data.created ? baru++ : dikemas++;
           disimpan.push(a);
           status.set(k, {

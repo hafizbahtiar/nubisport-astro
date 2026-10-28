@@ -20,7 +20,7 @@ import Icon from "../../../components/ui/Icon.astro";
     <p>Import aktiviti Strava terbuka untuk ahli Nubi Sport.</p>
   </Alert>
   <Alert variant="danger" id="tiada" hidden>
-    <p>Aktiviti ini tiada, atau bukan milik anda.</p>
+    <p id="tiada-teks">Aktiviti ini tiada, atau bukan milik anda.</p>
   </Alert>
 
   <div id="isi" hidden>
@@ -34,6 +34,12 @@ import Icon from "../../../components/ui/Icon.astro";
       <button class="btn btn-outline btn-sm" type="button" id="padam"
         >Padam</button
       >
+      <button
+        class="btn btn-outline btn-sm"
+        type="button"
+        id="sokong"
+        aria-pressed="false"
+        hidden></button>
     </div>
 
     <ul class="stat" aria-label="Ringkasan">
@@ -58,7 +64,7 @@ import Icon from "../../../components/ui/Icon.astro";
       </label>
       <p class="muted kecil">
         Ahli Nubi boleh buka detail aktiviti ini: laluan penuh, split,
-        ketinggian dan pace. Nadi pilihan; fail asal dan cuaca kekal peribadi.
+        ketinggian, pace dan cuaca. Nadi pilihan; fail asal kekal peribadi.
         Boleh tarik balik bila-bila masa.
       </p>
       <p class="muted" id="kongsi-status" hidden></p>
@@ -253,11 +259,14 @@ import Icon from "../../../components/ui/Icon.astro";
     formatDuration,
     routePreview,
     recordsFromShared,
+    sharedRecords,
+    previewTrack,
     type Sport,
   } from "../../../lib/activity-file";
   import {
     fetchFeedActivity,
     fetchFeedRecords,
+    toggleKudos,
     uploadSharedRecords,
   } from "../../../lib/feed";
   import {
@@ -369,22 +378,40 @@ import Icon from "../../../components/ui/Icon.astro";
     }
     let a: Aktiviti;
     let author: string | null = null;
+    let feedPreview: [number, number][] | null = null;
     if (fromFeed) {
       const item = await feedP;
       if (!item) {
+        $("tiada-teks").textContent =
+          "Aktiviti ini tak lagi dikongsi, atau tiada.";
         $("tiada").hidden = false;
         return;
       }
-      // Feed tiada cuaca / % lari / kawalan pemilik.
+      // Macam Strava: cuaca + % lari ikut dipapar; kawalan pemilik tiada.
       a = {
         ...item,
-        runRatio: null,
-        weather: null,
         visibility: "members",
         hasPreview: !!item.preview,
         updatedAt: "",
       };
       author = item.author.name;
+      feedPreview = item.preview;
+      if (!item.own) {
+        const sokong = $("sokong") as HTMLButtonElement;
+        const label = () => {
+          sokong.textContent = `${item.kudos.mine ? "Disokong" : "Sokong"} ${item.kudos.count}`;
+          sokong.setAttribute("aria-pressed", String(item.kudos.mine));
+        };
+        label();
+        sokong.hidden = false;
+        sokong.addEventListener("click", async () => {
+          sokong.disabled = true;
+          const next = await toggleKudos(item.id, !item.kudos.mine);
+          sokong.disabled = false;
+          if (next) item.kudos = next;
+          label();
+        });
+      }
       ($("kembali") as HTMLAnchorElement).href = "/account/feed";
       $("kembali-teks").textContent = "Feed komuniti";
       for (const ownerOnly of ["padam", "kongsi-panel", "laluan-nota"])
@@ -497,7 +524,7 @@ import Icon from "../../../components/ui/Icon.astro";
       // Salinan rekod untuk detail ahli lain; gagal = ahli nampak ringkasan saja (cuba kongsi semula).
       if (on && !wasShared) {
         const records = await ownRecords();
-        if (records) await uploadSharedRecords(a.id, records);
+        if (records) await uploadSharedRecords(a.id, sharedRecords(records));
       }
       a.visibility = on ? "members" : "private";
       a.shareHr = on && shareHrEl.checked;
@@ -553,9 +580,21 @@ import Icon from "../../../components/ui/Icon.astro";
         }
       }
     } catch {
+      // Dikongsi sebelum salinan wujud: peta + animasi dari preview feed, tanpa split/carta (data anggaran).
+      if (fromFeed && feedPreview && feedPreview.length >= 2) {
+        $("laluan-nota").textContent =
+          "Laluan ringkas - split, ketinggian dan pace tersedia bila pemilik kongsi semula aktiviti ini.";
+        $("laluan-nota").hidden = false;
+        await peta(
+          feedPreview,
+          previewTrack(feedPreview, a.distanceM, a.movingS),
+          false,
+        );
+        return;
+      }
       $("peta").hidden = true;
       $("peta-status").textContent = fromFeed
-        ? "Laluan dan split tak tersedia untuk aktiviti ini - ia dikongsi sebelum detail ahli wujud."
+        ? "Laluan dan split tak tersedia untuk aktiviti ini."
         : "Laluan tak dapat dimuatkan. Muat semula halaman untuk cuba lagi.";
       return;
     }
@@ -887,7 +926,12 @@ import Icon from "../../../components/ui/Icon.astro";
     $("tinggi").hidden = false;
   }
 
-  async function peta(titik: [number, number][], track: TrackPoint[] | null) {
+  // paceColours false = track anggaran (preview feed): warna pace akan rata dan mengelirukan.
+  async function peta(
+    titik: [number, number][],
+    track: TrackPoint[] | null,
+    paceColours = true,
+  ) {
     const status = $("peta-status");
     if (titik.length < 2) {
       $("peta").hidden = true;
@@ -916,7 +960,7 @@ import Icon from "../../../components/ui/Icon.astro";
       } catch {}
       const sudut = () => (tigaD ? 60 : 0);
       // Warna ikut pace perlukan masa + jarak (track); tanpa itu butang Pace tiada.
-      const gradien = track ? paceGradient(track) : null;
+      const gradien = track && paceColours ? paceGradient(track) : null;
       const garisPace: ExpressionSpecification | undefined = gradien
         ? ([
             "interpolate",
