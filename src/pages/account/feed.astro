@@ -195,11 +195,14 @@ import "../../styles/panel.css";
     orang.append(nama, el("span", "muted", formatDate(item.startedAt)));
     kepala.append(avatar, orang);
 
-    const tajuk = el(
-      "h3",
-      "feed-tajuk",
-      item.name?.trim() || SPORT_LABELS[item.sport],
-    );
+    const activityName = item.name?.trim() || SPORT_LABELS[item.sport];
+    const tajuk = el("h3", "feed-tajuk", item.own ? "" : activityName);
+    // Detail hanya untuk aktiviti sendiri: backend tak hantar aktiviti ahli lain (docs/plans/feed-activity-detail.md).
+    if (item.own) {
+      const link = el("a", "link", activityName) as HTMLAnchorElement;
+      link.href = `/account/activities/view?id=${Number(item.id)}`;
+      tajuk.append(link);
+    }
 
     article.append(kepala, tajuk);
 
