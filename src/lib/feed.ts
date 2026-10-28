@@ -54,7 +54,9 @@ export const fetchFeedActivity = (id: number) => dataOf<FeedActivity>(`/me/apps/
 /** Salinan rekod pemilik - JSON mentah (backend hantar terus dari storan). null = tiada salinan / tak dikongsi. */
 export async function fetchFeedRecords(id: number): Promise<SharedRecords | null> {
   const r = await api(`/me/apps/nubi/feed/${id}/records`).catch(() => null);
-  return r?.ok ? ((await r.json().catch(() => null)) as SharedRecords | null) : null;
+  const data = r?.ok ? await r.json().catch(() => null) : null;
+  // Bentuk lain (contoh backend lama dengan { success, data }) = tiada salinan -> page guna preview.
+  return Array.isArray(data?.timestamp) ? (data as SharedRecords) : null;
 }
 
 /** Hantar salinan rekod aktiviti sendiri. false = gagal; aktiviti tetap dikongsi, cuma tanpa detail. */

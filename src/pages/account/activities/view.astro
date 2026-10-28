@@ -562,8 +562,8 @@ import Icon from "../../../components/ui/Icon.astro";
     try {
       if (fromFeed) {
         const shared = await recordsP;
-        if (!shared) throw new Error("tiada-salinan");
-        rekod = recordsFromShared(shared);
+        rekod = shared ? recordsFromShared(shared) : [];
+        if (routeOf(rekod).length < 2) throw new Error("tiada-salinan"); // tiada GPS dalam salinan = guna preview
       } else {
         const currentVersion = a.updatedAt;
         const f = await (fileP && version === currentVersion
