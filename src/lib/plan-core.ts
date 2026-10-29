@@ -5,7 +5,7 @@
 // Sumber enjin pelan. Disalin ke nubisport-astro - ubah = `bun scripts/sync-plan-engine.ts` + deploy kedua-dua.
 import { todayMY } from "./date";
 import { DISTANCES, buildDistancePlan, type Distance } from "./distance-plan";
-import { buildPlan, startMonday, isoDate, isWalkDate, sessionDate, type SessionType, type Segment, type Week, type Level } from "./plan-5k";
+import { buildPlan, racePlan, RACE_WEEKS, startMonday, isoDate, isWalkDate, sessionDate, type SessionType, type Segment, type Week, type Level } from "./plan-5k";
 
 /** Naikkan bila enjin pelan berubah sehingga sesi lama mungkin tidak sama (lib/plan-5k.ts, lib/distance-plan.ts). */
 export const ENGINE_VERSION = 2;
@@ -95,6 +95,19 @@ export function normalizePlanParams(kind: PlanKind, raw: Record<string, unknown>
     delete input.distance;
   }
   return planParams(new URLSearchParams(input));
+}
+
+/**
+ * Tarikh lumba -> `minggu` + `mula` (Plan5k.astro / DistancePlan.astro). 5K: `bulan` dibuang (normalizePlanParams
+ * jadikan "<minggu>w"). `mula` tiada = `today` (YYYY-MM-DD). Tiada `lumba` = tak berubah.
+ */
+export function raceParams(kind: PlanKind, p: Record<string, string>, today: string): Record<string, string> {
+  if (!p.lumba || !ISO.test(p.lumba)) return p;
+  const had: readonly [number, number] = kind === "5k" ? RACE_WEEKS : [DISTANCES[kind].minggu[0], DISTANCES[kind].minggu.at(-1)!];
+  const r = racePlan(new Date(`${ISO.test(p.mula ?? "") ? p.mula : today}T00:00:00`), new Date(`${p.lumba}T00:00:00`), had, Number(p.hari));
+  const out: Record<string, string> = { ...p, mula: isoDate(r.mula), minggu: String(r.minggu) };
+  if (kind === "5k") delete out.bulan;
+  return out;
 }
 
 export function buildFromParams(kind: PlanKind, p: Record<string, string>, nadi?: { maf: number; bawah: number }) {
