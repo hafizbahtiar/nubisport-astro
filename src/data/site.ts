@@ -17,7 +17,8 @@ export const CONTACT = {
 // Kunci TAPAK Turnstile (awam - memang dipapar dalam HTML), widget yang sama dengan portfolio.
 // Hostname nubisport.hafizbahtiar.com mesti ditambah pada widget ini di dashboard Cloudflare,
 // dan pada TURNSTILE_HOSTNAMES backend - jika tidak, login production gagal "captcha".
-export const TURNSTILE_SITE_KEY = "0x4AAAAAAFD-PSk_u7NHAF-5";
+// Sama seperti portfolio: PUBLIC_TURNSTILE_SITE_KEY dari .env.*; kosong = kunci production (`||`).
+export const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || "0x4AAAAAAFD-PSk_u7NHAF-5";
 
 // Pelan awam (/plan-5k): storan pelayar + manfaat akaun. Akaun = lib/cloud-sync.ts (had dari backend
 // QUOTA.nubi.plan: percuma 1, ahli 5, admin 10); tukar teks ini bila had berubah (docs/plans/cloud-sync.md).
