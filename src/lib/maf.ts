@@ -1,3 +1,4 @@
+// GENERATED from hono-workers src/services/nubi-plan/engine/maf.ts - do not edit. Run `bun scripts/sync-plan-engine.ts` there.
 // MAF (Maximum Aerobic Function) - formula "180" Dr. Phil Maffetone, dikira dalam browser.
 // Sumber: philmaffetone.com/180-formula. Semak: bun scripts/check-maf.ts
 

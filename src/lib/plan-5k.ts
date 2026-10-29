@@ -1,3 +1,4 @@
+// GENERATED from hono-workers src/services/nubi-plan/engine/plan-5k.ts - do not edit. Run `bun scripts/sync-plan-engine.ts` there.
 // Pelan "5K bawah 30 minit": fungsi tulen, dikira dalam browser.
 // Semak: bun scripts/check-plan-5k.ts
 import { todayMY } from "./date";

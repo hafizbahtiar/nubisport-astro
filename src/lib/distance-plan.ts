@@ -1,3 +1,4 @@
+// GENERATED from hono-workers src/services/nubi-plan/engine/distance-plan.ts - do not edit. Run `bun scripts/sync-plan-engine.ts` there.
 // Pelan 10K, 21K dan 42K (akaun sahaja): fungsi tulen, dikira dalam browser. Semak: bun scripts/check-distance-plan.ts
 //
 // Bertangga: 10K mula dari masa 5K, 21K dari masa 10K, 42K dari masa 21K (boleh lari jarak itu tanpa henti).
