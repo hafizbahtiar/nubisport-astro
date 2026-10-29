@@ -9,22 +9,13 @@ import { formatDuration, formatKm, paceFromDistance } from "./activity-file";
 import { icon } from "./icon";
 import { buildPlan, startMonday, isoDate, isWalkDate, sessionDate, formatPace, type SessionType, type Segment, type Week, type Level } from "./plan-5k";
 import { readList, writeList } from "./saved-plans";
-import { ENGINE_VERSION, syncProgress, listCloud, saveToCloud, pullCloud } from "./cloud-sync";
+import { syncProgress, listCloud, saveToCloud, pullCloud } from "./cloud-sync";
 import { readProfile, ageOn } from "./profile";
 import { confirmDialog } from "./confirm";
+import { ENGINE_VERSION, ISO, planFromParams, planSessionDate, planSessions, type PlanSession } from "./plan-core";
 
-export interface PlanSession {
-  id: string; // token tanda siap "<minggu>.<sesi>"
-  minggu: number;
-  tarikh: string; // yyyy-mm-dd
-  jenis: SessionType;
-  minit: number;
-  tajuk: string;
-  jarakM: number; // jarak lumba/ujian pelan ini (dipakai bila jenis "ujian")
-  segmen?: Segment[]; // langkah pemasa - untuk semakan interval/tempo dari fail FIT
-  usaha: string; // teks usaha; pace sasaran interval/tempo ada di sini
-  walk?: boolean; // mod jalan sementara: aktiviti jalan diterima, tiada semakan nisbah lari
-}
+export { ENGINE_VERSION, planFromParams, planSessionDate, planSessions, type PlanSession } from "./plan-core";
+
 export interface MatchableActivity {
   startedAt: string; // UTC
   sport: string;
@@ -48,62 +39,6 @@ export const easyForQuality = (s: { jenis: SessionType }, a: MatchableActivity, 
 export interface MatchResult<A> {
   padan: Map<A, PlanSession>;
   tolak: Map<A, PlanSession>;
-}
-
-const ISO = /^\d{4}-\d{2}-\d{2}$/;
-
-/**
- * Bina pelan dari kunci + parameter tersimpan (pelan lama `bulan`/`minggu` dan v2 `minggu`+`lumba`, `pace`).
- * Nadi (MAF) tidak mengubah minit sesi, jadi tidak perlu di sini. null = tidak sah.
- */
-export function planFromParams(kunci: string, p: Record<string, string>): { jenis: "5k" | Distance; minggu: Week[]; hari: number } | null {
-  const jenis = /^pelan-(5k|10k|21k|42k):/.exec(kunci)?.[1] as "5k" | Distance | undefined;
-  const hari = Number(p.hari);
-  const n = (k: string) => (p[k] ? Number(p[k]) : undefined);
-  const h =
-    jenis === "5k"
-      ? buildPlan({ bulan: Number(p.bulan), minggu: n("minggu"), pace: n("pace"), tahap: p.tahap as Level, hari, masa5k: n("masa") })
-      : jenis
-        ? buildDistancePlan({ jarak: jenis, minggu: Number(p.minggu), hari, masa: Number(p.masa), sasaran: n("sasaran"), pace: n("pace") })
-        : null;
-  return h?.ok && jenis ? { jenis, minggu: h.minggu, hari } : null;
-}
-
-/**
- * Tarikh sesi. Pelan lumba: hari lumba (`ujian`) = tarikh lumba sebenar (pelan 3 hari: sesi akhir Sabtu, lumba
- * Ahad), sesi lain dianjak ikut hari lumba (raceShift) - tiada sesi selepas lumba.
- */
-export function planSessionDate(isnin: Date, w: number, hari: number, i: number, jenis: SessionType, lumba?: string | null) {
-  const l = lumba && ISO.test(lumba) ? new Date(`${lumba}T00:00:00`) : null;
-  return jenis === "ujian" && l ? l : sessionDate(isnin, w, hari, i, l);
-}
-
-/** Sesi bertarikh dari kunci + parameter pelan awan. null = tiada tarikh mula / pelan tidak sah. */
-export function planSessions(kunci: string, p: Record<string, string>, walkUntil?: string | null, today = todayMY()): PlanSession[] | null {
-  if (!ISO.test(p.mula ?? "")) return null;
-  const h = planFromParams(kunci, p);
-  if (!h) return null;
-  const { jenis, hari } = h;
-  const jarakM = jenis === "5k" ? 5000 : DISTANCES[jenis].km * 1000;
-  const isnin = startMonday(new Date(`${p.mula}T00:00:00`));
-  return h.minggu.flatMap((w) =>
-    w.sesi.map((s, i) => {
-      const tarikh = isoDate(planSessionDate(isnin, w.no, hari, i, s.jenis, p.lumba));
-      const walk = s.jenis !== "ujian" && isWalkDate(tarikh, walkUntil, today);
-      return {
-        id: `${w.no}.${i}`,
-        minggu: w.no,
-        tarikh,
-        jenis: s.jenis,
-        minit: s.minit,
-        tajuk: walk ? `Jalan ${s.minit} min` : s.tajuk,
-        jarakM,
-        segmen: walk ? undefined : s.segmen,
-        usaha: walk ? "Jalan santai; berhenti kalau sakit bertambah." : s.usaha,
-        ...(walk ? { walk: true } : {}),
-      };
-    }),
-  );
 }
 
 const hariAntara = (a: string, b: string) => Math.abs(Date.parse(a) - Date.parse(b)) / 864e5;

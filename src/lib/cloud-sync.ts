@@ -14,9 +14,9 @@ import {
   writeParams,
   CREATED_KEY,
 } from "./saved-plans";
+import { ENGINE_VERSION } from "./plan-core";
 
-/** Naikkan bila enjin pelan berubah sehingga sesi lama mungkin tidak sama (lib/plan-5k.ts, lib/distance-plan.ts). */
-export const ENGINE_VERSION = 2;
+export { ENGINE_VERSION } from "./plan-core";
 
 export interface CloudPlan {
   key: string;

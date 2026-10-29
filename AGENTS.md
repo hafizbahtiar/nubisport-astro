@@ -38,3 +38,5 @@ Consult these guides before working on related tasks:
 Read `TODO.md` first - its "Penting" section holds the rules (brand generator, domain, roles via backend `requireAppRole`, never run anything remote).
 
 @TODO.md
+
+Plan engine (plan-5k, distance-plan, date, maf, plan-core in `src/lib`) is GENERATED from hono-workers `src/services/nubi-plan/engine/`; never edit here - change it there, run `bun scripts/sync-plan-engine.ts` there, and deploy both.

@@ -1,3 +1,4 @@
+// GENERATED from hono-workers src/services/nubi-plan/engine/date.ts - do not edit. Run `bun scripts/sync-plan-engine.ts` there.
 // Tarikh format Malaysia (dd/mm/yyyy) untuk DatePicker.astro: medan papar dan terima
 // dd/mm/yyyy, borang tetap hantar ISO yyyy-mm-dd. Asal: portfolio src/lib/date-my.ts.
 // Semak: bun scripts/check-date.ts
