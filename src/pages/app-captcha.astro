@@ -1,0 +1,52 @@
+---
+// Turnstile for the Nubi Sport app: the app opens this page in a WebView and receives the token through
+// its "AppCaptcha" JavaScript channel. Same widget and hostname as the web forms, so the API check is unchanged.
+import { TURNSTILE_SITE_KEY } from "../data/site";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Spam check - Nubi Sport</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: Canvas;
+        color: CanvasText;
+        font: 15px/1.5 system-ui, sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="w" data-sitekey={TURNSTILE_SITE_KEY}></div>
+    <script is:inline>
+      // Only the actions the API checks; anything else would never verify.
+      var action = new URLSearchParams(location.search).get("action");
+      var send = function (m) {
+        if (window.AppCaptcha) window.AppCaptcha.postMessage(m);
+      };
+      window.go = function () {
+        if (["login", "register", "reset"].indexOf(action) < 0) return send("error");
+        turnstile.render("#w", {
+          sitekey: document.getElementById("w").dataset.sitekey,
+          action: action,
+          callback: send,
+          "error-callback": function () { send("error"); },
+          "expired-callback": function () { send("error"); },
+        });
+      };
+    </script>
+    <script
+      is:inline
+      src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=go"
+      async
+      defer></script>
+  </body>
+</html>
