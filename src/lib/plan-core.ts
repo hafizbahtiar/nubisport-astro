@@ -1,6 +1,7 @@
 // Teras pelan tulen (tiada DOM/rangkaian/storan): kunci, parameter, penjanaan sesi bertarikh.
 // Disalin ke API Workers, jadi hanya boleh import ./plan-5k, ./distance-plan, ./date, ./maf.
 // Semak: bun scripts/check-plan-core.ts
+// Disalin ke hono-workers - ubah = `bun scripts/sync-plan-engine.ts` + deploy API
 import { todayMY } from "./date";
 import { DISTANCES, buildDistancePlan, type Distance } from "./distance-plan";
 import { buildPlan, startMonday, isoDate, isWalkDate, sessionDate, type SessionType, type Segment, type Week, type Level } from "./plan-5k";
