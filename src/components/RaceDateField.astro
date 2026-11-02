@@ -1,26 +1,17 @@
 ---
-// Tarikh lumba (input utama pelan v2) + pilihan cepat dari kalendar /races (src/data/races.ts).
-// Pilih lumba = isi tarikh (+ jarak bila borang ada radio `jarak`). Lumba lepas disembunyikan di pelayar.
+// Tarikh lumba (input utama pelan v2) + pilihan cepat dari kalendar /races (API, src/lib/races.ts).
+// Pilih lumba = isi tarikh (+ jarak bila borang ada radio `jarak`). Pilihan dimuat dalam pelayar; tiada lumba = medan tersembunyi.
 import Field from "./ui/Field.astro";
 import DatePicker from "./ui/DatePicker.astro";
 import Dropdown from "./ui/Dropdown.astro";
-import { RACES } from "../data/races";
+import Icon from "./ui/Icon.astro";
 
 interface Props {
-  /** Label jarak dalam RACES[].jarak, contoh ["5K"] atau ["10K", "21K"]. */
+  /** Label jarak dalam Race.distances, contoh ["5K"] atau ["10K", "21K"]. */
   jarak: string[];
 }
 const { jarak } = Astro.props;
 const tahun = new Date().getFullYear();
-const pilihan = RACES.flatMap((r) =>
-  jarak.filter((j) => r.jarak.includes(j)).map((j) => ({ r, j })),
-);
-const tarikh = (iso: string) =>
-  new Date(`${iso}T00:00:00`).toLocaleDateString("ms-MY", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
 ---
 
 <Field
@@ -35,39 +26,62 @@ const tarikh = (iso: string) =>
     max={`${tahun + 2}-12-31`}
   />
 </Field>
-{
-  pilihan.length > 0 && (
-    <Field label="Atau pilih dari kalendar lumba" for="pilih-lumba-butang">
-      {/* Nilai "tarikh|jarak"; tiada `name`, jadi tak dihantar dengan borang. */}
-      <Dropdown
-        id="pilih-lumba"
-        placeholder="Pilih lumba…"
-        options={pilihan.map(({ r, j }) => ({
-          value: `${r.tarikh}|${j.toLowerCase()}`,
-          label: `${r.nama} · ${j} · ${tarikh(r.tarikh)}`,
-        }))}
-      />
-    </Field>
-  )
-}
+<div hidden data-pilih-lumba data-jarak={jarak.join(",")}>
+  <Field label="Atau pilih dari kalendar lumba" for="pilih-lumba-butang">
+    {/* Nilai "tarikh|jarak"; tiada `name`, jadi tak dihantar dengan borang. */}
+    <Dropdown id="pilih-lumba" placeholder="Pilih lumba…" options={[]} />
+  </Field>
+  <template id="pilih-lumba-item"
+    ><li role="option" aria-selected="false">
+      <span></span><Icon name="tanda" />
+    </li></template
+  >
+</div>
 
 <script>
-  import { todayMY } from "../lib/date";
+  import { fetchRaces } from "../lib/races";
 
+  const kotak = document.querySelector<HTMLElement>("[data-pilih-lumba]");
   const pilih = document.getElementById(
     "pilih-lumba",
   ) as HTMLSelectElement | null;
   const lumba = document.getElementById("lumba") as HTMLInputElement | null;
-  if (pilih && lumba) {
-    // Lumba lepas: buang dari select dan menu Dropdown.
-    const hariIni = todayMY();
-    const lepas = (v?: string) => !!v && v.slice(0, 10) <= hariIni;
-    [...pilih.options].forEach((o) => lepas(o.value) && o.remove());
-    document
-      .querySelectorAll<HTMLElement>("#pilih-lumba-menu [data-value]")
-      .forEach((li) => lepas(li.dataset.value) && li.remove());
-    if (pilih.options.length < 2)
-      pilih.closest(".field")!.setAttribute("hidden", "");
+  const tarikh = (iso: string) =>
+    new Date(`${iso}T00:00:00`).toLocaleDateString("ms-MY", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+
+  if (kotak && pilih && lumba) {
+    void fetchRaces().then((races) => {
+      const jarak = kotak.dataset.jarak!.split(",");
+      const pilihan = (races ?? []).flatMap((r) =>
+        jarak
+          .filter((j) => r.distances.includes(j))
+          .map((j) => ({
+            value: `${r.raceDate}|${j.toLowerCase()}`,
+            label: `${r.name} · ${j} · ${tarikh(r.raceDate)}`,
+          })),
+      );
+      if (!pilihan.length) return;
+      const menu = document.getElementById("pilih-lumba-menu")!;
+      const item = document.getElementById(
+        "pilih-lumba-item",
+      ) as HTMLTemplateElement;
+      pilihan.forEach((p, i) => {
+        pilih.add(new Option(p.label, p.value));
+        const li = item.content.firstElementChild!.cloneNode(
+          true,
+        ) as HTMLElement;
+        li.id = `pilih-lumba-p${i}`;
+        li.dataset.value = p.value;
+        li.querySelector("span")!.textContent = p.label;
+        menu.append(li);
+      });
+      pilih.closest("[data-dropdown]")!.dispatchEvent(new Event("dd:semula"));
+      kotak.hidden = false;
+    });
     pilih.addEventListener("change", () => {
       const [tarikh, j] = pilih.value.split("|");
       if (!tarikh) return;

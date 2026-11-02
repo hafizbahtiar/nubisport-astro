@@ -16,8 +16,8 @@ vigorous ACSM; padam aktiviti tanya dulu sebelum buang tanda) · **bot Telegram*
 (`/account/events`: admin Nubi cipta, ahli "Saya datang", admin tanda **hadir sebenar** - RSVP ≠ hadir,
 lencana kira hadir; had peserta pilihan; Google Maps, `.ics`)
 · notis luar talian · **mod Ramadan**
-(sesi dalam Hijri 9 ditag "Puasa" + banner nasihat) · **kalkulator peluh** (`/guide#peluh`, ACSM) · **kalendar lumba** (`/races`, susun tangan
-`src/data/races.ts`, `.ics` per acara).
+(sesi dalam Hijri 9 ditag "Puasa" + banner nasihat) · **kalkulator peluh** (`/guide#peluh`, ACSM) · **kalendar lumba** (`/races`, dari API `nubi_races` -
+owner tambah dari laman rasmi di portfolio `/admin/nubi/races`, AI + Clef semak duplikasi; `.ics` dibina dalam pelayar).
 
 ## Peraturan untuk setiap idea
 
@@ -37,7 +37,7 @@ Semua dibina - lihat "Dah ada" dan `TODO.md`.
 
 | Idea | Kenapa | Nota bina |
 |---|---|---|
-| **Hantar acara lumba** | Senarai susun tangan lambat bertambah | Borang awam -> admin Nubi lulus -> masuk kalendar (perlu jadual kongsi, bukan `app_items`). Kini: owner tambah dalam `src/data/races.ts` |
+| **Hantar acara lumba** | Senarai susun tangan lambat bertambah | Borang awam -> admin Nubi lulus -> masuk kalendar (perlu jadual kongsi, bukan `app_items`). Kini: owner tambah di portfolio `/admin/nubi/races` (jadual `nubi_races`, migration 053) |
 
 ## Gelombang 3 - komuniti (perlu backend, ikut `requireAppRole`)
 
@@ -60,7 +60,7 @@ benda Nubi dalam satu bulan. Ini **view dalam app**, bukan feed `.ics` - feed se
 | Sesi pelan | `readList` + `pullCloud` + `planSessions` (browser) | Tajuk sesi, minggu, tick / kosong / "terlepas" |
 | Aktiviti Strava | `GET /me/apps/nubi/activities?from=&to=` | Nama, km, pace; pautan detail |
 | Larian kumpulan | `nubi_events` + RSVP | Tajuk, masa, "Saya datang" / hadir |
-| Lumba | `src/data/races.ts` | Nama, jarak, tutup pendaftaran |
+| Lumba | `GET /public/nubi/races` (`nubi_races`) | Nama, jarak, tutup pendaftaran |
 | Tugasan sendiri | belum diputuskan | Tajuk, tick (fasa 2) |
 
 ### Status tick

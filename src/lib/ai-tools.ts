@@ -15,7 +15,7 @@ import {
 } from "./plan-sync";
 import { readProfile, saveProfile, type TrainingProfile } from "./profile";
 import { DISTANCES } from "./distance-plan";
-import { RACES } from "../data/races";
+import { fetchRaces } from "./races";
 import { addDays, todayMY } from "./date";
 import { readList, writeList } from "./saved-plans";
 import {
@@ -405,23 +405,26 @@ async function trainingSummary(args: Record<string, unknown>): Promise<ToolResul
   };
 }
 
-function listRaces(args: Record<string, unknown>): ToolResult {
+async function listRaces(args: Record<string, unknown>): Promise<ToolResult> {
   const negeri = textValue(args.negeri, 60).toLowerCase();
   const today = todayMY();
-  const races = RACES
-    .filter((r) => r.tarikh >= today && (!negeri || r.negeri.toLowerCase().includes(negeri)))
+  const all = await fetchRaces();
+  if (all === null) return { ralat: "Tak dapat baca kalendar lumba sekarang." };
+  // Kunci Melayu kekal: bentuk hasil tool yang model sudah kenal.
+  const races = all
+    .filter((r) => r.raceDate >= today && (!negeri || r.state.toLowerCase().includes(negeri)))
     .slice(0, 20)
     .map((r) => ({
-      id: r.id,
-      nama: r.nama,
-      tarikh: r.tarikh,
-      mula: r.mula,
-      tempat: r.tempat,
-      negeri: r.negeri,
-      jarak: r.jarak,
-      yuran: r.yuran ?? null,
-      tutup: r.tutup ?? null,
-      pautan: r.pautan,
+      id: r.slug,
+      nama: r.name,
+      tarikh: r.raceDate,
+      mula: r.startTime,
+      tempat: r.venue,
+      negeri: r.state,
+      jarak: r.distances,
+      yuran: r.fee,
+      tutup: r.registrationCloses,
+      pautan: r.url,
     }));
   return { hariIni: today, races };
 }
@@ -610,7 +613,7 @@ export async function runTool(name: string, rawArgs: string): Promise<ToolOutcom
       case "get_training_summary":
         return { result: await trainingSummary(args) };
       case "list_races":
-        return { result: listRaces(args) };
+        return { result: await listRaces(args) };
       case "get_activity_detail":
         return activityDetail(args);
       default:

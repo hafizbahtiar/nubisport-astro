@@ -1,22 +1,10 @@
 ---
-// Kalendar lumba Malaysia. Data susun tangan: src/data/races.ts (semak: bun scripts/check-races.ts).
-// Page statik: acara yang sudah lepas disembunyikan dalam pelayar (tarikh Malaysia), bukan hanya masa bina.
+// Kalendar lumba Malaysia. Data dari API (src/lib/races.ts) - owner tambah dari laman rasmi penganjur di
+// portfolio /admin/nubi/races. Page statik: senarai dimuat dalam pelayar.
 import Layout from "../layouts/Layout.astro";
 import PageHero from "../components/ui/PageHero.astro";
 import Section from "../components/ui/Section.astro";
 import Alert from "../components/ui/Alert.astro";
-import { RACES } from "../data/races";
-
-const senarai = [...RACES].sort((a, b) => a.tarikh.localeCompare(b.tarikh));
-const tarikh = (iso: string) =>
-  new Date(`${iso}T00:00:00+08:00`).toLocaleDateString("ms-MY", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: "Asia/Kuala_Lumpur",
-  });
-const ddmm = (iso: string) => iso.split("-").reverse().join("/");
 ---
 
 <Layout
@@ -31,53 +19,32 @@ const ddmm = (iso: string) => iso.split("-").reverse().join("/");
   />
 
   <Section>
-    <ul class="lumba card-grid" id="lumba">
-      {
-        senarai.map((l) => (
-          <li class="card" data-tarikh={l.tarikh} data-tutup={l.tutup}>
-            <p class="eyebrow">
-              {tarikh(l.tarikh)} · {l.mula}
-            </p>
-            <h2 class="lumba-nama">{l.nama}</h2>
-            <p class="lumba-tempat">
-              {l.tempat}, {l.negeri}
-            </p>
-            <p class="lumba-jarak">
-              {l.jarak.map((j) => (
-                <span class="lencana">{j}</span>
-              ))}
-              {l.tutup && (
-                <span class="lencana lumba-tutup" hidden>
-                  Pendaftaran ditutup
-                </span>
-              )}
-            </p>
-            {l.yuran && <p class="lumba-kecil">Yuran: {l.yuran}</p>}
-            {l.tutup && (
-              <p class="lumba-kecil">Daftar sebelum {ddmm(l.tutup)}</p>
-            )}
-            <div class="actions">
-              <a
-                class="btn btn-primary btn-sm"
-                href={l.pautan}
-                target="_blank"
-                rel="noopener"
-              >
-                Laman rasmi
-              </a>
-              <a
-                class="btn btn-outline btn-sm"
-                href={`/races/${l.id}.ics`}
-                download
-              >
-                Simpan ke kalendar
-              </a>
-            </div>
-            <p class="lumba-kecil muted">Disemak {ddmm(l.disemak)}</p>
-          </li>
-        ))
-      }
-    </ul>
+    <p class="lead" id="memuat" aria-live="polite">
+      Memuatkan kalendar lumba...
+    </p>
+    <ul class="lumba card-grid" id="lumba"></ul>
+    <template id="kad-lumba">
+      <li class="card">
+        <p class="eyebrow" data-k="bila"></p>
+        <h2 class="lumba-nama" data-k="nama"></h2>
+        <p class="lumba-tempat" data-k="tempat"></p>
+        <p class="lumba-jarak" data-k="jarak"></p>
+        <p class="lumba-kecil" data-k="yuran" hidden></p>
+        <p class="lumba-kecil" data-k="tutup" hidden></p>
+        <div class="actions">
+          <a
+            class="btn btn-primary btn-sm"
+            data-k="pautan"
+            target="_blank"
+            rel="noopener">Laman rasmi</a
+          >
+          <button type="button" class="btn btn-outline btn-sm" data-k="ics"
+            >Simpan ke kalendar</button
+          >
+        </div>
+        <p class="lumba-kecil muted" data-k="disemak"></p>
+      </li>
+    </template>
     <p class="lead" id="kosong" hidden>
       Tiada lumba akan datang dalam senarai ini lagi - kami tengah semak acara
       baru.
@@ -100,16 +67,69 @@ const ddmm = (iso: string) => iso.split("-").reverse().join("/");
 
 <script>
   import { todayMY } from "../lib/date";
+  import { downloadRaceIcs, fetchRaces } from "../lib/races";
 
-  const hari = todayMY();
-  const kad = [...document.querySelectorAll<HTMLElement>("#lumba > li")];
-  for (const li of kad) {
-    li.hidden = li.dataset.tarikh! < hari;
-    const tutup = li.dataset.tutup;
-    if (tutup && tutup < hari)
-      li.querySelector<HTMLElement>(".lumba-tutup")!.hidden = false;
-  }
-  document.getElementById("kosong")!.hidden = kad.some((li) => !li.hidden);
+  const tarikh = (iso: string) =>
+    new Date(`${iso}T00:00:00+08:00`).toLocaleDateString("ms-MY", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      timeZone: "Asia/Kuala_Lumpur",
+    });
+  const ddmm = (iso: string) => iso.split("-").reverse().join("/");
+
+  const senarai = document.getElementById("lumba")!;
+  const memuat = document.getElementById("memuat")!;
+  const kad = document.getElementById("kad-lumba") as HTMLTemplateElement;
+
+  void (async () => {
+    const races = await fetchRaces();
+    if (races === null) {
+      memuat.textContent =
+        "Kalendar lumba tak dapat dimuatkan sekarang. Cuba muat semula sebentar lagi.";
+    } else {
+      memuat.hidden = true;
+      const hari = todayMY();
+      for (const r of races) {
+        const li = kad.content.firstElementChild!.cloneNode(
+          true,
+        ) as HTMLElement;
+        const k = (n: string) =>
+          li.querySelector<HTMLElement>(`[data-k="${n}"]`)!;
+        k("bila").textContent = `${tarikh(r.raceDate)} · ${r.startTime}`;
+        k("nama").textContent = r.name;
+        k("tempat").textContent = `${r.venue}, ${r.state}`;
+        for (const j of r.distances) {
+          const s = document.createElement("span");
+          s.className = "lencana";
+          s.textContent = j;
+          k("jarak").append(s);
+        }
+        if (r.registrationCloses && r.registrationCloses < hari) {
+          const s = document.createElement("span");
+          s.className = "lencana lumba-tutup";
+          s.textContent = "Pendaftaran ditutup";
+          k("jarak").append(s);
+        }
+        if (r.fee)
+          Object.assign(k("yuran"), {
+            hidden: false,
+            textContent: `Yuran: ${r.fee}`,
+          });
+        if (r.registrationCloses)
+          Object.assign(k("tutup"), {
+            hidden: false,
+            textContent: `Daftar sebelum ${ddmm(r.registrationCloses)}`,
+          });
+        (k("pautan") as HTMLAnchorElement).href = r.url;
+        k("ics").addEventListener("click", () => downloadRaceIcs(r));
+        k("disemak").textContent = `Disemak ${ddmm(r.checkedOn)}`;
+        senarai.append(li);
+      }
+      document.getElementById("kosong")!.hidden = races.length > 0;
+    }
+  })();
 </script>
 
 <style>

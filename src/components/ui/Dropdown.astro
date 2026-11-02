@@ -95,7 +95,7 @@ const pilihan = options.find((o) => o.value === value);
     const butang = root.querySelector<HTMLButtonElement>("[data-butang]")!;
     const label = root.querySelector<HTMLElement>("[data-label]")!;
     const menu = root.querySelector<HTMLElement>("[data-menu]")!;
-    const items = [...menu.querySelectorAll<HTMLElement>("[role=option]")];
+    let items = [...menu.querySelectorAll<HTMLElement>("[role=option]")];
     let aktif = -1;
 
     const segerak = () => {
@@ -157,9 +157,17 @@ const pilihan = options.find((o) => o.value === value);
       if (e.key === "ArrowDown" || e.key === "ArrowUp")
         (e.preventDefault(), buka());
     });
-    items.forEach((li, i) => {
-      li.addEventListener("click", () => pilih(i));
-      li.addEventListener("pointermove", () => aktif !== i && tanda(i));
+    const ikat = () =>
+      items.forEach((li, i) => {
+        li.addEventListener("click", () => pilih(i));
+        li.addEventListener("pointermove", () => aktif !== i && tanda(i));
+      });
+    ikat();
+    // Pilihan dimuat selepas page dibuka (contoh lumba dari API): ganti <option> + <li>, kemudian hantar "dd:semula".
+    root.addEventListener("dd:semula", () => {
+      items = [...menu.querySelectorAll<HTMLElement>("[role=option]")];
+      ikat();
+      segerak();
     });
     let taip = "";
     let taipMasa = 0;
