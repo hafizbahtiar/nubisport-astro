@@ -67,7 +67,12 @@ import Alert from "../components/ui/Alert.astro";
 
 <script>
   import { todayMY } from "../lib/date";
-  import { downloadRaceIcs, fetchRaces } from "../lib/races";
+  import {
+    downloadRaceIcs,
+    fetchRaces,
+    lowestFee,
+    raceDistances,
+  } from "../lib/races";
 
   const tarikh = (iso: string) =>
     new Date(`${iso}T00:00:00+08:00`).toLocaleDateString("ms-MY", {
@@ -97,13 +102,21 @@ import Alert from "../components/ui/Alert.astro";
         ) as HTMLElement;
         const k = (n: string) =>
           li.querySelector<HTMLElement>(`[data-k="${n}"]`)!;
-        k("bila").textContent = `${tarikh(r.raceDate)} · ${r.startTime}`;
+        k("bila").textContent = r.endDate
+          ? `${tarikh(r.raceDate)} - ${tarikh(r.endDate)} · ${r.startTime}`
+          : `${tarikh(r.raceDate)} · ${r.startTime}`;
         k("nama").textContent = r.name;
         k("tempat").textContent = `${r.venue}, ${r.state}`;
-        for (const j of r.distances) {
+        for (const j of raceDistances(r)) {
           const s = document.createElement("span");
           s.className = "lencana";
           s.textContent = j;
+          k("jarak").append(s);
+        }
+        if (r.registrationOpens && r.registrationOpens > hari) {
+          const s = document.createElement("span");
+          s.className = "lencana";
+          s.textContent = `Dibuka ${ddmm(r.registrationOpens)}`;
           k("jarak").append(s);
         }
         if (r.registrationCloses && r.registrationCloses < hari) {
@@ -112,10 +125,11 @@ import Alert from "../components/ui/Alert.astro";
           s.textContent = "Pendaftaran ditutup";
           k("jarak").append(s);
         }
-        if (r.fee)
+        const yuran = lowestFee(r);
+        if (yuran != null)
           Object.assign(k("yuran"), {
             hidden: false,
-            textContent: `Yuran: ${r.fee}`,
+            textContent: `Yuran dari RM${yuran % 1 ? yuran.toFixed(2) : yuran} (ikut kategori dan tarikh daftar)`,
           });
         if (r.registrationCloses)
           Object.assign(k("tutup"), {

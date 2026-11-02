@@ -7,7 +7,7 @@ import Dropdown from "./ui/Dropdown.astro";
 import Icon from "./ui/Icon.astro";
 
 interface Props {
-  /** Label jarak dalam Race.distances, contoh ["5K"] atau ["10K", "21K"]. */
+  /** Label jarak (raceDistances), contoh ["5K"] atau ["10K", "21K"]. */
   jarak: string[];
 }
 const { jarak } = Astro.props;
@@ -39,7 +39,7 @@ const tahun = new Date().getFullYear();
 </div>
 
 <script>
-  import { fetchRaces } from "../lib/races";
+  import { fetchRaces, raceDistances } from "../lib/races";
 
   const kotak = document.querySelector<HTMLElement>("[data-pilih-lumba]");
   const pilih = document.getElementById(
@@ -58,7 +58,7 @@ const tahun = new Date().getFullYear();
       const jarak = kotak.dataset.jarak!.split(",");
       const pilihan = (races ?? []).flatMap((r) =>
         jarak
-          .filter((j) => r.distances.includes(j))
+          .filter((j) => raceDistances(r).includes(j))
           .map((j) => ({
             value: `${r.raceDate}|${j.toLowerCase()}`,
             label: `${r.name} · ${j} · ${tarikh(r.raceDate)}`,

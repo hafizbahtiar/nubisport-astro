@@ -15,7 +15,7 @@ import {
 } from "./plan-sync";
 import { readProfile, saveProfile, type TrainingProfile } from "./profile";
 import { DISTANCES } from "./distance-plan";
-import { fetchRaces } from "./races";
+import { fetchRaces, raceDistances } from "./races";
 import { addDays, todayMY } from "./date";
 import { readList, writeList } from "./saved-plans";
 import {
@@ -412,7 +412,7 @@ async function listRaces(args: Record<string, unknown>): Promise<ToolResult> {
   if (all === null) return { ralat: "Tak dapat baca kalendar lumba sekarang." };
   // Kunci Melayu kekal: bentuk hasil tool yang model sudah kenal.
   const races = all
-    .filter((r) => r.raceDate >= today && (!negeri || r.state.toLowerCase().includes(negeri)))
+    .filter((r) => (r.endDate ?? r.raceDate) >= today && (!negeri || r.state.toLowerCase().includes(negeri)))
     .slice(0, 20)
     .map((r) => ({
       id: r.slug,
@@ -421,8 +421,16 @@ async function listRaces(args: Record<string, unknown>): Promise<ToolResult> {
       mula: r.startTime,
       tempat: r.venue,
       negeri: r.state,
-      jarak: r.distances,
-      yuran: r.fee,
+      tarikhAkhir: r.endDate,
+      jarak: raceDistances(r),
+      kategori: r.categories.map((c) => ({
+        nama: c.name,
+        jarakKm: c.distanceKm,
+        mula: c.startTime,
+        yuran: c.fees.map((f) => `${f.tier} RM${f.amountRm}`),
+      })),
+      buka: r.registrationOpens,
+      penganjur: r.organiser,
       tutup: r.registrationCloses,
       pautan: r.url,
     }));

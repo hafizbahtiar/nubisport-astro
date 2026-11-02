@@ -3,20 +3,42 @@
 // dari laman rasmi penganjur (AI + Clef semak duplikasi). Dulu susun tangan dalam src/data/races.ts.
 import { buildIcs } from "./ics";
 
+export interface RaceCategory {
+  name: string; // "21KM", "Half Marathon", "Kids Dash"
+  distanceKm: number | null;
+  startTime: string | null;
+  fees: { tier: string; amountRm: number }[]; // "Early Bird" RM120 ...
+}
+
 export interface Race {
   id: number;
   slug: string; // stabil - UID kalendar
   name: string;
-  raceDate: string; // YYYY-MM-DD, waktu Malaysia
+  raceDate: string; // hari pertama, YYYY-MM-DD, waktu Malaysia
+  endDate: string | null; // lumba beberapa hari
   startTime: string; // HH:MM flag-off pertama
   venue: string;
   state: string;
-  distances: string[];
-  fee: string | null;
+  categories: RaceCategory[];
+  registrationOpens: string | null;
   registrationCloses: string | null;
-  url: string; // laman rasmi penganjur
+  organiser: string | null;
+  url: string; // laman lumba (penganjur / platform pendaftaran)
   checkedOn: string; // YYYY-MM-DD
 }
+
+/** Label jarak seperti borang pelan: 21.0975 -> "21K", 42.195 -> "42K", 5 -> "5K"; tiada jarak = null. */
+export const distanceLabel = (km: number | null): string | null =>
+  km == null ? null : `${km >= 42 && km < 43 ? 42 : km >= 21 && km < 22 ? 21 : Math.round(km * 10) / 10}K`;
+
+/** Label jarak lumba, tanpa ulang ("21K", "10K"); kategori tanpa jarak guna namanya. */
+export const raceDistances = (r: Race): string[] => [...new Set(r.categories.map((c) => distanceLabel(c.distanceKm) ?? c.name))];
+
+/** Yuran terendah (semua kategori, semua peringkat), atau null. */
+export const lowestFee = (r: Race): number | null => {
+  const all = r.categories.flatMap((c) => c.fees.map((f) => f.amountRm));
+  return all.length ? Math.min(...all) : null;
+};
 
 let cache: Promise<Race[] | null> | null = null;
 
@@ -39,7 +61,7 @@ export function downloadRaceIcs(r: Race) {
         mula: new Date(`${r.raceDate}T${r.startTime}:00+08:00`),
         minit: 240, // shortcut: tempoh tetap 4 jam - penganjur tidak beri masa tamat yang seragam
         tajuk: r.name,
-        keterangan: `${r.distances.join(" / ")} · ${r.venue}, ${r.state}\n${r.url}`,
+        keterangan: `${raceDistances(r).join(" / ")} · ${r.venue}, ${r.state}\n${r.url}`,
       },
     ],
     { nama: r.name },
