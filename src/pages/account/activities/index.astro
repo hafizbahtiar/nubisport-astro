@@ -127,7 +127,7 @@ import Table from "../../../components/ui/Table.astro";
     movingS: number;
     avgHr: number | null;
     hasGpx: boolean;
-    visibility: "private" | "members";
+    visibility: "private" | "members" | "public";
     shareHr: boolean;
     hasPreview: boolean;
     updatedAt: string;
@@ -313,8 +313,8 @@ import Table from "../../../components/ui/Table.astro";
       (a) => (a.avgHr ? `${Math.round(a.avgHr)} bpm` : "-"),
       (a) => {
         const b = butang(
-          a.visibility === "members" ? "Peribadi" : "Kongsi",
-          `${a.visibility === "members" ? "Jadikan peribadi" : "Kongsi ke feed"}: ${a.name || SPORT_LABELS[a.sport]}`,
+          a.visibility !== "private" ? "Peribadi" : "Kongsi",
+          `${a.visibility !== "private" ? "Jadikan peribadi" : "Kongsi ke feed"}: ${a.name || SPORT_LABELS[a.sport]}`,
         );
         b.addEventListener("click", () => void shareActivity(a));
         return b;
@@ -329,7 +329,7 @@ import Table from "../../../components/ui/Table.astro";
 
   /** Share/unshare one activity; old rows get a preview from their own .fit on first share. */
   async function shareActivity(a: Baris) {
-    const on = a.visibility !== "members";
+    const on = a.visibility === "private";
     papar(on ? "Menyediakan peta…" : "Menyimpan…", "info");
     let preview: [number, number][] | undefined;
     if (on && !a.hasPreview) {

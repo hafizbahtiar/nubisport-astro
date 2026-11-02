@@ -59,6 +59,7 @@ import "../../styles/panel.css";
     paceFromDistance,
   } from "../../lib/activity-file";
   import { fetchFeed, toggleKudos, type FeedItem } from "../../lib/feed";
+  import { drawRouteMap } from "../../lib/route-map";
 
   const $ = <T extends HTMLElement = HTMLElement>(id: string) =>
     document.getElementById(id) as T;
@@ -91,73 +92,11 @@ import "../../styles/panel.css";
   let next: string | null = null;
   let loading = false;
 
-  // Map dimuat hanya bila kad masuk skrin.
-  let petaModul: Promise<
-    [typeof import("maplibre-gl"), { default: string }]
-  > | null = null;
-  const mapModule = () =>
-    (petaModul ??= Promise.all([
-      import("maplibre-gl"),
-      import("maplibre-gl/dist/maplibre-gl-worker.mjs?url"),
-      import("maplibre-gl/dist/maplibre-gl.css"),
-    ]).then(([ml, pekerja]) => {
-      ml.setWorkerUrl(pekerja.default);
-      return [ml, pekerja] as [
-        typeof import("maplibre-gl"),
-        { default: string },
-      ];
-    }));
-
   // Satu kad = satu konteks WebGL; pelayar hadkan ~16. Peta dibuang bila kad keluar skrin, dilukis semula bila masuk.
   const petaHidup = new Map<HTMLElement, { remove(): void }>();
   const drawMap = async (kotak: HTMLElement, route: [number, number][]) => {
-    try {
-      const [ml] = await mapModule();
-      const lonLat = route.map(([lat, lon]) => [lon, lat] as [number, number]);
-      const lon = lonLat.map((p) => p[0]);
-      const lat = lonLat.map((p) => p[1]);
-      const bounds: [[number, number], [number, number]] = [
-        [Math.min(...lon), Math.min(...lat)],
-        [Math.max(...lon), Math.max(...lat)],
-      ];
-      kotak.replaceChildren();
-      const map = new ml.Map({
-        container: kotak,
-        style: "https://tiles.openfreemap.org/styles/positron",
-        bounds,
-        fitBoundsOptions: { padding: 18 },
-        interactive: false,
-      });
-      petaHidup.set(kotak, map);
-      map.on("load", () => {
-        const warna = getComputedStyle(document.documentElement);
-        const oren = warna.getPropertyValue("--orange").trim() || "#ff5a1f";
-        map.addSource("laluan", {
-          type: "geojson",
-          data: {
-            type: "Feature",
-            properties: {},
-            geometry: { type: "LineString", coordinates: lonLat },
-          },
-        });
-        map.addLayer({
-          id: "laluan-tepi",
-          type: "line",
-          source: "laluan",
-          layout: { "line-join": "round", "line-cap": "round" },
-          paint: { "line-color": "#fff", "line-width": 6 },
-        });
-        map.addLayer({
-          id: "laluan",
-          type: "line",
-          source: "laluan",
-          layout: { "line-join": "round", "line-cap": "round" },
-          paint: { "line-color": oren, "line-width": 3 },
-        });
-      });
-    } catch {
-      kotak.textContent = "Peta tak dapat dimuatkan.";
-    }
+    const map = await drawRouteMap(kotak, route);
+    if (map) petaHidup.set(kotak, map);
   };
 
   const petaObserver = new IntersectionObserver(

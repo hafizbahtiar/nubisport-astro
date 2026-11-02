@@ -1,6 +1,6 @@
-// Only /api/*, /_astro/* and /u/* reach this (assets.run_worker_first in wrangler.jsonc); /api/*
+// Only /api/*, /_astro/*, /u/* and /a/* reach this (assets.run_worker_first in wrangler.jsonc); /api/*
 // goes to hono-workers unchanged, so its CSRF/Origin, rate limits and cookies apply as-is.
-// /u/<username> is a static shell (/u/index.html) whose script reads the username from the URL.
+// /u/<username> and /a/<id> are static shells (/u/index.html, /a/index.html) whose scripts read the URL.
 interface Env {
   /** Service binding to the hono-workers Worker (wrangler.jsonc `services`). */
   API: { fetch(request: Request): Promise<Response> };
@@ -25,6 +25,12 @@ export default {
         return new Response("Method Not Allowed", { status: 405 });
       // Keep the browser URL /u/<username>; the static shell reads location.pathname.
       return env.ASSETS.fetch(new Request(new URL("/u/index.html", url), request));
+    }
+    // Public activity page /a/<id> (hono-workers services/nubi-public-activity.ts): same static-shell trick.
+    if (url.pathname === "/a" || url.pathname.startsWith("/a/")) {
+      if (request.method !== "GET" && request.method !== "HEAD")
+        return new Response("Method Not Allowed", { status: 405 });
+      return env.ASSETS.fetch(new Request(new URL("/a/index.html", url), request));
     }
     // Trusted app marker for the shared API: the backend binds the session/JWT to
     // this app. Overwrite any client-supplied header.

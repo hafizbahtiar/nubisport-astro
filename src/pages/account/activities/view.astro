@@ -62,10 +62,18 @@ import Icon from "../../../components/ui/Icon.astro";
         <input type="checkbox" id="kongsi-nadi" disabled />
         <span>Kongsi nadi</span>
       </label>
+      <label class="check">
+        <input type="checkbox" id="kongsi-awam" disabled />
+        <span>Pautan awam (sesiapa dengan pautan boleh lihat)</span>
+      </label>
+      <button type="button" class="btn btn-outline" id="kongsi-pautan" hidden
+        >Salin pautan</button
+      >
       <p class="muted kecil">
         Ahli Nubi boleh buka detail aktiviti ini: laluan penuh, split,
         ketinggian, pace dan cuaca. Nadi pilihan; fail asal kekal peribadi.
-        Boleh tarik balik bila-bila masa.
+        Boleh tarik balik bila-bila masa. Pautan awam hanya tunjuk ringkasan dan
+        peta tanpa 200 m awal/akhir.
       </p>
       <p class="muted" id="kongsi-status" hidden></p>
     </section>
@@ -345,7 +353,7 @@ import Icon from "../../../components/ui/Icon.astro";
     maxHr: number | null;
     runRatio: number | null;
     weather: ActivityWeather | null; // MET Norway masa upload (migration 040 backend)
-    visibility: "private" | "members";
+    visibility: "private" | "members" | "public";
     shareHr: boolean;
     hasPreview: boolean;
     updatedAt: string;
@@ -474,10 +482,23 @@ import Icon from "../../../components/ui/Icon.astro";
     const shareEl = $("kongsi-tanda") as HTMLInputElement;
     const shareHrEl = $("kongsi-nadi") as HTMLInputElement;
     const shareStatus = $("kongsi-status");
+    const publicEl = $("kongsi-awam") as HTMLInputElement;
+    const linkBtn = $("kongsi-pautan") as HTMLButtonElement;
+    const publicUrl = () => `${location.origin}/a/${a.id}`;
     const setSharingUi = () => {
-      shareHrEl.disabled = !shareEl.checked;
-      if (!shareEl.checked) shareHrEl.checked = false;
+      shareHrEl.disabled = publicEl.disabled = !shareEl.checked;
+      if (!shareEl.checked) shareHrEl.checked = publicEl.checked = false;
+      linkBtn.hidden = !publicEl.checked;
     };
+    linkBtn.addEventListener("click", async () => {
+      shareStatus.hidden = false;
+      try {
+        await navigator.clipboard.writeText(publicUrl());
+        shareStatus.textContent = "Pautan disalin.";
+      } catch {
+        shareStatus.textContent = publicUrl();
+      }
+    });
     const ownRecords = async (): Promise<any[] | null> => {
       if (rekodCache) return rekodCache;
       const f = await api(fileUrl(a.updatedAt)).catch(() => null);
@@ -498,16 +519,17 @@ import Icon from "../../../components/ui/Icon.astro";
     };
     const saveSharing = async () => {
       const on = shareEl.checked;
-      const wasShared = a.visibility === "members";
+      const wasShared = a.visibility !== "private";
+      const pub = on && publicEl.checked;
       shareStatus.hidden = false;
       shareStatus.textContent = on ? "Menyediakan peta…" : "Menyimpan…";
       shareEl.disabled = true;
-      shareHrEl.disabled = true;
+      shareHrEl.disabled = publicEl.disabled = true;
       const preview = on && !a.hasPreview ? await previewForShare() : undefined;
       const res = await api(`${BASE}/${a.id}/visibility`, {
         method: "PUT",
         body: JSON.stringify({
-          visibility: on ? "members" : "private",
+          visibility: pub ? "public" : on ? "members" : "private",
           shareHr: on && shareHrEl.checked,
           ...(preview ? { preview } : {}),
         }),
@@ -516,6 +538,7 @@ import Icon from "../../../components/ui/Icon.astro";
       if (!res?.ok) {
         shareEl.checked = wasShared;
         shareHrEl.checked = a.shareHr && wasShared;
+        publicEl.checked = a.visibility === "public";
         setSharingUi();
         shareStatus.textContent =
           "Tak dapat ubah tetapan kongsi. Cuba lagi sekejap.";
@@ -526,19 +549,22 @@ import Icon from "../../../components/ui/Icon.astro";
         const records = await ownRecords();
         if (records) await uploadSharedRecords(a.id, sharedRecords(records));
       }
-      a.visibility = on ? "members" : "private";
+      a.visibility = pub ? "public" : on ? "members" : "private";
       a.shareHr = on && shareHrEl.checked;
       if (preview) a.hasPreview = true;
       setSharingUi();
-      shareStatus.textContent = on
-        ? "Aktiviti dikongsi ke feed ahli."
-        : "Aktiviti kembali peribadi.";
+      shareStatus.textContent = pub
+        ? "Aktiviti awam: sesiapa dengan pautan boleh lihat."
+        : on
+          ? "Aktiviti dikongsi ke feed ahli."
+          : "Aktiviti kembali peribadi.";
     };
-    shareEl.checked = a.visibility === "members";
+    shareEl.checked = a.visibility !== "private";
     shareHrEl.checked = a.shareHr && shareEl.checked;
+    publicEl.checked = a.visibility === "public";
     setSharingUi();
-    shareEl.addEventListener("change", () => void saveSharing());
-    shareHrEl.addEventListener("change", () => void saveSharing());
+    for (const el of [shareEl, shareHrEl, publicEl])
+      el.addEventListener("change", () => void saveSharing());
 
     $("padam").addEventListener("click", async () => {
       const ya = await confirmDialog({

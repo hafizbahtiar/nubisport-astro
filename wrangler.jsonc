@@ -8,13 +8,15 @@
 		"directory": "./dist",
 		"binding": "ASSETS",
 		"not_found_handling": "404-page",
-		// Only /api/*, /_astro/* and /u/* run the Worker (404s must not be cached, see worker.ts);
+		// Only /api/*, /_astro/*, /u/* and /a/* run the Worker (404s must not be cached, see worker.ts);
 		// every other path is a plain static asset.
 		"run_worker_first": [
 			"/api/*",
 			"/_astro/*",
 			"/u",
-			"/u/*"
+			"/u/*",
+			"/a",
+			"/a/*"
 		]
 	},
 	"services": [

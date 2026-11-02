@@ -1,0 +1,176 @@
+---
+// Aktiviti awam Nubi: /a/<id>. Halaman statik; Worker frontend rewrite /a/* ke shell ini, script baca id dari
+// pathname dan fetch JSON awam (hono-workers services/nubi-public-activity.ts). Hanya aktiviti yang pemiliknya
+// set "Awam". Privasi: tiada email/fail/cuaca; nadi hanya bila dikongsi; 200 m awal dan akhir laluan dibuang di
+// backend (tempat mula/tamat selalunya rumah). Semua teks pengguna guna textContent.
+import Layout from "../../layouts/Layout.astro";
+import Section from "../../components/ui/Section.astro";
+import "../../styles/panel.css";
+---
+
+<Layout title="Aktiviti - Nubi Sport" description="Aktiviti awam ahli Nubi Sport." noindex={true}>
+  <Section>
+    <div class="aktiviti-awam">
+      <p class="muted" id="status" aria-live="polite">Memuatkan aktiviti…</p>
+
+      <div id="isi" hidden>
+        <div class="kepala">
+          <p class="eyebrow" id="jenis">Larian</p>
+          <h1 class="display" id="tajuk">…</h1>
+          <p class="muted"><span id="pengarang">…</span> · <span id="tarikh">…</span></p>
+        </div>
+
+        <div class="peta" id="peta" hidden>Memuatkan peta…</div>
+        <p class="muted kecil" id="nota-peta" hidden>Bahagian awal dan akhir laluan disembunyikan.</p>
+
+        <ul class="stat" id="stat" aria-label="Statistik aktiviti"></ul>
+        <p class="muted" id="kudos" hidden></p>
+
+        <div class="actions">
+          <a class="btn btn-primary" href="/register">Sertai Nubi Sport</a>
+          <a class="btn btn-outline" href="/plan-5k">Buat pelan 5K</a>
+        </div>
+      </div>
+    </div>
+  </Section>
+</Layout>
+
+<script>
+  import { SPORT_LABELS, formatDuration, formatKm, paceFromDistance } from "../../lib/activity-file";
+  import { drawRouteMap } from "../../lib/route-map";
+
+  interface AktivitiAwam {
+    id: number;
+    startedAt: string;
+    sport: string;
+    name: string | null;
+    distanceM: number;
+    movingS: number;
+    elevationGainM: number | null;
+    avgHr: number | null;
+    maxHr: number | null;
+    preview: [number, number][] | null;
+    author: { name: string; profileHref: string | null };
+    kudos: number;
+  }
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const status = $("status");
+  const isi = $("isi");
+
+  const gagal = (mesej: string) => {
+    status.textContent = mesej;
+    status.hidden = false;
+    isi.hidden = true;
+  };
+
+  const tarikh = (iso: string) =>
+    new Date(iso).toLocaleString("ms-MY", {
+      weekday: "short", day: "numeric", month: "short", year: "numeric",
+      hour: "numeric", minute: "2-digit", timeZone: "Asia/Kuala_Lumpur",
+    });
+
+  const papar = (a: AktivitiAwam) => {
+    const jenis = SPORT_LABELS[a.sport as keyof typeof SPORT_LABELS] ?? a.sport;
+    const tajuk = a.name?.trim() || jenis;
+    $("jenis").textContent = jenis;
+    $("tajuk").textContent = tajuk;
+    $("tarikh").textContent = tarikh(a.startedAt);
+    const pengarang = $("pengarang");
+    if (a.author.profileHref?.startsWith("/u/")) {
+      const link = document.createElement("a");
+      link.className = "link";
+      link.href = a.author.profileHref;
+      link.textContent = a.author.name;
+      pengarang.replaceChildren(link);
+    } else pengarang.textContent = a.author.name;
+
+    const stat: [string, string | null][] = [
+      ["Jarak", formatKm(a.distanceM)],
+      ["Masa bergerak", formatDuration(a.movingS)],
+      ["Pace", paceFromDistance(a.distanceM, a.movingS) ?? null],
+      ["Ketinggian", a.elevationGainM != null ? `${Math.round(a.elevationGainM)} m` : null],
+      ["Nadi", a.avgHr != null ? (a.maxHr != null ? `${Math.round(a.avgHr)} / ${Math.round(a.maxHr)} bpm` : `${Math.round(a.avgHr)} bpm`) : null],
+    ];
+    $("stat").replaceChildren(
+      ...stat
+        .filter((s): s is [string, string] => !!s[1])
+        .map(([k, v]) => {
+          const li = document.createElement("li");
+          const span = document.createElement("span");
+          span.textContent = k;
+          const strong = document.createElement("strong");
+          strong.textContent = v;
+          li.append(span, strong);
+          return li;
+        }),
+    );
+    if (a.kudos > 0) {
+      $("kudos").textContent = `${a.kudos.toLocaleString("ms-MY")} kudos`;
+      $("kudos").hidden = false;
+    }
+
+    document.title = `${tajuk} oleh ${a.author.name} - Nubi Sport`;
+    status.hidden = true;
+    isi.hidden = false;
+    if (a.preview && a.preview.length >= 2) {
+      $("peta").hidden = false;
+      $("nota-peta").hidden = false;
+      void drawRouteMap($("peta"), a.preview);
+    }
+  };
+
+  const mula = async () => {
+    const parts = location.pathname.split("/").filter(Boolean);
+    if (parts.length !== 2 || parts[0] !== "a" || !/^[1-9]\d{0,15}$/.test(parts[1])) {
+      gagal("Pautan aktiviti tak sah.");
+      return;
+    }
+    const res = await fetch(`/api/v1/public/nubi/activities/${parts[1]}`).catch(() => null);
+    if (!res) return gagal("Tak dapat muatkan aktiviti. Semak internet dan cuba lagi.");
+    if (res.status === 404) return gagal("Aktiviti ini tiada atau tidak awam.");
+    if (!res.ok) return gagal("Tak dapat muatkan aktiviti. Cuba lagi sekejap.");
+    const body = (await res.json().catch(() => null)) as { success?: boolean; data?: AktivitiAwam } | null;
+    if (!body?.success || !body.data) return gagal("Aktiviti ini tiada atau tidak awam.");
+    papar(body.data);
+  };
+
+  await mula();
+</script>
+
+<style>
+  .aktiviti-awam,
+  #isi {
+    display: grid;
+    gap: 1.25rem;
+  }
+  .kepala h1 {
+    margin: 0.1rem 0;
+    font-size: clamp(1.8rem, 5vw, 2.6rem);
+    overflow-wrap: anywhere;
+  }
+  .kepala p {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+  .peta {
+    height: 18rem;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+    background: var(--paper-2, #f1efe8);
+  }
+  .kecil {
+    margin: -0.75rem 0 0;
+    font-size: 0.85rem;
+  }
+  #kudos {
+    margin: 0;
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+</style>
